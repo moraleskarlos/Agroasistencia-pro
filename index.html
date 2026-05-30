@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroAsistencia Pro - Control de Personal Agrícola</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        agroDark: '#0f2942',
+                        agroGreen: '#10b981',
+                        agroLight: '#f8fafc'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        /* CONFIGURACIÓN DE IMPRESIÓN OPTIMIZADA: 12 POR HOJA (3 columnas x 4 filas) */
+        @media print {
+            body * { visibility: hidden; background: white !important; }
+            #zona-impresion-masiva, #zona-impresion-masiva * { visibility: visible; }
+            #zona-impresion-masiva { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                display: grid !important; 
+                grid-template-columns: repeat(3, 1fr) !important; 
+                gap: 12px !important; 
+                background: white !important;
+                padding: 0 !important;
+            }
+            .tarjeta-impresion { 
+                page-break-inside: avoid; 
+                border: 1.5px solid #0f2942 !important;
+                border-radius: 8px !important;
+                overflow: hidden !important;
+                background: white !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                width: 100% !important;
+                height: 240px !important; 
+                box-sizing: border-box !important;
+                padding: 8px !important;
+                margin: 0 !important;
+            }
+            .no-imprimir { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-agroLight min-h-screen text-slate-800 font-sans">
+
+    <header class="bg-agroDark text-white shadow-md sticky top-0 z-50 no-imprimir">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="bg-agroGreen p-2 rounded-lg text-white flex items-center justify-center">
+                    <i class="fa-solid fa-square-poll-horizontal text-xl"></i>
+                </div>
+                <span class="text-xl font-bold tracking-tight">AGRO<span class="text-agroGreen">ASISTENCIA pro</span></span>
+            </div>
+            <nav class="flex space-x-1 md:space-x-4">
+                <button onclick="cambiarPestaña('trabajadores')" id="btn-trabajadores" class="tab-btn px-2.5 py-2 rounded-md text-sm font-medium bg-agroGreen text-white transition flex items-center space-x-1">
+                    <i class="fa-solid fa-users"></i> <span class="hidden md:inline">Trabajadores</span>
+                </button>
+                <button onclick="cambiarPestaña('empresas')" id="btn-empresas" class="tab-btn px-2.5 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center space-x-1">
+                    <i class="fa-solid fa-building"></i> <span class="hidden md:inline">Empresas</span>
+                </button>
+                <button onclick="cambiarPestaña('escaner')" id="btn-escaner" class="tab-btn px-2.5 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center space-x-1">
+                    <i class="fa-solid fa-camera"></i> <span class="hidden md:inline">Asistencia QR</span>
+                </button>
+                <button onclick="cambiarPestaña('reportes')" id="btn-reportes" class="tab-btn px-2.5 py-2 rounded-md text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center space-x-1">
+                    <i class="fa-solid fa-chart-line"></i> <span class="hidden md:inline">Reportes</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 md:py-8">
+
+        <section id="mod-trabajadores" class="tab-content block">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2 no-imprimir">
+                    
+                    <div class="flex border-b border-slate-200 mb-6">
+                        <button onclick="alternarTipoRegistro('individual')" id="tab-reg-individual" class="py-2 px-4 border-b-2 border-agroDark font-bold text-sm text-agroDark">Registro Manual</button>
+                        <button onclick="alternarTipoRegistro('masivo')" id="tab-reg-masivo" class="py-2 px-4 border-b-2 border-transparent text-slate-500 font-semibold text-sm hover:text-agroDark flex items-center space-x-1">
+                            <i class="fa-solid fa-file-csv text-emerald-500"></i> <span>Carga Masiva (Excel/CSV)</span>
+                        </button>
+                    </div>
+
+                    <form id="form-trabajador" class="space-y-6" onsubmit="agregarTrabajador(event)">
+                        <input type="hidden" id="trab-editando-index" value="-1">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">RUT <span class="text-rose-500">*</span></label>
+                                <input type="text" id="trab-rut" oninput="formatearRUT(this)" placeholder="Ej: 12.345.678-9" maxlength="12" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 font-mono focus:ring-2 focus:ring-agroGreen focus:border-agroGreen outline-none" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre Completo <span class="text-rose-500">*</span></label>
+                                <input type="text" id="trab-nombre" placeholder="Ej: Juan Pérez" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-agroGreen focus:border-agroGreen outline-none" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Cargo <span class="text-rose-500">*</span></label>
+                                <select id="trab-cargo" onchange="verificarCargoOtro(this)" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-agroGreen focus:border-agroGreen outline-none" required>
+                                    <option value="">Selecciona un cargo</option>
+                                    <option value="Tractorista">Tractorista</option>
+                                    <option value="Obrero agrícola">Obrero agrícola</option>
+                                    <option value="Cosechero">Cosechero</option>
+                                    <option value="Soldador">Soldador</option>
+                                    <option value="Ayudante de soldador">Ayudante de soldador</option>
+                                    <option value="Aplicador">Aplicador</option>
+                                    <option value="Supervisor">Supervisor</option>
+                                    <option value="Anotador">Anotador</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Tipo de Jornada <span class="text-rose-500">*</span></label>
+                                <select id="trab-jornada" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-agroGreen focus:border-agroGreen outline-none" required>
+                                    <option value="">Selecciona una opción</option>
+                                    <option value="Trato">Por Trato (Producción)</option>
+                                    <option value="Diario">Valor Día Fijo</option>
+                                    <option value="Mensual">Sueldo Mensual</option>
+                                </select>
+                            </div>
+                            <div id="contenedor-cargo-especifico" class="hidden md:col-span-2">
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Especificar nuevo cargo <span class="text-rose-500">*</span></label>
+                                <input type="text" id="trab-cargo-especifico" placeholder="Ej: Mecánico" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-agroGreen focus:border-agroGreen outline-none">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Empresa Contratista / Asignación <span class="text-rose-500">*</span></label>
+                                <select id="trab-empresa-select" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-agroGreen focus:border-agroGreen outline-none" required>
+                                    <option value="">-- Primero registra una empresa en el menú superior --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-slate-100 flex space-x-3">
+                            <button type="button" id="btn-cancelar-edicion" onclick="cancelarEdicionTrabajador()" class="hidden w-1/3 bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-lg">Cancelar</button>
+                            <button type="submit" id="btn-guardar-trabajador" class="w-full bg-agroDark hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-lg shadow flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-qrcode"></i> <span id="texto-guardar-trabajador">Guardar y Generar QR</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="seccion-carga-masiva" class="hidden space-y-6">
+                        <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg text-sm">
+                            <h4 class="font-bold mb-1"><i class="fa-solid fa-circle-exclamation mr-1"></i> Validación Estricta Activada (Opción 1):</h4>
+                            <p class="text-xs">Para evitar datos sucios, la planilla **debe incluir RUTs de contratistas que ya existan** en el sistema. Si hay algún RUT de empresa que no registraste previamente, el operario será rechazado automáticamente.</p>
+                        </div>
+                        
+                        <div class="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center bg-slate-50/50 hover:bg-slate-50 transition flex flex-col items-center justify-center space-y-4">
+                            <i class="fa-solid fa-file-excel text-4xl text-emerald-600"></i>
+                            <div>
+                                <p class="text-sm font-bold text-slate-700">Selecciona tu archivo CSV</p>
+                            </div>
+                            <input type="file" id="archivo-csv-masivo" accept=".csv, text/csv, application/vnd.ms-excel" onchange="procesarCargaMasiva(this)" class="block w-full max-w-xs text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer border border-slate-200 p-2 rounded-lg bg-white shadow-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center justify-start space-y-4 no-imprimir">
+                    <div id="area-preview-unica" class="w-full max-w-[340px] bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden flex flex-col">
+                        <div class="bg-agroDark text-white p-4 text-center">
+                            <div class="text-[10px] font-bold tracking-widest text-agroGreen mb-0.5">SISTEMA DE ASISTENCIA</div>
+                            <div class="text-lg font-black tracking-tight">AGRO<span class="text-agroGreen">ASISTENCIA PRO</span></div>
+                        </div>
+                        <div class="p-6 bg-white flex flex-col items-center justify-center border-b border-slate-100">
+                            <div id="contenedor-qr" class="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-inner min-w-[160px] min-h-[160px] flex items-center justify-center">
+                                <span id="placeholder-qr-texto" class="text-slate-400 text-xs italic text-center px-4">Enrola o selecciona un trabajador para previsualizar el QR</span>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-slate-50/80 flex-1 flex flex-col justify-between space-y-3">
+                            <div class="text-center">
+                                <div id="cred-nombre" class="text-base font-bold text-slate-800 uppercase truncate">Nombre Trabajador</div>
+                                <div id="cred-rut" class="text-sm font-mono text-slate-500 font-medium mt-0.5">RUT: 00.000.000-0</div>
+                            </div>
+                            <div class="border-t border-slate-200/60 my-1"></div>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                    <span class="text-slate-400 block uppercase font-bold tracking-wider text-[10px]">Cargo</span>
+                                    <span id="cred-cargo" class="font-semibold text-slate-700 truncate block">--</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-400 block uppercase font-bold tracking-wider text-[10px]">Contratista</span>
+                                    <span id="cred-empresa" class="font-semibold text-slate-700 truncate block">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 p-6 no-imprimir">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 mb-4 border-b border-slate-100 space-y-3 sm:space-y-0">
+                    <div>
+                        <h3 class="text-md font-bold text-slate-700"><i class="fa-solid fa-address-book text-agroGreen mr-1"></i> Dotación Enrolada de Operarios</h3>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="imprimirLoteSeleccionado()" class="bg-agroDark hover:bg-slate-800 text-white text-xs font-bold py-2 px-3 rounded-lg shadow flex items-center space-x-1">
+                            <i class="fa-solid fa-print"></i> <span>Imprimir QR Seleccionados</span>
+                        </button>
+                        <button onclick="eliminarTrabajadoresLote()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold py-2 px-3 rounded-lg flex items-center space-x-1">
+                            <i class="fa-solid fa-trash-can"></i> <span>Eliminar Selección</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                                <th class="p-3 w-10 text-center"><input type="checkbox" id="check-seleccionar-todos" onchange="seleccionarTodosTrabajadores(this)" class="rounded border-slate-300 text-agroGreen focus:ring-agroGreen"></th>
+                                <th class="p-3">RUT Trabajador</th>
+                                <th class="p-3">Nombre Completo</th>
+                                <th class="p-3">Cargo</th>
+                                <th class="p-3">Jornada</th>
+                                <th class="p-3">Contratista</th>
+                                <th class="p-3 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-trabajadores-body" class="text-slate-600 divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="7" class="p-4 text-center text-slate-400 italic">No hay trabajadores enrolados aún.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="mod-empresas" class="tab-content hidden no-imprimir">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <div class="border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-xl font-bold text-agroDark">Registro de Empresas Contratistas</h2>
+                </div>
+                <form id="form-empresa" class="space-y-6" onsubmit="agregarEmpresa(event)">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">RUT Empresa <span class="text-rose-500">*</span></label>
+                            <input type="text" id="emp-rut" oninput="formatearRUT(this)" placeholder="Ej: 76.123.456-K" maxlength="12" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 font-mono focus:ring-2 focus:ring-agroGreen focus:border-agroGreen outline-none" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Nombre Empresa / Razón Social <span class="text-rose-500">*</span></label>
+                            <input type="text" id="emp-nombre" placeholder="Ej: Contratistas El Valle Ltda." class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-agroGreen focus:border-agroGreen outline-none" required>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Faena u Obra Destino <span class="text-rose-500">*</span></label>
+                            <input type="text" id="emp-faena" placeholder="Ej: Fundo Los Pinos" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-agroGreen focus:border-agroGreen outline-none" required>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-100">
+                        <button type="submit" class="w-full bg-agroDark hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-lg shadow flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-building-circle-check"></i> <span>Registrar Empresa Contratista</span>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-8 border-t border-slate-100 pt-6">
+                    <h3 class="text-md font-bold text-slate-700 mb-4">Empresas Registradas</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                                    <th class="p-3">RUT Empresa</th>
+                                    <th class="p-3">Razón Social</th>
+                                    <th class="p-3">Faena Asignada</th>
+                                    <th class="p-3 text-center">N° Trabajadores</th>
+                                    <th class="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-empresas-body" class="text-slate-600 divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="5" class="p-4 text-center text-slate-400 italic">No hay empresas registradas aún.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="mod-escaner" class="tab-content hidden no-imprimir">
+            <div class="max-w-xl mx-auto bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 text-center">
+                <h2 class="text-xl font-bold text-agroDark mb-1">Escáner de Asistencia en Terreno</h2>
+                <p class="text-slate-500 text-sm mb-6">Apunta la cámara hacia el código QR del trabajador al ingreso.</p>
+                
+                <div id="toast-exito" class="hidden mb-4 bg-emerald-500 text-white p-3 rounded-xl font-bold text-sm flex items-center justify-center space-x-2 shadow-md">
+                    <i class="fa-solid fa-circle-check text-lg"></i> <span id="toast-mensaje">¡Marca registrada!</span>
+                </div>
+
+                <div id="toast-error" class="hidden mb-4 bg-rose-500 text-white p-3 rounded-xl font-bold text-sm flex items-center justify-center space-x-2 shadow-md animate-pulse">
+                    <i class="fa-solid fa-circle-exclamation text-lg"></i> <span id="toast-error-mensaje">¡RUT REPETIDO!</span>
+                </div>
+
+                <div class="w-full aspect-square md:max-w-md mx-auto bg-slate-900 rounded-2xl overflow-hidden shadow-inner relative border-4 border-slate-800">
+                    <div id="lector-camara-qr" class="w-full h-full"></div>
+                </div>
+
+                <div class="mt-6 flex flex-col space-y-3 justify-center items-center">
+                    <button onclick="alternarCamara()" id="btn-control-camara" class="bg-agroDark hover:bg-slate-800 text-white font-bold py-2.5 px-6 rounded-lg shadow flex items-center space-x-2">
+                        <i class="fa-solid fa-video"></i> <span id="texto-control-camara">Encender Cámara</span>
+                    </button>
+                    <p id="feedback-escaneo" class="text-xs text-slate-400 font-medium italic">El escáner se encuentra apagado.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="mod-reportes" class="tab-content hidden no-imprimir">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                        <div>
+                            <span class="text-xs text-slate-400 uppercase font-bold tracking-wider">Total Ingresos</span>
+                            <div id="indicador-total-asistencias" class="text-2xl font-black text-agroDark mt-1">0</div>
+                        </div>
+                        <div class="bg-agroDark/10 text-agroDark p-3 rounded-lg"><i class="fa-solid fa-user-clock text-lg"></i></div>
+                    </div>
+                    
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                        <div>
+                            <span class="text-xs text-emerald-600 uppercase font-bold tracking-wider">Jornada Completa</span>
+                            <div id="indicador-jornada-completa" class="text-2xl font-black text-emerald-600 mt-1">0</div>
+                        </div>
+                        <div class="bg-emerald-500/10 text-emerald-600 p-3 rounded-lg"><i class="fa-solid fa-circle-check text-lg"></i></div>
+                    </div>
+
+                    <div id="tarjeta-alerta-media" class="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm transition-all duration-300">
+                        <div>
+                            <span class="text-xs text-slate-400 uppercase font-bold tracking-wider">Media Jornada</span>
+                            <div id="indicador-media-jornada" class="text-2xl font-black text-slate-400 mt-1">0</div>
+                        </div>
+                        <div id="icono-alerta-media" class="bg-slate-100 text-slate-400 p-3 rounded-lg"><i class="fa-solid fa-triangle-exclamation text-lg"></i></div>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between space-y-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Fecha Faena:</label>
+                            <input type="date" id="filtro-fecha-asistencia" onchange="actualizarTablaAsistencia()" class="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-agroGreen">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Contratista:</label>
+                            <select id="filtro-contratista-asistencia" onchange="actualizarTablaAsistencia()" class="w-full px-2 py-1 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-agroGreen">
+                                <option value="TODOS">-- Todos los Contratistas --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 pt-4 pb-4 mb-4 space-y-3 sm:space-y-0">
+                    <div>
+                        <h2 class="text-xl font-bold text-agroDark">Libro de Asistencia Diario</h2>
+                        <p class="text-sm text-slate-500">Administra los estados de jornada y el cierre de faena.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="ejecutarCierreMasivo()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2.5 px-4 rounded-lg shadow-sm flex items-center space-x-1.5">
+                            <i class="fa-solid fa-business-time"></i> <span>Cierre Masivo de Jornada</span>
+                        </button>
+                        <button onclick="exportarAsistenciaCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-lg shadow-sm flex items-center space-x-1">
+                            <i class="fa-solid fa-file-excel"></i> <span>Exportar CSV</span>
+                        </button>
+                        <button onclick="limpiarHistorialAsistenciaCompleto()" class="bg-rose-50 text-rose-600 text-xs font-bold py-2.5 px-3 rounded-lg hover:bg-rose-100">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                                <th class="p-3">N°</th>
+                                <th class="p-3">RUT</th>
+                                <th class="p-3">Nombre</th>
+                                <th class="p-3">Contratista</th>
+                                <th class="p-3 font-mono">Hora Ingreso</th>
+                                <th class="p-3 font-mono">Hora Salida</th>
+                                <th class="p-3 text-center">Tipo de Jornada Real</th>
+                                <th class="p-3 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-asistencia-body" class="text-slate-600 divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="8" class="p-4 text-center text-slate-400 italic">No se han registrado marcas de asistencia.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="zona-impresion-masiva" class="hidden"></div>
+
+    <script>
+        const empresasRegistradas = JSON.parse(localStorage.getItem('AA_empresas')) || [];
+        const trabajadoresRegistrados = JSON.parse(localStorage.getItem('AA_trabajadores')) || [];
+        const historialAsistencia = JSON.parse(localStorage.getItem('AA_asistencia')) || []; 
+        const ultimosMarcajesPorRut = {}; 
+
+        let html5QrcodeScanner = null;
+        let camaraEncendida = false;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const hoy = new Date();
+            const yyyy = hoy.getFullYear();
+            let mm = hoy.getMonth() + 1;
+            let dd = hoy.getDate();
+            if (dd < 10) dd = '0' + dd;
+            if (mm < 10) mm = '0' + mm;
+            document.getElementById('filtro-fecha-asistencia').value = `${yyyy}-${mm}-${dd}`;
+
+            actualizarTablaTrabajadores();
+            actualizarTablaEmpresas();
+            poblarSelectEmpresas();
+            poblarFiltroContratistasReporte();
+        });
+
+        function guardarEnLocalStorage() {
+            localStorage.setItem('AA_empresas', JSON.stringify(empresasRegistradas));
+            localStorage.setItem('AA_trabajadores', JSON.stringify(trabajadoresRegistrados));
+            localStorage.setItem('AA_asistencia', JSON.stringify(historialAsistencia));
+        }
+
+        function cambiarPestaña(idPestaña) {
+            if (idPestaña !== 'escaner' && camaraEncendida) { apagarCamara(); }
+            document.querySelectorAll('.tab-content').forEach(section => {
+                section.classList.replace('block', 'hidden');
+                section.classList.replace('hidden', 'hidden');
+            });
+            document.getElementById('mod-' + idPestaña).classList.replace('hidden', 'block');
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-agroGreen', 'text-white');
+                btn.classList.add('text-slate-300', 'hover:text-white', 'hover:bg-slate-800');
+            });
+            const btnActivo = document.getElementById('btn-' + idPestaña);
+            btnActivo.classList.remove('text-slate-300', 'hover:text-white', 'hover:bg-slate-800');
+            btnActivo.classList.add('bg-agroGreen', 'text-white');
+
+            if (idPestaña === 'escaner' && !camaraEncendida) { encenderCamara(); }
+            if (idPestaña === 'reportes') { 
+                poblarFiltroContratistasReporte();
+                actualizarTablaAsistencia(); 
+            }
+        }
+
+        function alternarTipoRegistro(tipo) {
+            const btnInd = document.getElementById('tab-reg-individual');
+            const btnMas = document.getElementById('tab-reg-masivo');
+            const formInd = document.getElementById('form-trabajador');
+            const formMas = document.getElementById('seccion-carga-masiva');
+
+            if (tipo === 'individual') {
+                btnInd.className = "py-2 px-4 border-b-2 border-agroDark font-bold text-sm text-agroDark";
+                btnMas.className = "py-2 px-4 border-b-2 border-transparent text-slate-500 font-semibold text-sm hover:text-agroDark flex items-center space-x-1";
+                formInd.classList.remove('hidden');
+                formMas.classList.add('hidden');
+            } else {
+                btnMas.className = "py-2 px-4 border-b-2 border-agroDark font-bold text-sm text-agroDark flex items-center space-x-1";
+                btnInd.className = "py-2 px-4 border-b-2 border-transparent text-slate-500 font-semibold text-sm hover:text-agroDark";
+                formMas.classList.remove('hidden');
+                formInd.classList.add('hidden');
+            }
+        }
+
+        // CARGA MASIVA CON RECHAZO ESTRICTO (OPCIÓN 1)
+        function procesarCargaMasiva(input) {
+            const archivo = input.files[0];
+            if (!archivo) return;
+
+            const lector = new FileReader();
+            lector.onload = function(e) {
+                const contenido = e.target.result;
+                const lineas = contenido.split(/\r?\n/);
+                if (lineas.length <= 1) { alert("El archivo está vacío."); return; }
+
+                const encabezado = lineas[0].toLowerCase();
+                let separador = ";";
+                if (encabezado.includes(",")) separador = ",";
+
+                const columnasTitulo = encabezado.split(separador).map(tit => tit.replace(/[^a-z_]/g, '').trim());
+                
+                const idxRut = columnasTitulo.indexOf('rut');
+                const idxNombre = columnasTitulo.indexOf('nombre');
+                const idxCargo = columnasTitulo.indexOf('cargo');
+                const idxJornada = columnasTitulo.indexOf('jornada');
+                const idxEmpresa = columnasTitulo.indexOf('rut_empresa');
+
+                if (idxRut === -1 || idxNombre === -1 || idxEmpresa === -1) {
+                    alert("Error: Faltan columnas requeridas ('rut', 'nombre' o 'rut_empresa').");
+                    return;
+                }
+
+                let importados = 0;
+                let rechazadosContratista = 0;
+                let duplicados = 0;
+                let filasConError = [];
+
+                for (let i = 1; i < lineas.length; i++) {
+                    if (!lineas[i].trim()) continue;
+                    const columnas = lineas[i].split(separador);
+                    
+                    if (columnas.length > Math.max(idxRut, idxNombre, idxEmpresa)) {
+                        let rut = columnas[idxRut] ? columnas[idxRut].trim().replace(/["']/g, "") : "";
+                        let nombre = columnas[idxNombre] ? columnas[idxNombre].trim().replace(/["']/g, "") : "";
+                        let cargo = (idxCargo !== -1 && columnas[idxCargo]) ? columnas[idxCargo].trim().replace(/["']/g, "") : "Obrero agrícola";
+                        let jornada = (idxJornada !== -1 && columnas[idxJornada]) ? columnas[idxJornada].trim().replace(/["']/g, "") : "Diario";
+                        let empRut = columnas[idxEmpresa].trim().replace(/["']/g, "");
+
+                        if (rut && nombre) {
+                            // VALIDACIÓN ESTRICTA
+                            const existeEmpresa = empresasRegistradas.some(e => e.rut === empRut);
+                            
+                            if (!existeEmpresa) {
+                                rechazadosContratista++;
+                                filasConError.push(`Fila ${i+1} (Contratista RUT ${empRut} no existe)`);
+                                continue; 
+                            }
+
+                            if (!trabajadoresRegistrados.some(t => t.rut === rut)) {
+                                trabajadoresRegistrados.push({ rut, nombre, cargo, jornada, empresaRut: empRut });
+                                const emp = empresasRegistradas.find(e => e.rut === empRut);
+                                if (emp) emp.totalTrabajadores += 1;
+                                importados++;
+                            } else {
+                                duplicados++;
+                            }
+                        }
+                    }
+                }
+
+                guardarEnLocalStorage();
+                actualizarTablaTrabajadores();
+                actualizarTablaEmpresas();
+
+                let mensajeFinal = `¡Carga masiva finalizada!\n\n✔ Operarios cargados con éxito: ${importados}\n❌ Omitidos por RUT ya existente: ${duplicados}\n⚠️ Rechazados por error de Contratista: ${rechazadosContratista}`;
+                if (filasConError.length > 0) {
+                    mensajeFinal += `\n\nDetalle de rechazos:\n` + filasConError.slice(0, 5).join("\n");
+                    if (filasConError.length > 5) mensajeFinal += `\n... y ${filasConError.length - 5} errores más.`;
+                }
+                alert(mensajeFinal);
+                input.value = "";
+            };
+            lector.readAsText(archivo, "UTF-8");
+        }
+
+        function seleccionarTodosTrabajadores(masterCheck) {
+            const checkboxes = document.querySelectorAll('.check-trabajador');
+            checkboxes.forEach(cb => cb.checked = masterCheck.checked);
+        }
+
+        function imprimirLoteSeleccionado() {
+            const checkboxes = document.querySelectorAll('.check-trabajador:checked');
+            if (checkboxes.length === 0) { alert("Por favor, marca las casillas de los operarios."); return; }
+
+            const zonaImpresion = document.getElementById('zona-impresion-masiva');
+            zonaImpresion.innerHTML = ''; 
+
+            checkboxes.forEach((cb) => {
+                const idx = parseInt(cb.getAttribute('data-index'));
+                const trab = trabajadoresRegistrados[idx];
+                const emp = empresasRegistradas.find(e => e.rut === trab.empresaRut);
+                const razonSocial = emp ? emp.nombre : "Sin Contratista";
+
+                const tarjeta = document.createElement('div');
+                tarjeta.className = "tarjeta-impresion";
+                tarjeta.style.boxSizing = "border-box";
+                tarjeta.style.padding = "6px";
+                tarjeta.style.border = "1.5px solid #0f2942";
+                tarjeta.style.display = "flex";
+                tarjeta.style.flexDirection = "column";
+                tarjeta.style.justify = "space-between";
+                tarjeta.style.alignItems = "center";
+
+                tarjeta.innerHTML = `
+                    <div style="background-color:#0f2942; color:white; width:100%; padding:4px 2px; border-radius:4px; font-weight:black; font-size:10px; text-align:center;">
+                        AGROCHECK
+                    </div>
+                    <div class="qr-print-box flex items-center justify-center" id="print-qr-${idx}" style="min-height:95px; margin: 4px 0;"></div>
+                    <div style="width: 100%; text-align: center;">
+                        <div style="font-size:11px; font-weight:bold; text-transform:uppercase; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#0f2942;">${trab.nombre}</div>
+                        <div style="font-family:monospace; font-size:10px; color:#475569; font-weight:bold;">${trab.rut}</div>
+                    </div>
+                    <div style="width:100%; border-top:1px dashed #cbd5e1; padding-top:4px; display:grid; grid-template-columns:1fr 1fr; gap:2px; text-align:left; font-size:8.5px; line-height:1;">
+                        <div style="overflow:hidden;">
+                            <span style="color:#94a3b8; font-size:7px; font-weight:bold; text-transform:uppercase; display:block;">Cargo</span>
+                            <strong style="color:#334155; display:block; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${trab.cargo}</strong>
+                        </div>
+                        <div style="overflow:hidden;">
+                            <span style="color:#94a3b8; font-size:7px; font-weight:bold; text-transform:uppercase; display:block;">Empresa</span>
+                            <strong style="color:#334155; display:block; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${razonSocial}</strong>
+                        </div>
+                    </div>
+                `;
+                zonaImpresion.appendChild(tarjeta);
+
+                new QRCode(document.getElementById(`print-qr-${idx}`), {
+                    text: trab.rut,
+                    width: 90,
+                    height: 90,
+                    colorDark: "#0f2942",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            });
+
+            setTimeout(() => { window.print(); }, 600);
+        }
+
+        function eliminarTrabajadoresLote() {
+            const checkboxes = document.querySelectorAll('.check-trabajador:checked');
+            if (checkboxes.length === 0) { alert("No hay trabajadores seleccionados."); return; }
+
+            if (confirm(`¿Eliminar los ${checkboxes.length} trabajadores seleccionados?`)) {
+                const indices = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-index'))).sort((a,b) => b-a);
+                indices.forEach(idx => {
+                    const trab = trabajadoresRegistrados[idx];
+                    const emp = empresasRegistradas.find(e => e.rut === trab.empresaRut);
+                    if (emp && emp.totalTrabajadores > 0) emp.totalTrabajadores -= 1;
+                    trabajadoresRegistrados.splice(idx, 1);
+                });
+                guardarEnLocalStorage();
+                actualizarTablaTrabajadores();
+                actualizarTablaEmpresas();
+                document.getElementById('check-seleccionar-todos').checked = false;
+            }
+        }
+
+        function agregarTrabajador(event) {
+            event.preventDefault();
+            const indexEditando = parseInt(document.getElementById('trab-editando-index').value);
+            const rut = document.getElementById('trab-rut').value.trim();
+            const nombre = document.getElementById('trab-nombre').value.trim();
+            const selectCargo = document.getElementById('trab-cargo');
+            const jornada = document.getElementById('trab-jornada').value.trim();
+            const empresaRut = document.getElementById('trab-empresa-select').value;
+            let cargoFinal = selectCargo.value === 'Otro' ? document.getElementById('trab-cargo-especifico').value.trim() : selectCargo.value;
+
+            if (!empresaRut) { alert("Primero debes seleccionar una empresa."); return; }
+            if (indexEditando === -1 && trabajadoresRegistrados.some(t => t.rut === rut)) { alert("Este RUT ya existe."); return; }
+
+            const empresaAsociada = empresasRegistradas.find(e => e.rut === empresaRut);
+            if (empresaAsociada) {
+                if (indexEditando === -1) {
+                    empresaAsociada.totalTrabajadores += 1;
+                    trabajadoresRegistrados.push({ rut, nombre, cargo: cargoFinal, jornada, empresaRut });
+                } else {
+                    const trabAntiguo = trabajadoresRegistrados[indexEditando];
+                    if (trabAntiguo.empresaRut !== empresaRut) {
+                        const empAntigua = empresasRegistradas.find(e => e.rut === trabAntiguo.empresaRut);
+                        if (empAntigua && empAntigua.totalTrabajadores > 0) empAntigua.totalTrabajadores -= 1;
+                        empresaAsociada.totalTrabajadores += 1;
+                    }
+                    trabajadoresRegistrados[indexEditando] = { rut, nombre, cargo: cargoFinal, jornada, empresaRut };
+                    cancelarEdicionTrabajador();
+                }
+
+                guardarEnLocalStorage();
+                actualizarTablaEmpresas();
+                actualizarTablaTrabajadores();
+
+                document.getElementById('cred-nombre').textContent = nombre;
+                document.getElementById('cred-rut').textContent = `RUT: ${rut}`;
+                document.getElementById('cred-cargo').textContent = cargoFinal;
+                document.getElementById('cred-empresa').textContent = empresaAsociada.nombre;
+
+                const contenedorQR = document.getElementById('contenedor-qr');
+                contenedorQR.innerHTML = ''; 
+                new QRCode(contenedorQR, { text: rut, width: 160, height: 160, colorDark: "#0f2942", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+
+                document.getElementById('form-trabajador').reset();
+                document.getElementById('contenedor-cargo-especifico').classList.add('hidden');
+            }
+        }
+
+        function actualizarTablaTrabajadores() {
+            const tbody = document.getElementById('tabla-trabajadores-body');
+            tbody.innerHTML = '';
+            if (trabajadoresRegistrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400 italic">No hay trabajadores enrolados.</td></tr>`;
+                return;
+            }
+            trabajadoresRegistrados.forEach((trab, index) => {
+                const emp = empresasRegistradas.find(e => e.rut === trab.empresaRut);
+                const nombreEmpresa = emp ? emp.nombre : "Sin Contratista";
+                const fila = document.createElement('tr');
+                fila.className = "border-b border-slate-100 hover:bg-slate-50 transition text-xs md:text-sm";
+                fila.innerHTML = `
+                    <td class="p-3 text-center"><input type="checkbox" data-index="${index}" class="check-trabajador rounded border-slate-300 text-agroGreen focus:ring-agroGreen"></td>
+                    <td class="p-3 font-mono font-bold text-slate-700">${trab.rut}</td>
+                    <td class="p-3 font-medium text-slate-800">${trab.nombre}</td>
+                    <td class="p-3 text-slate-600">${trab.cargo}</td>
+                    <td class="p-3 text-slate-500">${trab.jornada}</td>
+                    <td class="p-3 text-slate-500 font-medium">${nombreEmpresa}</td>
+                    <td class="p-3 text-center flex justify-center space-x-3">
+                        <button onclick="cargarTrabajadorParaEditar(${index})" class="text-amber-500 hover:text-amber-600 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="eliminarTrabajadorIndividual(${index})" class="text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-user-minus"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        function cargarTrabajadorParaEditar(index) {
+            const trab = trabajadoresRegistrados[index];
+            document.getElementById('trab-editando-index').value = index;
+            document.getElementById('trab-rut').value = trab.rut;
+            document.getElementById('trab-nombre').value = trab.nombre;
+            document.getElementById('trab-jornada').value = trab.jornada;
+            document.getElementById('trab-empresa-select').value = trab.empresaRut;
+
+            const selectCargo = document.getElementById('trab-cargo');
+            if (Array.from(selectCargo.options).map(o => o.value).includes(trab.cargo)) {
+                selectCargo.value = trab.cargo;
+                document.getElementById('contenedor-cargo-especifico').classList.add('hidden');
+            } else {
+                selectCargo.value = "Otro";
+                document.getElementById('contenedor-cargo-especifico').classList.remove('hidden');
+                document.getElementById('trab-cargo-especifico').value = $.cargo;
+            }
+            document.getElementById('texto-guardar-trabajador').textContent = "Actualizar Cambios";
+            document.getElementById('btn-cancelar-edicion').classList.remove('hidden');
+            alternarTipoRegistro('individual');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelarEdicionTrabajador() {
+            document.getElementById('form-trabajador').reset();
+            document.getElementById('trab-editando-index').value = "-1";
+            document.getElementById('contenedor-cargo-especifico').classList.add('hidden');
+            document.getElementById('texto-guardar-trabajador').textContent = "Guardar y Generar QR";
+            document.getElementById('btn-cancelar-edicion').classList.add('hidden');
+        }
+
+        function eliminarTrabajadorIndividual(index) {
+            const trab = trabajadoresRegistrados[index];
+            if (confirm(`¿Eliminar a ${trab.nombre}?`)) {
+                const emp = empresasRegistradas.find(e => e.rut === trab.empresaRut);
+                if (emp && emp.totalTrabajadores > 0) emp.totalTrabajadores -= 1;
+                trabajadoresRegistrados.splice(index, 1);
+                guardarEnLocalStorage();
+                actualizarTablaTrabajadores();
+                actualizarTablaEmpresas();
+            }
+        }
+
+        function encenderCamara() {
+            const contenedorId = "lector-camara-qr";
+            document.getElementById('feedback-escaneo').textContent = "Iniciando cámara...";
+            document.getElementById('feedback-escaneo').className = "text-xs text-amber-500 font-bold animate-pulse";
+
+            html5QrcodeScanner = new Html5Qrcode(contenedorId);
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, 
+                { fps: 20, qrbox: function(width, height) { return { width: Math.min(width * 0.7, 280), height: Math.min(height * 0.7, 280) }; } },
+                onScanSuccess, 
+                onScanFailure  
+            )
+            .then(() => {
+                camaraEncendida = true;
+                document.getElementById('texto-control-camara').textContent = "Apagar Cámara";
+                document.getElementById('feedback-escaneo').textContent = "Escáner encendido. Registrando entrada.";
+                document.getElementById('feedback-escaneo').className = "text-xs text-emerald-500 font-bold tracking-wide";
+            })
+            .catch(err => {
+                document.getElementById('feedback-escaneo').textContent = "Error: Cámara no disponible.";
+                document.getElementById('feedback-escaneo').className = "text-xs text-rose-500 font-bold";
+                camaraEncendida = false;
+            });
+        }
+
+        function apagarCamara() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner = null;
+                    camaraEncendida = false;
+                    document.getElementById('texto-control-camara').textContent = "Encender Cámara";
+                    document.getElementById('feedback-escaneo').textContent = "El escáner se encuentra apagado.";
+                    document.getElementById('feedback-escaneo').className = "text-xs text-slate-400 font-medium italic";
+                    document.getElementById('lector-camara-qr').innerHTML = ''; 
+                }).catch(err => console.error(err));
+            }
+        }
+
+        function alternarCamara() { if (camaraEncendida) { apagarCamara(); } else { encenderCamara(); } }
+
+        function onScanSuccess(decodedText) {
+            const rutEscaneado = decodedText.trim();
+            const ahoraMilisegundos = Date.now();
+
+            if (ultimosMarcajesPorRut[rutEscaneado] && (ahoraMilisegundos - ultimosMarcajesPorRut[rutEscaneado] < 10000)) {
+                document.getElementById('toast-exito').classList.add('hidden');
+                const toastError = document.getElementById('toast-error');
+                document.getElementById('toast-error-mensaje').textContent = `¡RUT YA MARCO INGRESO!`;
+                toastError.classList.remove('hidden');
+                emitirSonido('error');
+                setTimeout(() => { toastError.classList.add('hidden'); }, 2000);
+                return; 
+            }
+
+            ultimosMarcajesPorRut[rutEscaneado] = ahoraMilisegundos;
+            const ahora = new Date();
+            
+            const yyyy = ahora.getFullYear();
+            let mm = ahora.getMonth() + 1;
+            let dd = ahora.getDate();
+            if (dd < 10) dd = '0' + dd;
+            if (mm < 10) mm = '0' + mm;
+            const fechaISO = `${yyyy}-${mm}-${dd}`; 
+
+            const fechaString = ahora.toLocaleDateString('es-CL');
+            const horaString = ahora.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+
+            const trabajador = trabajadoresRegistrados.find(t => t.rut === rutEscaneado);
+            let nombreTrabajador = trabajador ? trabajador.nombre : "Operario Desconocido";
+            let contratistaTrabajador = "Sin Contratista";
+
+            if (trabajador && trabajador.empresaRut) {
+                const emp = empresasRegistradas.find(e => e.rut === trabajador.empresaRut);
+                if (emp) { contratistaTrabajador = emp.nombre; }
+            }
+
+            historialAsistencia.unshift({ 
+                rut: rutEscaneado, 
+                nombre: nombreTrabajador, 
+                contratista: contratistaTrabajador, 
+                fecha: fechaString, 
+                fechaISO: fechaISO, 
+                horaIngreso: horaString,
+                horaSalida: '--',
+                tipoJornada: 'Completa' 
+            });
+            
+            guardarEnLocalStorage();
+            actualizarTablaAsistencia();
+
+            document.getElementById('toast-error').classList.add('hidden');
+            const toastExito = document.getElementById('toast-exito');
+            document.getElementById('toast-mensaje').textContent = `Ingreso OK: ${nombreTrabajador}`;
+            toastExito.classList.remove('hidden');
+            emitirSonido('exito');
+            setTimeout(() => { toastExito.classList.add('hidden'); }, 2500);
+        }
+
+        function onScanFailure(error) {}
+
+        // POBLAR MENÚ DESPLEGABLE DE CONTRATISTAS EN REPORTES
+        function poblarFiltroContratistasReporte() {
+            const selectFiltro = document.getElementById('filtro-contratista-asistencia');
+            const valorSeleccionadoAnterior = selectFiltro.value; 
+            
+            selectFiltro.innerHTML = '<option value="TODOS">-- Todos los Contratistas --</option>';
+            
+            empresasRegistradas.forEach(emp => {
+                const opt = document.createElement('option');
+                opt.value = emp.nombre; 
+                opt.textContent = emp.nombre;
+                selectFiltro.appendChild(opt);
+            });
+
+            if (Array.from(selectFiltro.options).some(o => o.value === valorSeleccionadoAnterior)) {
+                selectFiltro.value = valorSeleccionadoAnterior;
+            }
+        }
+
+        // TABLA DE ASISTENCIA CON CONTADORES DINÁMICOS POR FILTRO DE CONTRATISTA
+        function actualizarTablaAsistencia() {
+            const fechaSeleccionada = document.getElementById('filtro-fecha-asistencia').value;
+            const contratistaSeleccionado = document.getElementById('filtro-contratista-asistencia').value;
+            const tbody = document.getElementById('tabla-asistencia-body');
+            tbody.innerHTML = '';
+            
+            // 1. Filtrar primero por fecha
+            let registrosFiltrados = historialAsistencia.filter(marca => marca.fechaISO === fechaSeleccionada);
+            
+            // 2. Filtrar por Contratista (Si no está en TODOS)
+            if (contratistaSeleccionado !== 'TODOS') {
+                registrosFiltrados = registrosFiltrados.filter(marca => marca.contratista === contratistaSeleccionado);
+            }
+            
+            // Recalcular indicadores en base al resultado filtrado actual
+            let totalIngresos = registrosFiltrados.length;
+            let totalCompleta = registrosFiltrados.filter(m => m.tipoJornada === 'Completa').length;
+            let totalMedia = registrosFiltrados.filter(m => m.tipoJornada === 'Media').length;
+
+            document.getElementById('indicador-total-asistencias').textContent = totalIngresos;
+            document.getElementById('indicador-jornada-completa').textContent = totalCompleta;
+            document.getElementById('indicador-media-jornada').textContent = totalMedia;
+
+            const tarjetaAlerta = document.getElementById('tarjeta-alerta-media');
+            const iconoAlerta = document.getElementById('icono-alerta-media');
+            const textoContador = document.getElementById('indicador-media-jornada');
+
+            if (totalMedia > 0) {
+                tarjetaAlerta.className = "bg-amber-50 border-2 border-amber-400 rounded-xl p-4 flex items-center justify-between shadow-md animate-pulse";
+                iconoAlerta.className = "bg-amber-500 text-white p-3 rounded-lg";
+                textoContador.className = "text-2xl font-black text-amber-600 mt-1";
+            } else {
+                tarjetaAlerta.className = "bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm";
+                iconoAlerta.className = "bg-slate-100 text-slate-400 p-3 rounded-lg";
+                textoContador.className = "text-2xl font-black text-slate-400 mt-1";
+            }
+
+            if (registrosFiltrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400 italic">No hay marcas de presencia para los criterios seleccionados.</td></tr>`;
+                return;
+            }
+
+            registrosFiltrados.forEach((marca) => {
+                const indexGlobal = historialAsistencia.findIndex(h => h.rut === marca.rut && h.fechaISO === marca.fechaISO && h.horaIngreso === marca.horaIngreso);
+                
+                let badgeEstilo = marca.tipoJornada === 'Completa' 
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                    : 'bg-amber-100 text-amber-800 border-amber-300';
+
+                const fila = document.createElement('tr');
+                fila.className = "border-b border-slate-100 hover:bg-slate-50 transition text-xs md:text-sm";
+                fila.innerHTML = `
+                    <td class="p-3 text-slate-400 font-medium">#</td>
+                    <td class="p-3 font-mono font-bold text-slate-700">${marca.rut}</td>
+                    <td class="p-3 font-medium text-slate-800">${marca.nombre}</td>
+                    <td class="p-3 text-slate-500 font-medium">${marca.contratista}</td>
+                    <td class="p-3 font-mono font-bold text-slate-600">${marca.horaIngreso}</td>
+                    <td class="p-3 font-mono text-slate-600">${marca.horaSalida}</td>
+                    <td class="p-3 text-center">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold border ${badgeEstilo}">
+                            ${marca.tipoJornada === 'Completa' ? 'Jornada Completa' : 'Media Jornada'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center flex justify-center space-x-2">
+                        <button onclick="alternarTipoJornadaReal(${indexGlobal})" title="Cambiar tipo de jornada" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded text-xs font-semibold flex items-center space-x-1 border border-slate-300">
+                            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> <span>Cambiar</span>
+                        </button>
+                        <button onclick="eliminarMarcaIndividual(${indexGlobal})" class="text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        function alternarTipoJornadaReal(indexGlobal) {
+            const marca = historialAsistencia[indexGlobal];
+            if (marca.tipoJornada === 'Completa') {
+                marca.tipoJornada = 'Media';
+                if (marca.horaSalida === '--') { marca.horaSalida = '13:00'; }
+            } else {
+                marca.tipoJornada = 'Completa';
+                if (marca.horaSalida === '13:00') { marca.horaSalida = '--'; }
+            }
+            guardarEnLocalStorage();
+            actualizarTablaAsistencia();
+        }
+
+        function ejecutarCierreMasivo() {
+            const fechaSeleccionada = document.getElementById('filtro-fecha-asistencia').value;
+            const contratistaSeleccionado = document.getElementById('filtro-contratista-asistencia').value;
+            
+            let registrosAFiltrar = historialAsistencia.filter(marca => marca.fechaISO === fechaSeleccionada);
+            if (contratistaSeleccionado !== 'TODOS') {
+                registrosAFiltrar = registrosAFiltrar.filter(marca => marca.contratista === contratistaSeleccionado);
+            }
+
+            if (registrosAFiltrar.length === 0) { alert("No hay trabajadores activos bajo este filtro para realizar el cierre."); return; }
+
+            const ahora = new Date();
+            const horaSalidaActual = ahora.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+
+            let msg = contratistaSeleccionado === 'TODOS' 
+                ? `¿Confirmas el cierre masivo de jornada para los ${registrosAFiltrar.length} operarios activos hoy?`
+                : `¿Confirmas el cierre masivo de jornada SOLO para los ${registrosAFiltrar.length} operarios de la empresa "${contratistaSeleccionado}"?`;
+
+            if (confirm(`${msg}\n\nLos registros en 'Jornada Completa' sin salida se cerrarán a las ${horaSalidaActual}.`)) {
+                
+                historialAsistencia.forEach(marca => {
+                    if (marca.fechaISO === fechaSeleccionada) {
+                        if (contratistaSeleccionado === 'TODOS' || marca.contratista === contratistaSeleccionado) {
+                            if (marca.tipoJornada === 'Completa' && marca.horaSalida === '--') {
+                                marca.horaSalida = horaSalidaActual;
+                            }
+                        }
+                    }
+                });
+
+                guardarEnLocalStorage();
+                actualizarTablaAsistencia();
+                alert("¡Cierre masivo de jornada procesado correctamente!");
+            }
+        }
+
+        function eliminarMarcaIndividual(index) {
+            if (confirm("¿Eliminar este marcaje?")) {
+                historialAsistencia.splice(index, 1);
+                guardarEnLocalStorage();
+                actualizarTablaAsistencia();
+            }
+        }
+
+        function limpiarHistorialAsistenciaCompleto() {
+            if (confirm("¿Quieres vaciar todos los registros históricos de asistencia?")) {
+                historialAsistencia.length = 0;
+                guardarEnLocalStorage();
+                actualizarTablaAsistencia();
+            }
+        }
+
+        function exportarAsistenciaCSV() {
+            const fechaSeleccionada = document.getElementById('filtro-fecha-asistencia').value;
+            const contratistaSeleccionado = document.getElementById('filtro-contratista-asistencia').value;
+            
+            let registrosFiltrados = historialAsistencia.filter(marca => marca.fechaISO === fechaSeleccionada);
+            if (contratistaSeleccionado !== 'TODOS') {
+                registrosFiltrados = registrosFiltrados.filter(marca => marca.contratista === contratistaSeleccionado);
+            }
+
+            if (registrosFiltrados.length === 0) { alert("No hay registros para descargar."); return; }
+            let csv = "RUT;Nombre_Completo;Contratista;Fecha;Hora_Ingreso;Hora_Salida;Tipo_Jornada\n";
+            registrosFiltrados.forEach((m) => {
+                csv += `${m.rut};${m.nombre};${m.contratista};${m.fecha};${m.horaIngreso};${m.horaSalida};${m.tipoJornada === 'Completa' ? 'Completa' : 'Media Jornada'}\n`;
+            });
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `Asistencia_${contratistaSeleccionado}_${fechaSeleccionada}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        function agregarEmpresa(event) {
+            event.preventDefault();
+            const rut = document.getElementById('emp-rut').value.trim();
+            const nombre = document.getElementById('emp-nombre').value.trim();
+            const faena = document.getElementById('emp-faena').value.trim();
+
+            if (empresasRegistradas.some(e => e.rut === rut)) { alert("Esta empresa ya está registrada."); return; }
+            empresasRegistradas.push({ rut, nombre, faena, totalTrabajadores: 0 });
+            
+            guardarEnLocalStorage();
+            actualizarTablaEmpresas();
+            poblarSelectEmpresas();
+            poblarFiltroContratistasReporte();
+
+            document.getElementById('form-empresa').reset();
+            alert(`Empresa "${nombre}" registrada.`);
+        }
+
+        function actualizarTablaEmpresas() {
+            const tbody = document.getElementById('tabla-empresas-body');
+            tbody.innerHTML = '';
+            if (empresasRegistradas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400 italic">No hay empresas registradas aún.</td></tr>`; return;
+            }
+            empresasRegistradas.forEach((emp, index) => {
+                const fila = document.createElement('tr');
+                fila.className = "border-b border-slate-100 hover:bg-slate-50 transition text-sm";
+                fila.innerHTML = `
+                    <td class="p-3 font-medium text-slate-700 font-mono">${emp.rut}</td>
+                    <td class="p-3 font-semibold">${emp.nombre}</td>
+                    <td class="p-3 text-slate-500">${emp.faena}</td>
+                    <td class="p-3 text-center font-bold text-agroGreen bg-emerald-50/50 rounded-lg">${emp.totalTrabajadores}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="eliminarEmpresa(${index})" class="text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        function poblarSelectEmpresas() {
+            const select = document.getElementById('trab-empresa-select');
+            select.innerHTML = '';
+            if (empresasRegistradas.length === 0) {
+                select.innerHTML = '<option value="">-- Registra una empresa primero --</option>';
+                return;
+            }
+            const optDefault = document.createElement('option');
+            optDefault.value = ""; optDefault.textContent = "Selecciona la empresa contratista";
+            select.appendChild(optDefault);
+
+            empresasRegistradas.forEach(emp => {
+                const opt = document.createElement('option');
+                opt.value = emp.rut; opt.textContent = `${emp.nombre} (${emp.faena})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function eliminarEmpresa(index) {
+            const emp = empresasRegistradas[index];
+            if (emp.totalTrabajadores > 0) {
+                alert(`La empresa tiene ${emp.totalTrabajadores} operarios asociados.`);
+                return;
+            }
+            if (confirm(`¿Eliminar contratista "${emp.nombre}"?`)) {
+                empresasRegistradas.splice(index, 1);
+                guardarEnLocalStorage();
+                actualizarTablaEmpresas();
+                poblarSelectEmpresas();
+                poblarFiltroContratistasReporte();
+            }
+        }
+
+        function verificarCargoOtro(elementoSelect) {
+            const contenedorExtra = document.getElementById('contenedor-cargo-especifico');
+            const inputExtra = document.getElementById('trab-cargo-especifico');
+            if (elementoSelect.value === 'Otro') {
+                contenedorExtra.classList.remove('hidden'); inputExtra.setAttribute('required', 'true'); inputExtra.focus();
+            } else {
+                contenedorExtra.classList.add('hidden'); inputExtra.removeAttribute('required'); inputExtra.value = '';
+            }
+        }
+
+        function emitirSonido(tipo) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode); gainNode.connect(audioCtx.destination);
+                if (tipo === 'exito') {
+                    oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); oscillator.start(); oscillator.stop(audioCtx.currentTime + 0.1);
+                } else if (tipo === 'error') {
+                    oscillator.type = 'sawtooth'; oscillator.frequency.setValueAtTime(160, audioCtx.currentTime); 
+                    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime); oscillator.start(); oscillator.stop(audioCtx.currentTime + 0.2);
+                }
+            } catch (e) {}
+        }
+
+        function formatearRUT(input) {
+            let valor = input.value.replace(/[^0-9kK]/g, '').toUpperCase();
+            if (!valor) { input.value = ''; return; }
+            if (valor.length <= 1) { input.value = valor; return; }
+            let cuerpo = valor.slice(0, -1); let dv = valor.slice(-1);
+            let cuerpoFormateado = '';
+            while (cuerpo.length > 3) { cuerpoFormateado = '.' + cuerpo.slice(-3) + cuerpoFormateado; cuerpo = cuerpo.slice(0, -3); }
+            cuerpoFormateado = cuerpo + cuerpoFormateado; input.value = cuerpoFormateado + '-' + dv;
+        }
+    </script>
+</body>
+</html>
