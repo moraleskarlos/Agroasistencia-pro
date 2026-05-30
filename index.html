@@ -23,34 +23,32 @@
             color: var(--azul-oscuro);
         }
 
-        /* CABECERA CORPORATIVA */
         header {
             background-color: var(--azul-oscuro);
             color: var(--blanco);
-            padding: 20px;
+            padding: 25px;
             border-bottom: 5px solid var(--verde-agro);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        header h1 { margin: 0; font-size: 22px; }
-        header p { margin: 5px 0 0 0; font-size: 13px; color: #94A3B8; }
+        header h1 { margin: 0; font-size: 26px; font-weight: 700; }
+        header p { margin: 5px 0 0 0; font-size: 14px; color: #94A3B8; }
 
-        /* MENÚ DE NAVEGACIÓN MODULAR */
         nav {
             background-color: #0F172A;
             display: flex;
-            padding: 0 10px;
+            padding: 0 15px;
         }
 
         nav button {
             background: none;
             border: none;
             color: #94A3B8;
-            padding: 15px 20px;
-            font-size: 14px;
-            font-weight: bold;
+            padding: 18px 25px;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
             transition: 0.3s;
         }
@@ -58,27 +56,91 @@
         nav button:hover, nav button.activo {
             color: var(--blanco);
             background-color: var(--azul-oscuro);
-            border-bottom: 3px solid var(--verde-agro);
+            border-bottom: 4px solid var(--verde-agro);
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 30px auto;
             padding: 0 20px;
         }
 
-        /* CONTENEDORES DE MÓDULOS */
         .modulo { display: none; }
         .modulo.activo { display: block; }
 
-        /* DISEÑO MÓDULO 1: REGISTRO / CARGA MASIVA */
+        h2 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+        h3 { font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 15px; }
+
+        .malla-registro {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            align-items: start;
+        }
+
+        @media (max-width: 850px) {
+            .malla-registro { grid-template-columns: 1fr; }
+        }
+
         .tarjeta {
             background: var(--blanco);
             border-radius: 12px;
             padding: 25px;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             border: 1px solid var(--borde);
-            margin-bottom: 25px;
+            box-sizing: border-box;
+        }
+
+        .grupo-formulario {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .campo {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .campo-completo {
+            grid-column: span 2;
+        }
+
+        /* Campos ocultos inicialmente para las opciones 'otro' */
+        .campo-oculto {
+            display: none;
+            grid-column: span 2;
+            background-color: #FEF3C7;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px dashed #F59E0B;
+            margin-top: -5px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #64748B;
+        }
+
+        input, select {
+            padding: 10px;
+            border: 1px solid var(--borde);
+            border-radius: 6px;
+            font-size: 13px;
+            background-color: #F8FAFC;
+            color: var(--azul-oscuro);
+            outline: none;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--verde-agro);
+            background-color: var(--blanco);
         }
 
         .btn {
@@ -94,6 +156,7 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            justify-content: center;
         }
 
         .btn:hover { background-color: #334155; }
@@ -102,12 +165,12 @@
 
         .zona-drop {
             border: 2px dashed #CBD5E1;
-            padding: 40px 20px;
+            padding: 45px 20px;
             border-radius: 8px;
             text-align: center;
             background: #F8FAFC;
             cursor: pointer;
-            margin: 20px 0;
+            margin-top: 15px;
             transition: 0.2s;
         }
 
@@ -116,7 +179,6 @@
             border-color: var(--verde-agro);
         }
 
-        /* ALERTAS DE SISTEMA */
         .alerta {
             padding: 15px;
             border-radius: 6px;
@@ -125,7 +187,6 @@
             display: none;
         }
 
-        /* TABLA DE PREVISUALIZACIÓN */
         .tabla-contenedor {
             overflow-x: auto;
             margin-top: 20px;
@@ -137,12 +198,7 @@
             font-size: 13px;
         }
 
-        th, td {
-            padding: 10px;
-            border: 1px solid var(--borde);
-            text-align: left;
-        }
-
+        th, td { padding: 10px; border: 1px solid var(--borde); text-align: left; }
         th { background-color: #F1F5F9; font-weight: bold; }
     </style>
 </head>
@@ -150,86 +206,211 @@
 
     <header>
         <div>
-            <h1 id="nombre-plataforma">AgroAsistencia Pro</h1>
+            <h1>AgroAsistencia Pro</h1>
             <p>Panel de Control y Blindaje Laboral para Contratistas</p>
         </div>
-        <div style="font-size: 14px; color: #10B981; font-weight: bold;">● Modo Administrador Online</div>
+        <div style="font-size: 14px; color: #10B981; font-weight: bold;">● Modo Administrator Online</div>
     </header>
 
     <nav>
-        <button id="btn-mod1" class="activo" onclick="cambiarModulo('modulo-registro')">1. Registro (Carga Masiva)</button>
-        <button id="btn-mod2" onclick="cambiarModulo('modulo-trabajadores')">2. Trabajadores (Gestión y QR)</button>
-        <button id="btn-mod3" onclick="cambiarModulo('modulo-empresa')">3. Empresa</button>
-        <button id="btn-mod4" onclick="cambiarModulo('modulo-reporte')">4. Reporte</button>
+        <button id="btn-mod1" class="activo" onclick="cambiarModulo('modulo-registro')">Registro de Personal</button>
+        <button id="btn-mod2" onclick="cambiarModulo('modulo-trabajadores')">Gestión de Trabajadores y QR</button>
+        <button id="btn-mod3" onclick="cambiarModulo('modulo-empresa')">Ficha Empresa</button>
+        <button id="btn-mod4" onclick="cambiarModulo('modulo-reporte')">Reportes de Asistencia</button>
     </nav>
 
     <div class="container">
         <div id="alerta-sistema" class="alerta"></div>
 
         <div id="modulo-registro" class="modulo activo">
-            <h2>Módulo 1: Registro de Trabajadores</h2>
-            <p style="color: #64748B;">Sube las fichas contractuales completas de tus cuadrillas de forma masiva utilizando nuestra plantilla estándar de Excel.</p>
+            <h2>Ingreso de Trabajadores</h2>
+            <p style="color: #64748B; margin-bottom: 25px;">Agrega nuevos operarios de forma individual utilizando el formulario manual, o masivamente arrastrando una lista en formato Excel.</p>
             
-            <div class="tarjeta">
-                <h3>Paso 1: Descargar Plantilla Oficial</h3>
-                <p>Descarga el archivo base estructurado con las columnas obligatorias requeridas para la validación legal de contratos y asistencia.</p>
-                <button class="btn" onclick="descargarPlantillaExcel()">📥 Descargar Plantilla Excel</button>
-            </div>
-
-            <div class="tarjeta">
-                <h3>Paso 2: Cargar Archivo Rellenado</h3>
-                <p>Arrastra o selecciona el archivo Excel con los datos de los operarios ingresados.</p>
+            <div class="malla-registro">
                 
-                <div class="zona-drop" onclick="document.getElementById('input-excel').click()">
-                    <span style="font-size: 32px;">📊</span>
-                    <p id="texto-drop"><strong>Haz clic aquí o arrastra tu archivo Excel</strong> para cargar la lista</p>
-                    <input type="file" id="input-excel" accept=".xlsx, .xls" style="display: none;" onchange="procesarArchivoExcel(event)">
+                <div class="tarjeta">
+                    <h3>Registro Individual</h3>
+                    <form id="form-trabajador" onsubmit="guardarTrabajadorManual(event)">
+                        <div class="grupo-formulario">
+                            <div class="campo">
+                                <label>RUT TRABAJADOR</label>
+                                <input type="text" id="m-rut" placeholder="12.345.678-9" required>
+                            </div>
+                            <div class="campo">
+                                <label>NOMBRE COMPLETO</label>
+                                <input type="text" id="m-nombre" placeholder="Juan Pérez" required>
+                            </div>
+                        </div>
+
+                        <div class="grupo-formulario">
+                            <div class="campo">
+                                <label>NACIONALIDAD</label>
+                                <select id="m-nacionalidad" onchange="verificarEspeciales()" required>
+                                    <option value="Chileno">Chileno</option>
+                                    <option value="Haitiano">Haitiano</option>
+                                    <option value="Colombiano">Colombiano</option>
+                                    <option value="Argentino">Argentino</option>
+                                    <option value="Venezolano">Venezolano</option>
+                                    <option value="Paraguayo">Paraguayo</option>
+                                    <option value="Peruano">Peruano</option>
+                                    <option value="Boliviano">Boliviano</option>
+                                    <option value="otro">otro</option>
+                                </select>
+                            </div>
+                            <div class="campo">
+                                <label>FECHA NACIMIENTO</label>
+                                <input type="date" id="m-fecha-nac" required>
+                            </div>
+                        </div>
+
+                        <div id="bloque-otra-nacionalidad" class="campo-oculto">
+                            <label style="color: #B45309;">ESPECIFIQUE OTRA NACIONALIDAD</label>
+                            <input type="text" id="m-otra-nacionalidad" placeholder="Ej: Ecuatoriano">
+                        </div>
+
+                        <div class="grupo-formulario">
+                            <div class="campo">
+                                <label>ESTADO CIVIL</label>
+                                <select id="m-estado-civil" required>
+                                    <option value="Soltero(a)">Soltero(a)</option>
+                                    <option value="Casado(a)">Casado(a)</option>
+                                    <option value="Divorciado(a)">Divorciado(a)</option>
+                                    <option value="Viudo(a)">Viudo(a)</option>
+                                </select>
+                            </div>
+                            <div class="campo">
+                                <label>CORREO ELECTRÓNICO</label>
+                                <input type="email" id="m-correo" placeholder="ejemplo@correo.com">
+                            </div>
+                        </div>
+
+                        <div class="grupo-formulario">
+                            <div class="campo campo-completo">
+                                <label>DOMICILIO COMPLETO</label>
+                                <input type="text" id="m-domicilio" placeholder="Calle, Número, Comuna, Ciudad" required>
+                            </div>
+                        </div>
+
+                        <div class="grupo-formulario">
+                            <div class="campo">
+                                <label>AFILIACIÓN AFP</label>
+                                <select id="m-afp" required>
+                                    <option value="Habitat">Habitat</option>
+                                    <option value="Capital">Capital</option>
+                                    <option value="Cuprum">Cuprum</option>
+                                    <option value="Modelo">Modelo</option>
+                                    <option value="PlanVital">PlanVital</option>
+                                    <option value="Provida">Provida</option>
+                                    <option value="Uno">Uno</option>
+                                </select>
+                            </div>
+                            <div class="campo">
+                                <label>SISTEMA SALUD</label>
+                                <select id="m-salud" required>
+                                    <option value="Fonasa">Fonasa</option>
+                                    <option value="Isapre">Isapre</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grupo-formulario">
+                            <div class="campo">
+                                <label>CARGO / FUNCIÓN</label>
+                                <select id="m-cargo" onchange="verificarEspeciales()" required>
+                                    <option value="Cosechero">Cosechero</option>
+                                    <option value="Tractoristas">Tractoristas</option>
+                                    <option value="Obrero agrícola">Obrero agrícola</option>
+                                    <option value="Soldador">Soldador</option>
+                                    <option value="Anotador">Anotador</option>
+                                    <option value="Supervisor">Supervisor</option>
+                                    <option value="Aplicador">Aplicador</option>
+                                    <option value="Ayudante soldador">Ayudante soldador</option>
+                                    <option value="Riego">Riego</option>
+                                    <option value="otro">otro</option>
+                                </select>
+                            </div>
+                            <div class="campo">
+                                <label>FAENA u OBRA</label>
+                                <input type="text" id="m-faena" placeholder="Huerto Principal" required>
+                            </div>
+                        </div>
+
+                        <div id="bloque-otro-cargo" class="campo-oculto">
+                            <label style="color: #B45309;">ESPECIFIQUE OTRO CARGO</label>
+                            <input type="text" id="m-otro-cargo" placeholder="Ej: Mecánico de Maquinaria">
+                        </div>
+
+                        <div class="grupo-formulario">
+                            <div class="campo">
+                                <label>FECHA INICIO CONTRATO</label>
+                                <input type="date" id="m-fecha-inicio" required>
+                            </div>
+                            <div class="campo">
+                                <label>VIGENCIA</label>
+                                <select id="m-vigencia" required>
+                                    <option value="Obra o Faena">Obra o Faena</option>
+                                    <option value="Plazo Fijo">Plazo Fijo</option>
+                                    <option value="Indefinido">Indefinido</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grupo-formulario">
+                            <div class="campo campo-completo">
+                                <label>SUELDO BASE ($)</label>
+                                <input type="number" id="m-sueldo" placeholder="500000" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-verde" style="width: 100%; margin-top: 10px;">💾 Registrar e Incorporar</button>
+                    </form>
                 </div>
 
-                <div id="seccion-previsualizacion" style="display: none;">
-                    <h4 style="margin-bottom: 5px;">Previsualización de Datos Detectados:</h4>
-                    <p style="font-size: 12px; color: #64748B; margin-top: 0;">Revisa que la información sea correcta antes de guardarla definitivamente en el servidor.</p>
-                    <div class="tabla-contenedor">
-                        <table id="tabla-excel">
-                            <thead></thead>
-                            <tbody></tbody>
-                        </table>
+                <div class="tarjeta" style="height: 100%;">
+                    <h3>Carga Masiva por Excel</h3>
+                    <p style="color: #64748B; font-size: 13px; margin-bottom: 20px;">Ideal para subir nóminas completas de cuadrillas en segundos.</p>
+                    
+                    <button class="btn" type="button" onclick="descargarPlantillaExcel()">📥 Descargar Plantilla Oficial</button>
+                    
+                    <div class="zona-drop" onclick="document.getElementById('input-excel').click()">
+                        <span style="font-size: 36px;">📊</span>
+                        <p id="texto-drop"><strong>Arrastra tu archivo Excel aquí</strong><br><span style="font-size:12px; color:#94A3B8;">o haz clic para explorar tus carpetas</span></p>
+                        <input type="file" id="input-excel" accept=".xlsx, .xls" style="display: none;" onchange="procesarArchivoExcel(event)">
                     </div>
-                    <button class="btn btn-verde" style="margin-top: 20px; width: 100%; justify-content: center;" onclick="subirDatosASupabase()">🚀 Confirmar y Guardar Lista en la Nube</button>
                 </div>
+
+            </div>
+
+            <div id="seccion-previsualizacion" class="tarjeta" style="display: none; margin-top: 25px;">
+                <h3>Lista Detectada desde Excel</h3>
+                <p style="font-size: 13px; color: #64748B; margin-top: 0;">Verifica las filas cargadas antes de subirlas permanentemente a la nube.</p>
+                <div class="tabla-contenedor">
+                    <table id="tabla-excel">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button class="btn btn-verde" style="margin-top: 20px; width: 100%;" onclick="subirDatosASupabase()">🚀 Confirmar y Subir Toda la Lista en Bloque</button>
             </div>
         </div>
 
-        <div id="modulo-trabajadores" class="modulo">
-            <h2>Módulo 2: Trabajadores (Gestión y Códigos QR)</h2>
-            <p style="color: #64748B;">Módulo en desarrollo. Aquí se listarán los trabajadores ingresados, se seleccionarán en masa e imprimirán 12 códigos QR por hoja.</p>
-        </div>
-
-        <div id="modulo-empresa" class="modulo">
-            <h2>Módulo 3: Configuración de Empresa</h2>
-            <p style="color: #64748B;">Módulo en desarrollo. Aquí se configurarán los datos del contratista, representante legal y correos corporativos.</p>
-        </div>
-
-        <div id="modulo-reporte" class="modulo">
-            <h2>Módulo 4: Reportes de Asistencia</h2>
-            <p style="color: #64748B;">Módulo en desarrollo. Vista de control horaria, cálculo de jornadas y cierres masivos automáticos.</p>
-        </div>
+        <div id="modulo-trabajadores" class="modulo"><h2>Gestión de Trabajadores y QR</h2><p>Módulo en desarrollo.</p></div>
+        <div id="modulo-empresa" class="modulo"><h2>Ficha Empresa</h2><p>Módulo en desarrollo.</p></div>
+        <div id="modulo-reporte" class="modulo"><h2>Reportes de Asistencia</h2><p>Módulo en desarrollo.</p></div>
     </div>
 
     <script>
-        // CONEXIÓN DIRECTA CON TU SUPABASE
         const SUPABASE_URL = "https://zwkcjeprpcmoXvfagcjy.supabase.co";
         const SUPABASE_KEY = "sb_publishable_vcy6lCwegkMqEakLaNGWaQ_I8Nqv1F6";
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let datosExcelProcesados = [];
+        const rutEmpresaTemporal = "77777777-7"; 
 
-        // Cambiar entre las pestañas del menú superior
         function cambiarModulo(idModulo) {
-            document.querySelectorAll('.modulo').forEach(m => m.classList.remove('activa'));
+            document.querySelectorAll('.modulo').forEach(m => m.classList.remove('activo'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('activo'));
-            
-            document.getElementById(idModulo).classList.add('activa');
+            document.getElementById(idModulo).classList.add('activo');
             event.currentTarget.classList.add('activo');
         }
 
@@ -242,23 +423,120 @@
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        // ACCIÓN: Descarga de la plantilla estructurada de forma automática
-        function descargarPlantillaExcel() {
-            const columnas = [
-                ["RUT", "Nombre Completo", "Nacionalidad", "Fecha Nacimiento", "Estado Civil", "Domicilio", "Correo", "AFP", "Salud", "Cargo", "Faena", "Fecha Inicio", "Vigencia", "Sueldo Base"]
-            ];
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(columnas);
-            XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Trabajadores");
-            XLSX.writeFile(wb, "Plantilla_AgroAsistencia_Pro.xlsx");
+        // CONTROL DE CUADROS OCULTOS PARA "OTRO"
+        function verificarEspeciales() {
+            const nacionalidadSelect = document.getElementById('m-nacionalidad').value;
+            const bloqueNac = document.getElementById('bloque-otra-nacionalidad');
+            const inputNac = document.getElementById('m-otra-nacionalidad');
+            
+            if (nacionalidadSelect === 'otro') {
+                bloqueNac.style.display = 'block';
+                inputNac.setAttribute('required', 'true');
+            } else {
+                bloqueNac.style.display = 'none';
+                inputNac.removeAttribute('required');
+            }
+
+            const cargoSelect = document.getElementById('m-cargo').value;
+            const bloqueCargo = document.getElementById('bloque-outro-cargo');
+            const inputCargo = document.getElementById('m-outro-cargo');
+
+            if (cargoSelect === 'otro') {
+                bloqueCargo.style.display = 'block';
+                inputCargo.setAttribute('required', 'true');
+            } else {
+                bloqueCargo.style.display = 'none';
+                inputCargo.removeAttribute('required');
+            }
         }
 
-        // ACCIÓN: Leer el archivo Excel cargado por el contratista
+        // DESCARGA ULTRA-COMPATIBLE DESDE EL NAVEGADOR
+        function descargarPlantillaExcel() {
+            try {
+                const columnas = [
+                    ["RUT", "Nombre Completo", "Nacionalidad", "Fecha Nacimiento", "Estado Civil", "Domicilio", "Correo", "AFP", "Salud", "Cargo", "Faena", "Fecha Inicio", "Vigencia", "Sueldo Base"]
+                ];
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(columnas);
+                XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
+                
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+                
+                function s2ab(s) {
+                    const buf = new ArrayBuffer(s.length);
+                    const view = new Uint8Array(buf);
+                    for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+                    return buf;
+                }
+
+                const blob = new Blob([s2ab(wbout)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+                
+                // Forzar descarga directa usando API moderna de enlaces
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = "Plantilla_AgroAsistencia_Pro.xlsx";
+                a.style.display = "none";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (err) {
+                alert("Error crítico de descarga: " + err.message);
+            }
+        }
+
+        // GUARDADO MANUAL INDIVIDUAL
+        async function guardarTrabajadorManual(e) {
+            e.preventDefault();
+            try {
+                // Si eligió 'otro', tomamos el valor digitado en el cuadro dinámico
+                let nacionalidadFinal = document.getElementById('m-nacionalidad').value;
+                if (nacionalidadFinal === 'otro') {
+                    nacionalidadFinal = document.getElementById('m-otra-nacionalidad').value.trim();
+                }
+
+                let cargoFinal = document.getElementById('m-cargo').value;
+                if (cargoFinal === 'otro') {
+                    cargoFinal = document.getElementById('m-outro-cargo').value.trim();
+                }
+
+                const nuevoTrabajador = {
+                    empresa_rut: rutEmpresaTemporal,
+                    rut: document.getElementById('m-rut').value.trim(),
+                    nombre: document.getElementById('m-nombre').value.trim(),
+                    nacionalidad: nacionalidadFinal,
+                    fecha_nacimiento: document.getElementById('m-fecha-nac').value,
+                    estado_civil: document.getElementById('m-estado-civil').value,
+                    domicilio: document.getElementById('m-domicilio').value.trim(),
+                    correo_electronico: document.getElementById('m-correo').value.trim() || null,
+                    afiliacion_afp: document.getElementById('m-afp').value,
+                    sistema_salud: document.getElementById('m-salud').value,
+                    funcion_cargo: cargoFinal,
+                    faena_obra: document.getElementById('m-faena').value.trim(),
+                    fecha_inicio: document.getElementById('m-fecha-inicio').value,
+                    vigencia_contrato: document.getElementById('m-vigencia').value,
+                    sueldo_base: parseFloat(document.getElementById('m-sueldo').value) || 0
+                };
+
+                const { error } = await supabase.from('trabajadores').insert([nuevoTrabajador]);
+
+                if (error) {
+                    mostrarAlerta(`⚠️ Error al registrar operario: ${error.message}`, false);
+                } else {
+                    mostrarAlerta(`✅ Trabajador ${nuevoTrabajador.nombre} ingresado con éxito en la nube.`, true);
+                    document.getElementById('form-trabajador').reset();
+                    verificarEspeciales(); // Ocultar bloques dinámicos tras limpiar
+                }
+            } catch (err) {
+                mostrarAlerta("❌ Ocurrió un error inesperado al procesar el envío.", false);
+            }
+        }
+
+        // LEER EXCEL
         function procesarArchivoExcel(e) {
             const file = e.target.files[0];
             if (!file) return;
 
-            document.getElementById('texto-drop').innerText = `Archivo cargado: ${file.name}`;
+            document.getElementById('texto-drop').innerHTML = `<strong>Archivo seleccionado:</strong><br>${file.name}`;
             const reader = new FileReader();
             
             reader.onload = function(e) {
@@ -266,45 +544,38 @@
                 const workbook = XLSX.read(data, { type: 'array' });
                 const primeraHoja = workbook.SheetNames[0];
                 const hoja = workbook.Sheets[primeraHoja];
-                
-                // Convertir la hoja de Excel a un formato JSON fácil de usar
                 const filas = XLSX.utils.sheet_to_json(hoja, { header: 1 });
                 
                 if(filas.length <= 1) {
-                    mostrarAlerta("❌ El archivo Excel parece estar vacío o le faltan filas de datos.", false);
+                    mostrarAlerta("❌ El archivo Excel está vacío o no tiene el formato correcto.", false);
                     return;
                 }
-
                 renderizarPrevisualizacion(filas);
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // Mostrar los datos en la tabla de la página antes de guardar
         function renderizarPrevisualizacion(filas) {
             const encabezados = filas[0];
             const cuerpoDatos = filas.slice(1);
             
-            datosExcelProcesados = cuerpoDatos.map(fila => {
-                return {
-                    rut: fila[0]?.toString().trim(),
-                    nombre: fila[1]?.toString().trim(),
-                    nacionalidad: fila[2]?.toString().trim() || 'Chilena',
-                    fecha_nacimiento: fila[3]?.toString().trim(),
-                    estado_civil: fila[4]?.toString().trim(),
-                    domicilio: fila[5]?.toString().trim(),
-                    correo_electronico: fila[6]?.toString().trim(),
-                    afiliacion_afp: fila[7]?.toString().trim(),
-                    sistema_salud: fila[8]?.toString().trim(),
-                    funcion_cargo: fila[9]?.toString().trim(),
-                    faena_obra: fila[10]?.toString().trim(),
-                    fecha_inicio: fila[11]?.toString().trim(),
-                    vigencia_contrato: fila[12]?.toString().trim(),
-                    sueldo_base: parseFloat(fila[13]) || 0
-                };
-            });
+            datosExcelProcesados = cuerpoDatos.map(fila => ({
+                rut: fila[0]?.toString().trim(),
+                nombre: fila[1]?.toString().trim(),
+                nacionalidad: fila[2]?.toString().trim() || 'Chileno',
+                fecha_nacimiento: fila[3]?.toString().trim(),
+                estado_civil: fila[4]?.toString().trim(),
+                domicilio: fila[5]?.toString().trim(),
+                correo_electronico: fila[6]?.toString().trim(),
+                afiliacion_afp: fila[7]?.toString().trim(),
+                sistema_salud: fila[8]?.toString().trim(),
+                funcion_cargo: fila[9]?.toString().trim(),
+                faena_obra: fila[10]?.toString().trim(),
+                fecha_inicio: fila[11]?.toString().trim(),
+                vigencia_contrato: fila[12]?.toString().trim(),
+                sueldo_base: parseFloat(fila[13]) || 0
+            }));
 
-            // Generar los elementos en la tabla HTML
             const thead = document.querySelector('#tabla-excel thead');
             const tbody = document.querySelector('#tabla-excel tbody');
             
@@ -314,14 +585,9 @@
             document.getElementById('seccion-previsualizacion').style.display = 'block';
         }
 
-        // ACCIÓN DEFINITIVA: Empujar los datos del Excel directo a las tablas de Supabase
         async function subirDatosASupabase() {
             try {
                 if (datosExcelProcesados.length === 0) return;
-
-                // NOTA: Como estamos en desarrollo sin sesión de contratista fija, 
-                // asumiremos temporalmente un RUT de empresa genérico para amarrar los registros.
-                const rutEmpresaTemporal = "77777777-7"; 
 
                 const filasParaSubir = datosExcelProcesados.map(d => ({
                     empresa_rut: rutEmpresaTemporal,
@@ -341,21 +607,18 @@
                     sueldo_base: d.sueldo_base
                 }));
 
-                const { error } = await supabase
-                    .from('trabajadores')
-                    .insert(filasParaSubir);
+                const { error } = await supabase.from('trabajadores').insert(filasParaSubir);
 
                 if (error) {
-                    console.error(error);
-                    mostrarAlerta(`⚠️ Error al guardar en la base de datos: ${error.message}`, false);
+                    mostrarAlerta(`⚠️ Error en la subida masiva: ${error.message}`, false);
                 } else {
-                    mostrarAlerta(`🚀 ¡Éxito! Se han registrado ${filasParaSubir.length} trabajadores de forma masiva en la nube.`, true);
+                    mostrarAlerta(`🚀 ¡Lista registrada! Se incorporaron ${filasParaSubir.length} trabajadores en bloque.`, true);
                     document.getElementById('seccion-previsualizacion').style.display = 'none';
-                    document.getElementById('texto-drop').innerHTML = "<strong>Haz clic aquí o arrastra tu archivo Excel</strong> para cargar la lista";
+                    document.getElementById('texto-drop').innerHTML = "<strong>Arrastra tu archivo Excel aquí</strong><br><span style='font-size:12px; color:#94A3B8;'>o haz clic para explorar tus carpetas</span>";
                     datosExcelProcesados = [];
                 }
             } catch (err) {
-                mostrarAlerta("❌ Ocurrió un error inesperado en la conexión.", false);
+                mostrarAlerta("❌ Error general en la red.", false);
             }
         }
     </script>
