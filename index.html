@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgroAsistencia Pro - Control de Acceso</title>
+    <title>AgroAsistencia Pro - Panel de Gestión</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        /* CONFIGURACIÓN DE COLORES CORPORATIVOS AGRO */
         :root {
             --azul-oscuro: #1E293B;
             --verde-agro: #10B981;
             --gris-fondo: #F8FAFC;
             --blanco: #FFFFFF;
+            --borde: #E2E8F0;
         }
 
         body {
@@ -23,378 +23,339 @@
             color: var(--azul-oscuro);
         }
 
+        /* CABECERA CORPORATIVA */
         header {
             background-color: var(--azul-oscuro);
             color: var(--blanco);
-            text-align: center;
             padding: 20px;
             border-bottom: 5px solid var(--verde-agro);
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 24px;
-        }
-
-        header p {
-            margin: 5px 0 0 0;
-            font-size: 14px;
-            color: #94A3B8;
-        }
-
-        .container {
-            max-width: 500px;
-            margin: 20px auto;
-            padding: 15px;
-        }
-
-        /* DISEÑO DE PANTALLAS */
-        .pantalla {
-            display: none;
-        }
-
-        .pantalla.activa {
-            display: block;
-        }
-
-        /* PANTALLA PRINCIPAL: LECTOR QR */
-        #reader {
-            width: 100%;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 2px solid #E2E8F0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        /* PANTALLA SECUNDARIA: RESUMEN Y GESTIÓN */
-        .tarjeta-resumen {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-
-        .malla-contadores {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .contador {
-            background: #F1F5F9;
-            padding: 10px;
-            border-radius: 8px;
-            border-top: 4px solid var(--verde-agro);
-        }
-
-        .contador num {
-            display: block;
-            font-size: 22px;
-            font-weight: bold;
-        }
-
-        .contador label {
-            font-size: 11px;
-            color: #64748B;
-        }
-
-        /* BOTONES */
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background-color: var(--azul-oscuro);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-        }
-
-        .btn-verde {
-            background-color: var(--verde-agro);
-        }
-
-        .btn-rojo {
-            background-color: #EF4444;
-        }
-
-        .btn-naranja {
-            background-color: #F59E0B;
-        }
-
-        /* LISTA DE TRABAJADORES */
-        .lista-trabajadores {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .lista-trabajadores li {
-            background: white;
-            padding: 12px;
-            margin-bottom: 8px;
-            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-left: 4px solid #CBD5E1;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
-        .lista-trabajadores li.completado {
-            border-left-color: var(--verde-agro);
+        header h1 { margin: 0; font-size: 22px; }
+        header p { margin: 5px 0 0 0; font-size: 13px; color: #94A3B8; }
+
+        /* MENÚ DE NAVEGACIÓN MODULAR */
+        nav {
+            background-color: #0F172A;
+            display: flex;
+            padding: 0 10px;
         }
 
-        .lista-trabajadores li.media-jornada {
-            border-left-color: #F59E0B;
-        }
-
-        .alerta {
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-            margin-bottom: 15px;
+        nav button {
+            background: none;
+            border: none;
+            color: #94A3B8;
+            padding: 15px 20px;
+            font-size: 14px;
             font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        nav button:hover, nav button.activo {
+            color: var(--blanco);
+            background-color: var(--azul-oscuro);
+            border-bottom: 3px solid var(--verde-agro);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        /* CONTENEDORES DE MÓDULOS */
+        .modulo { display: none; }
+        .modulo.activo { display: block; }
+
+        /* DISEÑO MÓDULO 1: REGISTRO / CARGA MASIVA */
+        .tarjeta {
+            background: var(--blanco);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            border: 1px solid var(--borde);
+            margin-bottom: 25px;
+        }
+
+        .btn {
+            background-color: var(--azul-oscuro);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover { background-color: #334155; }
+        .btn-verde { background-color: var(--verde-agro); }
+        .btn-verde:hover { background-color: #059669; }
+
+        .zona-drop {
+            border: 2px dashed #CBD5E1;
+            padding: 40px 20px;
+            border-radius: 8px;
+            text-align: center;
+            background: #F8FAFC;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: 0.2s;
+        }
+
+        .zona-drop:hover {
+            background: #F1F5F9;
+            border-color: var(--verde-agro);
+        }
+
+        /* ALERTAS DE SISTEMA */
+        .alerta {
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            margin-bottom: 20px;
             display: none;
         }
+
+        /* TABLA DE PREVISUALIZACIÓN */
+        .tabla-contenedor {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid var(--borde);
+            text-align: left;
+        }
+
+        th { background-color: #F1F5F9; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1 id="titulo-empresa">AgroAsistencia Pro</h1>
-        <p>Registro de Asistencia Digital</p>
+        <div>
+            <h1 id="nombre-plataforma">AgroAsistencia Pro</h1>
+            <p>Panel de Control y Blindaje Laboral para Contratistas</p>
+        </div>
+        <div style="font-size: 14px; color: #10B981; font-weight: bold;">● Modo Administrador Online</div>
     </header>
 
+    <nav>
+        <button id="btn-mod1" class="activo" onclick="cambiarModulo('modulo-registro')">1. Registro (Carga Masiva)</button>
+        <button id="btn-mod2" onclick="cambiarModulo('modulo-trabajadores')">2. Trabajadores (Gestión y QR)</button>
+        <button id="btn-mod3" onclick="cambiarModulo('modulo-empresa')">3. Empresa</button>
+        <button id="btn-mod4" onclick="cambiarModulo('modulo-reporte')">4. Reporte</button>
+    </nav>
+
     <div class="container">
-        <div id="alerta-app" class="alerta"></div>
+        <div id="alerta-sistema" class="alerta"></div>
 
-        <div id="pantalla-lector" class="pantalla activa">
-            <div id="reader" style="margin-bottom: 20px;"></div>
-            <button class="btn btn-verde" onclick="irAPantalla('pantalla-gestion')">📊 Ver Resumen y Acciones</button>
-        </div>
-
-        <div id="pantalla-gestion" class="pantalla">
-            <div class="tarjeta-resumen">
-                <h3 style="margin-top:0;">Control del Turno Diario</h3>
-                
-                <div class="malla-contadores">
-                    <div class="contador">
-                        <num id="cont-ingresos">0</num>
-                        <label>Total Ingresos</label>
-                    </div>
-                    <div class="contador">
-                        <num id="cont-completa">0</num>
-                        <label>Jornada Completa</label>
-                    </div>
-                    <div class="contador">
-                        <num id="cont-media">0</num>
-                        <label>Media Jornada</label>
-                    </div>
-                </div>
-
-                <button class="btn btn-naranja" onclick="cierreMasivoMediaJornada()">⏱️ Cierre Media Jornada</button>
-                <button class="btn btn-rojo" onclick="cierreMasivoTotal()">🚫 Acción Cierre Masivo General</button>
+        <div id="modulo-registro" class="modulo activo">
+            <h2>Módulo 1: Registro de Trabajadores</h2>
+            <p style="color: #64748B;">Sube las fichas contractuales completas de tus cuadrillas de forma masiva utilizando nuestra plantilla estándar de Excel.</p>
+            
+            <div class="tarjeta">
+                <h3>Paso 1: Descargar Plantilla Oficial</h3>
+                <p>Descarga el archivo base estructurado con las columnas obligatorias requeridas para la validación legal de contratos y asistencia.</p>
+                <button class="btn" onclick="descargarPlantillaExcel()">📥 Descargar Plantilla Excel</button>
             </div>
 
-            <h3>Trabajadores Registrados Hoy</h3>
-            <ul id="lista-operarios" class="lista-trabajadores">
-                </ul>
+            <div class="tarjeta">
+                <h3>Paso 2: Cargar Archivo Rellenado</h3>
+                <p>Arrastra o selecciona el archivo Excel con los datos de los operarios ingresados.</p>
+                
+                <div class="zona-drop" onclick="document.getElementById('input-excel').click()">
+                    <span style="font-size: 32px;">📊</span>
+                    <p id="texto-drop"><strong>Haz clic aquí o arrastra tu archivo Excel</strong> para cargar la lista</p>
+                    <input type="file" id="input-excel" accept=".xlsx, .xls" style="display: none;" onchange="procesarArchivoExcel(event)">
+                </div>
 
-            <button class="btn" style="margin-top: 20px;" onclick="irAPantalla('pantalla-lector')">⬅️ Volver al Escáner</button>
+                <div id="seccion-previsualizacion" style="display: none;">
+                    <h4 style="margin-bottom: 5px;">Previsualización de Datos Detectados:</h4>
+                    <p style="font-size: 12px; color: #64748B; margin-top: 0;">Revisa que la información sea correcta antes de guardarla definitivamente en el servidor.</p>
+                    <div class="tabla-contenedor">
+                        <table id="tabla-excel">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-verde" style="margin-top: 20px; width: 100%; justify-content: center;" onclick="subirDatosASupabase()">🚀 Confirmar y Guardar Lista en la Nube</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="modulo-trabajadores" class="modulo">
+            <h2>Módulo 2: Trabajadores (Gestión y Códigos QR)</h2>
+            <p style="color: #64748B;">Módulo en desarrollo. Aquí se listarán los trabajadores ingresados, se seleccionarán en masa e imprimirán 12 códigos QR por hoja.</p>
+        </div>
+
+        <div id="modulo-empresa" class="modulo">
+            <h2>Módulo 3: Configuración de Empresa</h2>
+            <p style="color: #64748B;">Módulo en desarrollo. Aquí se configurarán los datos del contratista, representante legal y correos corporativos.</p>
+        </div>
+
+        <div id="modulo-reporte" class="modulo">
+            <h2>Módulo 4: Reportes de Asistencia</h2>
+            <p style="color: #64748B;">Módulo en desarrollo. Vista de control horaria, cálculo de jornadas y cierres masivos automáticos.</p>
         </div>
     </div>
 
     <script>
-        // CONEXIÓN DIRECTA CON TU SUPABASE (YA INTEGRADO)
+        // CONEXIÓN DIRECTA CON TU SUPABASE
         const SUPABASE_URL = "https://zwkcjeprpcmoXvfagcjy.supabase.co";
         const SUPABASE_KEY = "sb_publishable_vcy6lCwegkMqEakLaNGWaQ_I8Nqv1F6";
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let html5QrcodeScanner;
-        let listaAsistenciaHoy = [];
+        let datosExcelProcesados = [];
 
-        // Inicializar la aplicación al cargar
-        window.onload = function() {
-            inicializarEscaner();
-            cargarAsistenciaHoy();
+        // Cambiar entre las pestañas del menú superior
+        function cambiarModulo(idModulo) {
+            document.querySelectorAll('.modulo').forEach(m => m.classList.remove('activa'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('activo'));
             
-            // Escuchar cambios en vivo desde Supabase
-            supabase.channel('cambios-asistencia')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'asistencia' }, cargarAsistenciaHoy)
-                .subscribe();
-        };
-
-        function irAPantalla(idPantalla) {
-            document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
-            document.getElementById(idPantalla).classList.add('activa');
+            document.getElementById(idModulo).classList.add('activa');
+            event.currentTarget.classList.add('activo');
         }
 
         function mostrarAlerta(mensaje, esExito) {
-            const alerta = document.getElementById('alerta-app');
+            const alerta = document.getElementById('alerta-sistema');
             alerta.innerText = mensaje;
             alerta.style.display = 'block';
             alerta.style.backgroundColor = esExito ? '#D1FAE5' : '#FEE2E2';
             alerta.style.color = esExito ? '#065F46' : '#991B1B';
-            setTimeout(() => { alerta.style.display = 'none'; }, 4000);
+            window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        // Configuración del Lector QR de Campo
-        function inicializarEscaner() {
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-                fps: 10, 
-                qrbox: {width: 250, height: 250},
-                rememberLastUsedCamera: true
-            });
-            html5QrcodeScanner.render(onScanSuccess);
+        // ACCIÓN: Descarga de la plantilla estructurada de forma automática
+        function descargarPlantillaExcel() {
+            const columnas = [
+                ["RUT", "Nombre Completo", "Nacionalidad", "Fecha Nacimiento", "Estado Civil", "Domicilio", "Correo", "AFP", "Salud", "Cargo", "Faena", "Fecha Inicio", "Vigencia", "Sueldo Base"]
+            ];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(columnas);
+            XLSX.utils.book_append_sheet(wb, ws, "Plantilla_Trabajadores");
+            XLSX.writeFile(wb, "Plantilla_AgroAsistencia_Pro.xlsx");
         }
 
-        // Acción al detectar un código QR exitosamente
-        async function onScanSuccess(decodedText) {
-            try {
-                const rutEscaneado = decodedText.trim();
+        // ACCIÓN: Leer el archivo Excel cargado por el contratista
+        function procesarArchivoExcel(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('texto-drop').innerText = `Archivo cargado: ${file.name}`;
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const primeraHoja = workbook.SheetNames[0];
+                const hoja = workbook.Sheets[primeraHoja];
                 
-                // 1. Buscar si el trabajador existe en la base de datos
-                const { data: trabajador, error: errorTrab } = await supabase
-                    .from('trabajadores')
-                    .select('nombre, cargo, empresa_rut')
-                    .eq('rut', rutEscaneado)
-                    .single();
-
-                if (errorTrab || !trabajador) {
-                    mostrarAlerta("❌ Código QR no registrado o inválido", false);
+                // Convertir la hoja de Excel a un formato JSON fácil de usar
+                const filas = XLSX.utils.sheet_to_json(hoja, { header: 1 });
+                
+                if(filas.length <= 1) {
+                    mostrarAlerta("❌ El archivo Excel parece estar vacío o le faltan filas de datos.", false);
                     return;
                 }
 
-                // 2. Revisar si ya ingresó hoy
-                const fechaHoy = new Date().toISOString().split('T')[0];
-                const { data: registroExistente } = await supabase
-                    .from('asistencia')
-                    .select('*')
-                    .eq('trabajador_rut', rutEscaneado)
-                    .eq('fecha', fechaHoy)
-                    .single();
+                renderizarPrevisualizacion(filas);
+            };
+            reader.readAsArrayBuffer(file);
+        }
 
-                const ahora = new Date().toLocaleTimeString('es-CL', { hour12: false });
+        // Mostrar los datos en la tabla de la página antes de guardar
+        function renderizarPrevisualizacion(filas) {
+            const encabezados = filas[0];
+            const cuerpoDatos = filas.slice(1);
+            
+            datosExcelProcesados = cuerpoDatos.map(fila => {
+                return {
+                    rut: fila[0]?.toString().trim(),
+                    nombre: fila[1]?.toString().trim(),
+                    nacionalidad: fila[2]?.toString().trim() || 'Chilena',
+                    fecha_nacimiento: fila[3]?.toString().trim(),
+                    estado_civil: fila[4]?.toString().trim(),
+                    domicilio: fila[5]?.toString().trim(),
+                    correo_electronico: fila[6]?.toString().trim(),
+                    afiliacion_afp: fila[7]?.toString().trim(),
+                    sistema_salud: fila[8]?.toString().trim(),
+                    funcion_cargo: fila[9]?.toString().trim(),
+                    faena_obra: fila[10]?.toString().trim(),
+                    fecha_inicio: fila[11]?.toString().trim(),
+                    vigencia_contrato: fila[12]?.toString().trim(),
+                    sueldo_base: parseFloat(fila[13]) || 0
+                };
+            });
 
-                if (!registroExistente) {
-                    // Es una Entrada (Ingreso)
-                    await supabase.from('asistencia').insert([{
-                        trabajador_rut: rutEscaneado,
-                        nombre_trabajador: trabajador.nombre,
-                        empresa_nombre: "Contratista",
-                        hora_ingreso: ahora,
-                        estado_asistencia: 'Activo'
-                    }]);
-                    mostrarAlerta(`✅ INGRESO: ${trabajador.nombre} registrado`, true);
-                } else if (registroExistente.estado_asistencia === 'Activo') {
-                    // Es una Salida estándar
-                    await supabase.from('asistencia')
-                        .update({ hora_salida: ahora, estado_asistencia: 'Cerrado' })
-                        .eq('id', registroExistente.id);
-                    mostrarAlerta(`👋 SALIDA: ${trabajador.nombre} finalizó jornada`, true);
+            // Generar los elementos en la tabla HTML
+            const thead = document.querySelector('#tabla-excel thead');
+            const tbody = document.querySelector('#tabla-excel tbody');
+            
+            thead.innerHTML = `<tr>${encabezados.map(h => `<th>${h}</th>`).join('')}</tr>`;
+            tbody.innerHTML = cuerpoDatos.map(fila => `<tr>${fila.map(celda => `<td>${celda || ''}</td>`).join('')}</tr>`).join('');
+            
+            document.getElementById('seccion-previsualizacion').style.display = 'block';
+        }
+
+        // ACCIÓN DEFINITIVA: Empujar los datos del Excel directo a las tablas de Supabase
+        async function subirDatosASupabase() {
+            try {
+                if (datosExcelProcesados.length === 0) return;
+
+                // NOTA: Como estamos en desarrollo sin sesión de contratista fija, 
+                // asumiremos temporalmente un RUT de empresa genérico para amarrar los registros.
+                const rutEmpresaTemporal = "77777777-7"; 
+
+                const filasParaSubir = datosExcelProcesados.map(d => ({
+                    empresa_rut: rutEmpresaTemporal,
+                    rut: d.rut,
+                    nombre: d.nombre,
+                    nacionalidad: d.nacionalidad,
+                    fecha_nacimiento: d.fecha_nacimiento,
+                    estado_civil: d.estado_civil,
+                    domicilio: d.domicilio,
+                    correo_electronico: d.correo_electronico,
+                    afiliacion_afp: d.afiliacion_afp,
+                    sistema_salud: d.sistema_salud,
+                    funcion_cargo: d.funcion_cargo,
+                    faena_obra: d.faena_obra,
+                    fecha_inicio: d.fecha_inicio,
+                    vigencia_contrato: d.vigencia_contrato,
+                    sueldo_base: d.sueldo_base
+                }));
+
+                const { error } = await supabase
+                    .from('trabajadores')
+                    .insert(filasParaSubir);
+
+                if (error) {
+                    console.error(error);
+                    mostrarAlerta(`⚠️ Error al guardar en la base de datos: ${error.message}`, false);
                 } else {
-                    mostrarAlerta(`ℹ️ ${trabajador.nombre} ya tiene su jornada cerrada hoy.`, false);
+                    mostrarAlerta(`🚀 ¡Éxito! Se han registrado ${filasParaSubir.length} trabajadores de forma masiva en la nube.`, true);
+                    document.getElementById('seccion-previsualizacion').style.display = 'none';
+                    document.getElementById('texto-drop').innerHTML = "<strong>Haz clic aquí o arrastra tu archivo Excel</strong> para cargar la lista";
+                    datosExcelProcesados = [];
                 }
             } catch (err) {
-                console.error(err);
-                mostrarAlerta("⚠️ Error de conexión.", false);
-            }
-        }
-
-        // Consultar los datos de Supabase para rellenar los contadores y la lista
-        async function cargarAsistenciaHoy() {
-            const fechaHoy = new Date().toISOString().split('T')[0];
-            const { data, error } = await supabase
-                .from('asistencia')
-                .select('*')
-                .eq('fecha', fechaHoy);
-
-            if (error) return;
-
-            listaAsistenciaHoy = data || [];
-            
-            // Calcular métricas
-            let totalIngresos = listaAsistenciaHoy.length;
-            let jornadaCompleta = listaAsistenciaHoy.filter(a => a.tipo_jornada_real === 'Completa').length;
-            let mediaJornada = listaAsistenciaHoy.filter(a => a.tipo_jornada_real === 'Media').length;
-
-            document.getElementById('cont-ingresos').innerText = totalIngresos;
-            document.getElementById('cont-completa').innerText = jornadaCompleta;
-            document.getElementById('cont-media').innerText = mediaJornada;
-
-            // Renderizar la lista
-            const listaUI = document.getElementById('lista-operarios');
-            listaUI.innerHTML = "";
-
-            listaAsistenciaHoy.forEach(t => {
-                const li = document.createElement('li');
-                
-                let claseJornada = 'completado';
-                if(t.tipo_jornada_real === 'Media') claseJornada = 'media-jornada';
-                li.classList.add(claseJornada);
-
-                li.innerHTML = `
-                    <div>
-                        <strong>${t.nombre_trabajador}</strong><br>
-                        <span style="font-size:12px; color:#64748B;">📥 ${t.hora_ingreso} | 📤 ${t.hora_salida || '--:--'}</span>
-                    </div>
-                    <span style="font-size:12px; font-weight:bold; color:${t.tipo_jornada_real === 'Media' ? '#F59E0B' : '#10B981'}">
-                        ${t.tipo_jornada_real} (${t.estado_asistencia})
-                    </span>
-                `;
-                listaUI.appendChild(li);
-            });
-        }
-
-        // ACCIÓN: Cierre Masivo General
-        async function cierreMasivoTotal() {
-            if(!confirm("¿Seguro que deseas cerrar la salida de todos los trabajadores activos en este momento?")) return;
-            
-            const fechaHoy = new Date().toISOString().split('T')[0];
-            const ahora = new Date().toLocaleTimeString('es-CL', { hour12: false });
-
-            const { error } = await supabase
-                .from('asistencia')
-                .update({ hora_salida: ahora, estado_asistencia: 'Cerrado' })
-                .eq('fecha', fechaHoy)
-                .eq('estado_asistencia', 'Activo');
-
-            if (!error) {
-                mostrarAlerta("🚫 Cierre masivo ejecutado con éxito", true);
-                cargarAsistenciaHoy();
-            }
-        }
-
-        // ACCIÓN: Cierre Media Jornada
-        async function cierreMasivoMediaJornada() {
-            if(!confirm("¿Deseas aplicar cierre de Media Jornada a los trabajadores seleccionables que se retiran anticipados?")) return;
-            
-            const fechaHoy = new Date().toISOString().split('T')[0];
-            const ahora = new Date().toLocaleTimeString('es-CL', { hour12: false });
-
-            const { error } = await supabase
-                .from('asistencia')
-                .update({ 
-                    hora_salida: ahora, 
-                    tipo_jornada_real: 'Media', 
-                    estado_asistencia: 'Media Cerrada' 
-                })
-                .eq('fecha', fechaHoy)
-                .eq('estado_asistencia', 'Activo');
-
-            if (!error) {
-                mostrarAlerta("⏱️ Cierre de media jornada aplicado", true);
-                cargarAsistenciaHoy();
+                mostrarAlerta("❌ Ocurrió un error inesperado en la conexión.", false);
             }
         }
     </script>
