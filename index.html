@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgroAsistencia Pro - Panel de Gestión</title>
+    <!-- Librerías esenciales -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
@@ -107,16 +108,12 @@
             grid-column: span 2;
         }
 
-        /* Bloques dinámicos de alerta visual para la opción 'otro' */
-        .campo-oculto {
-            display: none;
-            grid-column: span 2;
-            background-color: #FFFBEB;
-            padding: 12px;
+        .especificar-recuadro {
+            background-color: #F1F5F9;
+            padding: 8px;
             border-radius: 6px;
-            border: 1px dashed #F59E0B;
-            margin-top: 5px;
-            margin-bottom: 12px;
+            margin-top: 4px;
+            border: 1px solid #CBD5E1;
         }
 
         label {
@@ -157,6 +154,7 @@
             align-items: center;
             gap: 8px;
             justify-content: center;
+            text-decoration: none;
         }
 
         .btn:hover { background-color: #334155; }
@@ -185,6 +183,25 @@
             font-weight: bold;
             margin-bottom: 20px;
             display: none;
+        }
+
+        .instrucciones-excel {
+            background-color: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .instrucciones-excel ul {
+            margin: 5px 0 0 0;
+            padding-left: 20px;
+        }
+
+        .instrucciones-excel li {
+            margin-bottom: 4px;
+            color: #1E40AF;
         }
 
         .tabla-contenedor {
@@ -222,12 +239,14 @@
     <div class="container">
         <div id="alerta-sistema" class="alerta"></div>
 
+        <!-- ================= MÓDULO 1: REGISTRO ================= -->
         <div id="modulo-registro" class="modulo activo">
             <h2>Ingreso de Trabajadores</h2>
             <p style="color: #64748B; margin-bottom: 25px;">Agrega nuevos operarios de forma individual utilizando el formulario manual, o masivamente arrastrando una lista en formato Excel.</p>
             
             <div class="malla-registro">
                 
+                <!-- COLUMNA IZQUIERDA: REGISTRO MANUAL -->
                 <div class="tarjeta">
                     <h3>Registro Individual</h3>
                     <form id="form-trabajador" onsubmit="guardarTrabajadorManual(event)">
@@ -245,7 +264,7 @@
                         <div class="grupo-formulario">
                             <div class="campo">
                                 <label>NACIONALIDAD</label>
-                                <select id="m-nacionalidad" onchange="verificarEspeciales()" required>
+                                <select id="m-nacionalidad" onchange="evaluarCamposRequeridos()" required>
                                     <option value="Chileno">Chileno</option>
                                     <option value="Haitiano">Haitiano</option>
                                     <option value="Colombiano">Colombiano</option>
@@ -256,16 +275,15 @@
                                     <option value="Boliviano">Boliviano</option>
                                     <option value="otro">otro</option>
                                 </select>
+                                <div class="especificar-recuadro">
+                                    <label style="color: #475569; font-size: 11px;">SI ELIGIÓ "OTRO", ESPECIFIQUE AQUÍ:</label>
+                                    <input type="text" id="m-otra-nacionalidad" placeholder="Ej: Ecuatoriano">
+                                </div>
                             </div>
                             <div class="campo">
                                 <label>FECHA NACIMIENTO</label>
                                 <input type="date" id="m-fecha-nac" required>
                             </div>
-                        </div>
-
-                        <div id="bloque-otra-nacionalidad" class="campo-oculto">
-                            <label style="color: #B45309; font-weight: bold;">¿Cuál nacionalidad?</label>
-                            <input type="text" id="m-otra-nacionalidad" placeholder="Ej: Ecuatoriano" style="background-color: #FFF;">
                         </div>
 
                         <div class="grupo-formulario">
@@ -316,7 +334,7 @@
                         <div class="grupo-formulario">
                             <div class="campo">
                                 <label>CARGO / FUNCIÓN</label>
-                                <select id="m-cargo" onchange="verificarEspeciales()" required>
+                                <select id="m-cargo" onchange="evaluarCamposRequeridos()" required>
                                     <option value="Cosechero">Cosechero</option>
                                     <option value="Tractoristas">Tractoristas</option>
                                     <option value="Obrero agrícola">Obrero agrícola</option>
@@ -328,16 +346,15 @@
                                     <option value="Riego">Riego</option>
                                     <option value="otro">otro</option>
                                 </select>
+                                <div class="especificar-recuadro">
+                                    <label style="color: #475569; font-size: 11px;">SI ELIGIÓ "OTRO", ESPECIFIQUE AQUÍ:</label>
+                                    <input type="text" id="m-outro-cargo" placeholder="Ej: Mecánico, Bodeguero">
+                                </div>
                             </div>
                             <div class="campo">
                                 <label>FAENA u OBRA</label>
                                 <input type="text" id="m-faena" placeholder="Huerto Principal" required>
                             </div>
-                        </div>
-
-                        <div id="bloque-otro-cargo" class="campo-oculto">
-                            <label style="color: #B45309; font-weight: bold;">¿Cuál cargo o labor?</label>
-                            <input type="text" id="m-otro-cargo" placeholder="Ej: Mecánico, Bodeguero" style="background-color: #FFF;">
                         </div>
 
                         <div class="grupo-formulario">
@@ -366,11 +383,21 @@
                     </form>
                 </div>
 
+                <!-- COLUMNA DERECHA: REQUISITOS Y CARGA EXCEL -->
                 <div class="tarjeta" style="height: 100%;">
                     <h3>Carga Masiva por Excel</h3>
-                    <p style="color: #64748B; font-size: 13px; margin-bottom: 20px;">Ideal para subir nóminas completas de cuadrillas en segundos.</p>
                     
-                    <button class="btn" type="button" onclick="descargarPlantillaExcel()">📥 Descargar Plantilla Oficial</button>
+                    <!-- Panel Informativo del Formato Solicitado -->
+                    <div class="instrucciones-excel">
+                        <strong>📋 Estructura Obligatoria del Archivo:</strong>
+                        <p style="margin: 4px 0; color: #1E3A8A;">Tu archivo Excel debe contener exactamente una fila de títulos con los siguientes nombres en la primera línea:</p>
+                        <ul>
+                            <li><strong>Filas 1 a 7:</strong> RUT, Nombre Completo, Nacionalidad, Fecha Nacimiento, Estado Civil, Domicilio, Correo</li>
+                            <li><strong>Filas 8 a 14:</strong> AFP, Salud, Cargo, Faena, Fecha Inicio, Vigencia, Sueldo Base</li>
+                        </ul>
+                        <!-- Espacio listo por si a futuro quieres linkear tu archivo manual -->
+                        <a href="#" id="link-externo-plantilla" class="btn" style="margin-top: 12px; font-size: 12px; padding: 6px 12px; background-color: #3B82F6; display: none;">🔗 Descargar desde Servidor Alternativo</a>
+                    </div>
                     
                     <div class="zona-drop" onclick="document.getElementById('input-excel').click()">
                         <span style="font-size: 36px;">📊</span>
@@ -381,19 +408,21 @@
 
             </div>
 
+            <!-- PREVISUALIZACIÓN -->
             <div id="seccion-previsualizacion" class="tarjeta" style="display: none; margin-top: 25px;">
                 <h3>Lista Detectada desde Excel</h3>
                 <p style="font-size: 13px; color: #64748B; margin-top: 0;">Verifica las filas cargadas antes de subirlas permanentemente a la nube.</p>
                 <div class="tabla-contenedor">
                     <table id="tabla-excel">
-                        <thead></thead>
-                        <tbody></tbody>
+                        <thead><!-- Dinámico --></thead>
+                        <tbody><!-- Dinámico --></tbody>
                     </table>
                 </div>
                 <button class="btn btn-verde" style="margin-top: 20px; width: 100%;" onclick="subirDatosASupabase()">🚀 Confirmar y Subir Toda la Lista en Bloque</button>
             </div>
         </div>
 
+        <!-- MÓDULOS EN ESPERA -->
         <div id="modulo-trabajadores" class="modulo"><h2>Gestión de Trabajadores y QR</h2><p>Módulo en desarrollo.</p></div>
         <div id="modulo-empresa" class="modulo"><h2>Ficha Empresa</h2><p>Módulo en desarrollo.</p></div>
         <div id="modulo-reporte" class="modulo"><h2>Reportes de Asistencia</h2><p>Módulo en desarrollo.</p></div>
@@ -423,67 +452,26 @@
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        // CONTROL VISUAL CORREGIDO PARA LOS CAMPOS 'OTRO'
-        function verificarEspeciales() {
+        // CONTROL INTEGRADO DE CAMPOS REQUERIDOS
+        function evaluarCamposRequeridos() {
             const nacionalidadSelect = document.getElementById('m-nacionalidad').value;
-            const bloqueNac = document.getElementById('bloque-otra-nacionalidad');
             const inputNac = document.getElementById('m-otra-nacionalidad');
-            
             if (nacionalidadSelect === 'otro') {
-                bloqueNac.style.display = 'block';
                 inputNac.setAttribute('required', 'true');
+                inputNac.style.borderColor = '#F59E0B';
             } else {
-                bloqueNac.style.display = 'none';
                 inputNac.removeAttribute('required');
+                inputNac.style.borderColor = '#E2E8F0';
             }
 
             const cargoSelect = document.getElementById('m-cargo').value;
-            const bloqueCargo = document.getElementById('bloque-otro-cargo');
-            const inputCargo = document.getElementById('m-otro-cargo');
-
+            const inputCargo = document.getElementById('m-outro-cargo');
             if (cargoSelect === 'otro') {
-                bloqueCargo.style.display = 'block';
                 inputCargo.setAttribute('required', 'true');
+                inputCargo.style.borderColor = '#F59E0B';
             } else {
-                bloqueCargo.style.display = 'none';
                 inputCargo.removeAttribute('required');
-            }
-        }
-
-        // DESCARGA DE EXCEL REFORZADA E INSTANTÁNEA
-        function descargarPlantillaExcel() {
-            try {
-                const columnas = [
-                    ["RUT", "Nombre Completo", "Nacionalidad", "Fecha Nacimiento", "Estado Civil", "Domicilio", "Correo", "AFP", "Salud", "Cargo", "Faena", "Fecha Inicio", "Vigencia", "Sueldo Base"]
-                ];
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.aoa_to_sheet(columnas);
-                XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
-                
-                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
-                
-                function s2ab(s) {
-                    const buf = new ArrayBuffer(s.length);
-                    const view = new Uint8Array(buf);
-                    for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
-                    return buf;
-                }
-
-                const blob = new Blob([s2ab(wbout)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "Plantilla_AgroAsistencia_Pro.xlsx";
-                document.body.appendChild(a);
-                a.click();
-                
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                }, 100);
-            } catch (err) {
-                alert("Error de descarga: " + err.message);
+                inputCargo.style.borderColor = '#E2E8F0';
             }
         }
 
@@ -498,7 +486,7 @@
 
                 let cargoFinal = document.getElementById('m-cargo').value;
                 if (cargoFinal === 'otro') {
-                    cargoFinal = document.getElementById('m-otro-cargo').value.trim();
+                    cargoFinal = document.getElementById('m-outro-cargo').value.trim();
                 }
 
                 const nuevoTrabajador = {
@@ -526,7 +514,7 @@
                 } else {
                     mostrarAlerta(`✅ Trabajador ${nuevoTrabajador.nombre} ingresado con éxito en la nube.`, true);
                     document.getElementById('form-trabajador').reset();
-                    verificarEspeciales(); 
+                    evaluarCamposRequeridos();
                 }
             } catch (err) {
                 mostrarAlerta("❌ Ocurrió un error inesperado al procesar el envío.", false);
