@@ -107,16 +107,16 @@
             grid-column: span 2;
         }
 
-        /* Campos ocultos inicialmente para las opciones 'otro' */
+        /* Bloques dinámicos de alerta visual para la opción 'otro' */
         .campo-oculto {
             display: none;
             grid-column: span 2;
-            background-color: #FEF3C7;
-            padding: 10px;
+            background-color: #FFFBEB;
+            padding: 12px;
             border-radius: 6px;
             border: 1px dashed #F59E0B;
-            margin-top: -5px;
-            margin-bottom: 10px;
+            margin-top: 5px;
+            margin-bottom: 12px;
         }
 
         label {
@@ -209,7 +209,7 @@
             <h1>AgroAsistencia Pro</h1>
             <p>Panel de Control y Blindaje Laboral para Contratistas</p>
         </div>
-        <div style="font-size: 14px; color: #10B981; font-weight: bold;">● Modo Administrator Online</div>
+        <div style="font-size: 14px; color: #10B981; font-weight: bold;">● Modo Administrador Online</div>
     </header>
 
     <nav>
@@ -264,8 +264,8 @@
                         </div>
 
                         <div id="bloque-otra-nacionalidad" class="campo-oculto">
-                            <label style="color: #B45309;">ESPECIFIQUE OTRA NACIONALIDAD</label>
-                            <input type="text" id="m-otra-nacionalidad" placeholder="Ej: Ecuatoriano">
+                            <label style="color: #B45309; font-weight: bold;">¿Cuál nacionalidad?</label>
+                            <input type="text" id="m-otra-nacionalidad" placeholder="Ej: Ecuatoriano" style="background-color: #FFF;">
                         </div>
 
                         <div class="grupo-formulario">
@@ -336,8 +336,8 @@
                         </div>
 
                         <div id="bloque-otro-cargo" class="campo-oculto">
-                            <label style="color: #B45309;">ESPECIFIQUE OTRO CARGO</label>
-                            <input type="text" id="m-otro-cargo" placeholder="Ej: Mecánico de Maquinaria">
+                            <label style="color: #B45309; font-weight: bold;">¿Cuál cargo o labor?</label>
+                            <input type="text" id="m-otro-cargo" placeholder="Ej: Mecánico, Bodeguero" style="background-color: #FFF;">
                         </div>
 
                         <div class="grupo-formulario">
@@ -423,7 +423,7 @@
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        // CONTROL DE CUADROS OCULTOS PARA "OTRO"
+        // CONTROL VISUAL CORREGIDO PARA LOS CAMPOS 'OTRO'
         function verificarEspeciales() {
             const nacionalidadSelect = document.getElementById('m-nacionalidad').value;
             const bloqueNac = document.getElementById('bloque-otra-nacionalidad');
@@ -438,8 +438,8 @@
             }
 
             const cargoSelect = document.getElementById('m-cargo').value;
-            const bloqueCargo = document.getElementById('bloque-outro-cargo');
-            const inputCargo = document.getElementById('m-outro-cargo');
+            const bloqueCargo = document.getElementById('bloque-otro-cargo');
+            const inputCargo = document.getElementById('m-otro-cargo');
 
             if (cargoSelect === 'otro') {
                 bloqueCargo.style.display = 'block';
@@ -450,7 +450,7 @@
             }
         }
 
-        // DESCARGA ULTRA-COMPATIBLE DESDE EL NAVEGADOR
+        // DESCARGA DE EXCEL REFORZADA E INSTANTÁNEA
         function descargarPlantillaExcel() {
             try {
                 const columnas = [
@@ -471,16 +471,19 @@
 
                 const blob = new Blob([s2ab(wbout)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
                 
-                // Forzar descarga directa usando API moderna de enlaces
+                const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
-                a.href = URL.createObjectURL(blob);
+                a.href = url;
                 a.download = "Plantilla_AgroAsistencia_Pro.xlsx";
-                a.style.display = "none";
                 document.body.appendChild(a);
                 a.click();
-                document.body.removeChild(a);
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
             } catch (err) {
-                alert("Error crítico de descarga: " + err.message);
+                alert("Error de descarga: " + err.message);
             }
         }
 
@@ -488,7 +491,6 @@
         async function guardarTrabajadorManual(e) {
             e.preventDefault();
             try {
-                // Si eligió 'otro', tomamos el valor digitado en el cuadro dinámico
                 let nacionalidadFinal = document.getElementById('m-nacionalidad').value;
                 if (nacionalidadFinal === 'otro') {
                     nacionalidadFinal = document.getElementById('m-otra-nacionalidad').value.trim();
@@ -496,7 +498,7 @@
 
                 let cargoFinal = document.getElementById('m-cargo').value;
                 if (cargoFinal === 'otro') {
-                    cargoFinal = document.getElementById('m-outro-cargo').value.trim();
+                    cargoFinal = document.getElementById('m-otro-cargo').value.trim();
                 }
 
                 const nuevoTrabajador = {
@@ -524,7 +526,7 @@
                 } else {
                     mostrarAlerta(`✅ Trabajador ${nuevoTrabajador.nombre} ingresado con éxito en la nube.`, true);
                     document.getElementById('form-trabajador').reset();
-                    verificarEspeciales(); // Ocultar bloques dinámicos tras limpiar
+                    verificarEspeciales(); 
                 }
             } catch (err) {
                 mostrarAlerta("❌ Ocurrió un error inesperado al procesar el envío.", false);
