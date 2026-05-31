@@ -522,7 +522,24 @@
                 </div>
             </div>
 
-            <div id="modulo-trabajadores" class="modulo"><h3>Trabajadores</h3><p>Contenido del listado base de operarios.</p></div>
+     <div id="modulo-trabajadores" class="modulo">
+    <div class="tarjeta">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>Listado de Trabajadores</h3>
+            <button class="btn btn-verde" onclick="cargarTrabajadores()">🔄 Actualizar Listado</button>
+        </div>
+        <div class="tabla-contenedor">
+            <table>
+                <thead>
+                    <tr><th>RUT</th><th>Nombre</th><th>Faena</th><th>Cargo</th></tr>
+                </thead>
+                <tbody id="cuerpo-tabla-trabajadores">
+                    <tr><td colspan="4">Haz clic en "Actualizar Listado" para cargar los datos.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
             <div id="modulo-contratistas" class="modulo"><h3>Contratistas</h3><p>Panel de control de empresas externas.</p></div>
             <div id="modulo-qr" class="modulo"><h3>Generar Códigos QR</h3><p>Generador masivo de credenciales físicas.</p></div>
             <div id="modulo-asistencia" class="modulo"><h3>Asistencia</h3><p>Libro electrónico de asistencia agrícola.</p></div>
@@ -685,6 +702,33 @@
 
         // Inicializar estados de campos requeridos al arrancar
         evaluarCamposRequeridos();
+async function cargarTrabajadores() {
+    const tbody = document.getElementById('cuerpo-tabla-trabajadores');
+    tbody.innerHTML = '<tr><td colspan="4">Cargando desde Supabase...</td></tr>';
+    
+    try {
+        const { data, error } = await supabase
+            .from('trabajadores')
+            .select('rut, nombre, faena_obra, funcion_cargo');
+        
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            tbody.innerHTML = data.map(t => `
+                <tr>
+                    <td>${t.rut}</td>
+                    <td>${t.nombre}</td>
+                    <td>${t.faena_obra}</td>
+                    <td>${t.funcion_cargo}</td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4">No hay registros encontrados.</td></tr>';
+        }
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4">Error: ${err.message}</td></tr>`;
+    }
+}
     </script>
 </body>
 </html>
