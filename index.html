@@ -3,134 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgroAsistencia Pro - Panel de Gestión</title>
-    <!-- Librerías esenciales -->
+    <title>AgroAsistencia Pro - Panel de Administración</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
-            --azul-oscuro: #1E293B;
-            --verde-agro: #10B981;
-            --gris-fondo: #F8FAFC;
+            --azul-premium: #1E293B;       /* Azul oscuro de la barra original */
+            --azul-lateral: #111827;       /* Fondo del menú lateral izquierdo */
+            --azul-hover: #1F2937;         /* Color al pasar el cursor en el menú */
+            --verde-agro: #10B981;         /* Verde brillante para activos y selecciones */
+            --gris-fondo: #F3F4F6;         /* Fondo general de la aplicación */
             --blanco: #FFFFFF;
-            --borde: #E2E8F0;
+            --borde: #E5E7EB;
+            --texto-oscuro: #1F2937;
+            --texto-mutado: #6B7280;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background-color: var(--gris-fondo);
             margin: 0;
             padding: 0;
-            color: var(--azul-oscuro);
+            color: var(--texto-oscuro);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* === MENÚ LATERAL IZQUIERDO (Estructura Opción 2 + Colores Opción 1) === */
+        aside {
+            width: 260px;
+            background-color: var(--azul-lateral);
+            color: var(--blanco);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .marca-sistema {
+            padding: 24px 20px;
+            background-color: #0B0F19;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .marca-sistema h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--blanco);
+            letter-spacing: -0.5px;
+        }
+
+        .marca-sistema span {
+            font-size: 12px;
+            color: #9CA3AF;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .categoria-menu {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4B5563;
+            padding: 20px 20px 8px 20px;
+        }
+
+        .lista-navegacion {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 0 12px;
+            flex-grow: 1;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: #9CA3AF; /* Letra clara por defecto */
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-btn:hover {
+            color: var(--blanco);
+            background-color: var(--azul-hover);
+        }
+
+        /* Selección verde brillante con letra blanca de la Opción 1 */
+        .nav-btn.activo {
+            color: var(--blanco) !important;
+            background-color: var(--verde-agro) !important;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+
+        .perfil-usuario {
+            padding: 16px;
+            background-color: #0B0F19;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background-color: var(--verde-agro);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--blanco);
+            font-size: 14px;
+        }
+
+        /* === CONTENIDO PRINCIPAL === */
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
         }
 
         header {
-            background-color: var(--azul-oscuro);
-            color: var(--blanco);
-            padding: 25px;
-            border-bottom: 5px solid var(--verde-agro);
+            background-color: var(--blanco);
+            padding: 18px 30px;
+            border-bottom: 1px solid var(--borde);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
 
-        header h1 { margin: 0; font-size: 26px; font-weight: 700; }
-        header p { margin: 5px 0 0 0; font-size: 14px; color: #94A3B8; }
-
-        nav {
-            background-color: #0F172A;
+        header h2 { margin: 0; font-size: 22px; font-weight: 700; color: var(--texto-oscuro); }
+        
+        .estado-servidor {
             display: flex;
-            padding: 0 15px;
-        }
-
-        nav button {
-            background: none;
-            border: none;
-            color: #94A3B8;
-            padding: 18px 25px;
-            font-size: 15px;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--verde-agro);
             font-weight: 600;
-            cursor: pointer;
-            transition: 0.3s;
+            background-color: #E6F4EA;
+            padding: 6px 14px;
+            border-radius: 30px;
         }
 
-        nav button:hover, nav button.activo {
-            color: var(--blanco);
-            background-color: var(--azul-oscuro);
-            border-bottom: 4px solid var(--verde-agro);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
+        .contenedor-modulos {
+            padding: 30px;
+            overflow-y: auto;
+            flex-grow: 1;
         }
 
         .modulo { display: none; }
         .modulo.activo { display: block; }
 
-        h2 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
-        h3 { font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 15px; }
-
+        /* === DISEÑO DE TARJETAS Y CONTENEDORES INTERNOS === */
         .malla-registro {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 30px;
             align-items: start;
         }
 
-        @media (max-width: 850px) {
+        @media (max-width: 1024px) {
             .malla-registro { grid-template-columns: 1fr; }
         }
 
         .tarjeta {
             background: var(--blanco);
             border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            padding: 28px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
             border: 1px solid var(--borde);
             box-sizing: border-box;
+        }
+
+        .tarjeta h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--texto-oscuro);
         }
 
         .grupo-formulario {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
+            gap: 16px;
+            margin-bottom: 16px;
         }
 
-        .campo {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .campo-completo {
-            grid-column: span 2;
-        }
-
-        .especificar-recuadro {
-            background-color: #F1F5F9;
-            padding: 8px;
-            border-radius: 6px;
-            margin-top: 4px;
-            border: 1px solid #CBD5E1;
-        }
+        .campo { display: flex; flex-direction: column; }
+        .campo-completo { grid-column: span 2; }
 
         label {
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: #64748B;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            color: var(--texto-mutado);
         }
 
         input, select {
-            padding: 10px;
+            padding: 11px 14px;
             border: 1px solid var(--borde);
-            border-radius: 6px;
-            font-size: 13px;
-            background-color: #F8FAFC;
-            color: var(--azul-oscuro);
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #F9FAFB;
+            color: var(--texto-oscuro);
             outline: none;
+            transition: all 0.2s;
             box-sizing: border-box;
             width: 100%;
         }
@@ -138,295 +235,300 @@
         input:focus, select:focus {
             border-color: var(--verde-agro);
             background-color: var(--blanco);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
         }
 
+        .especificar-recuadro {
+            background-color: #F3F4F6;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+            border: 1px solid var(--borde);
+        }
+
+        /* === BOTONES === */
         .btn {
-            background-color: var(--azul-oscuro);
+            background-color: var(--azul-premium);
             color: white;
-            padding: 12px 20px;
+            padding: 12px 24px;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 14px;
-            font-weight: bold;
+            font-weight: 600;
             cursor: pointer;
-            transition: 0.2s;
+            transition: background 0.2s;
             display: inline-flex;
             align-items: center;
             gap: 8px;
             justify-content: center;
-            text-decoration: none;
         }
 
         .btn:hover { background-color: #334155; }
         .btn-verde { background-color: var(--verde-agro); }
         .btn-verde:hover { background-color: #059669; }
 
-        .zona-drop {
-            border: 2px dashed #CBD5E1;
-            padding: 45px 20px;
-            border-radius: 8px;
-            text-align: center;
-            background: #F8FAFC;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: 0.2s;
-        }
-
-        .zona-drop:hover {
-            background: #F1F5F9;
-            border-color: var(--verde-agro);
-        }
-
-        .alerta {
-            padding: 15px;
-            border-radius: 6px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            display: none;
-        }
-
+        /* === PANEL DE CARGA MASIVA === */
         .instrucciones-excel {
             background-color: #EFF6FF;
             border: 1px solid #BFDBFE;
             border-radius: 8px;
-            padding: 15px;
+            padding: 16px;
             margin-bottom: 20px;
             font-size: 13px;
         }
 
-        .instrucciones-excel ul {
-            margin: 5px 0 0 0;
-            padding-left: 20px;
+        .instrucciones-excel ul { margin: 8px 0 0 0; padding-left: 20px; }
+        .instrucciones-excel li { margin-bottom: 4px; color: #1E40AF; font-weight: 500; }
+
+        .zona-drop {
+            border: 2px dashed #D1D5DB;
+            padding: 50px 20px;
+            border-radius: 10px;
+            text-align: center;
+            background: #F9FAFB;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .instrucciones-excel li {
-            margin-bottom: 4px;
-            color: #1E40AF;
+        .zona-drop:hover {
+            background: #F3F4F6;
+            border-color: var(--verde-agro);
         }
 
-        .tabla-contenedor {
-            overflow-x: auto;
-            margin-top: 20px;
+        /* === ALERTAS Y PREVISUALIZACIÓN === */
+        .alerta {
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            display: none;
+            font-size: 14px;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        th, td { padding: 10px; border: 1px solid var(--borde); text-align: left; }
-        th { background-color: #F1F5F9; font-weight: bold; }
+        .tabla-contenedor { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 12px; border: 1px solid var(--borde); text-align: left; }
+        th { background-color: #F9FAFB; font-weight: 600; color: var(--texto-mutado); }
     </style>
 </head>
 <body>
 
-    <header>
-        <div>
+    <aside>
+        <div class="marca-sistema">
             <h1>AgroAsistencia Pro</h1>
-            <p>Panel de Control y Blindaje Laboral para Contratistas</p>
+            <span>Panel Administrador</span>
         </div>
-        <div style="font-size: 14px; color: #10B981; font-weight: bold;">● Modo Administrador Online</div>
-    </header>
+        
+        <div class="categoria-menu">Principal</div>
+        <div class="lista-navegacion">
+            <button id="btn-dashboard" class="nav-btn" onclick="cambiarModulo('modulo-dashboard')">📊 Dashboard</button>
+        </div>
 
-    <nav>
-        <button id="btn-mod1" class="activo" onclick="cambiarModulo('modulo-registro')">Registro de Personal</button>
-        <button id="btn-mod2" onclick="cambiarModulo('modulo-trabajadores')">Gestión de Trabajadores y QR</button>
-        <button id="btn-mod3" onclick="cambiarModulo('modulo-empresa')">Ficha Empresa</button>
-        <button id="btn-mod4" onclick="cambiarModulo('modulo-reporte')">Reportes de Asistencia</button>
-    </nav>
+        <div class="categoria-menu">Gestión</div>
+        <div class="lista-navegacion">
+            <button id="btn-registro" class="nav-btn activo" onclick="cambiarModulo('modulo-registro')">👤 Registro Personal</button>
+            <button id="btn-trabajadores" class="nav-btn" onclick="cambiarModulo('modulo-trabajadores')">👥 Trabajadores</button>
+            <button id="btn-contratistas" class="nav-btn" onclick="cambiarModulo('modulo-contratistas')">🚜 Contratistas</button>
+            <button id="btn-qr" class="nav-btn" onclick="cambiarModulo('modulo-qr')">📱 Generar QR</button>
+        </div>
 
-    <div class="container">
-        <div id="alerta-sistema" class="alerta"></div>
+        <div class="categoria-menu">Reportes</div>
+        <div class="lista-navegacion">
+            <button id="btn-asistencia" class="nav-btn" onclick="cambiarModulo('modulo-asistencia')">📅 Asistencia</button>
+            <button id="btn-exportar" class="nav-btn" onclick="cambiarModulo('modulo-exportar')">📥 Exportar Excel</button>
+        </div>
 
-        <!-- ================= MÓDULO 1: REGISTRO ================= -->
-        <div id="modulo-registro" class="modulo activo">
-            <h2>Ingreso de Trabajadores</h2>
-            <p style="color: #64748B; margin-bottom: 25px;">Agrega nuevos operarios de forma individual utilizando el formulario manual, o masivamente arrastrando una lista en formato Excel.</p>
-            
-            <div class="malla-registro">
-                
-                <!-- COLUMNA IZQUIERDA: REGISTRO MANUAL -->
-                <div class="tarjeta">
-                    <h3>Registro Individual</h3>
-                    <form id="form-trabajador" onsubmit="guardarTrabajadorManual(event)">
-                        <div class="grupo-formulario">
-                            <div class="campo">
-                                <label>RUT TRABAJADOR</label>
-                                <input type="text" id="m-rut" placeholder="12.345.678-9" required>
-                            </div>
-                            <div class="campo">
-                                <label>NOMBRE COMPLETO</label>
-                                <input type="text" id="m-nombre" placeholder="Juan Pérez" required>
-                            </div>
-                        </div>
+        <div class="perfil-usuario">
+            <div class="avatar">KM</div>
+            <div>
+                <div style="font-size: 13px; font-weight: 700;">Karlos Morales</div>
+                <div style="font-size: 11px; color: #9CA3AF;">Administrador</div>
+            </div>
+        </div>
+    </aside>
 
-                        <div class="grupo-formulario">
-                            <div class="campo">
-                                <label>NACIONALIDAD</label>
-                                <select id="m-nacionalidad" onchange="evaluarCamposRequeridos()" required>
-                                    <option value="Chileno">Chileno</option>
-                                    <option value="Haitiano">Haitiano</option>
-                                    <option value="Colombiano">Colombiano</option>
-                                    <option value="Argentino">Argentino</option>
-                                    <option value="Venezolano">Venezolano</option>
-                                    <option value="Paraguayo">Paraguayo</option>
-                                    <option value="Peruano">Peruano</option>
-                                    <option value="Boliviano">Boliviano</option>
-                                    <option value="otro">otro</option>
-                                </select>
-                                <div class="especificar-recuadro">
-                                    <label style="color: #475569; font-size: 11px;">SI ELIGIÓ "OTRO", ESPECIFIQUE AQUÍ:</label>
-                                    <input type="text" id="m-otra-nacionalidad" placeholder="Ej: Ecuatoriano">
+    <main>
+        <header>
+            <h2 id="titulo-pagina">Registro de Personal</h2>
+            <div class="estado-servidor">
+                <span style="height: 8px; width: 8px; background-color: var(--verde-agro); border-radius: 50%; display: inline-block;"></span>
+                Modo Administrador Online
+            </div>
+        </header>
+
+        <div class="contenedor-modulos">
+            <div id="alerta-sistema" class="alerta"></div>
+
+            <div id="modulo-dashboard" class="modulo">
+                <h3>Resumen de Faena</h3>
+                <p style="color: var(--texto-mutado);">Vista unificada de asistencia e indicadores de contratistas.</p>
+            </div>
+
+            <div id="modulo-registro" class="modulo activo">
+                <div class="malla-registro">
+                    
+                    <div class="tarjeta">
+                        <h3>Registro Individual</h3>
+                        <form id="form-trabajador" onsubmit="guardarTrabajadorManual(event)">
+                            <div class="grupo-formulario">
+                                <div class="campo">
+                                    <label>RUT Trabajador</label>
+                                    <input type="text" id="m-rut" placeholder="12.345.678-9" required>
+                                </div>
+                                <div class="campo">
+                                    <label>Nombre Completo</label>
+                                    <input type="text" id="m-nombre" placeholder="Juan Pérez" required>
                                 </div>
                             </div>
-                            <div class="campo">
-                                <label>FECHA NACIMIENTO</label>
-                                <input type="date" id="m-fecha-nac" required>
-                            </div>
-                        </div>
 
-                        <div class="grupo-formulario">
-                            <div class="campo">
-                                <label>ESTADO CIVIL</label>
-                                <select id="m-estado-civil" required>
-                                    <option value="Soltero(a)">Soltero(a)</option>
-                                    <option value="Casado(a)">Casado(a)</option>
-                                    <option value="Divorciado(a)">Divorciado(a)</option>
-                                    <option value="Viudo(a)">Viudo(a)</option>
-                                </select>
-                            </div>
-                            <div class="campo">
-                                <label>CORREO ELECTRÓNICO</label>
-                                <input type="email" id="m-correo" placeholder="ejemplo@correo.com">
-                            </div>
-                        </div>
-
-                        <div class="grupo-formulario">
-                            <div class="campo campo-completo">
-                                <label>DOMICILIO COMPLETO</label>
-                                <input type="text" id="m-domicilio" placeholder="Calle, Número, Comuna, Ciudad" required>
-                            </div>
-                        </div>
-
-                        <div class="grupo-formulario">
-                            <div class="campo">
-                                <label>AFILIACIÓN AFP</label>
-                                <select id="m-afp" required>
-                                    <option value="Habitat">Habitat</option>
-                                    <option value="Capital">Capital</option>
-                                    <option value="Cuprum">Cuprum</option>
-                                    <option value="Modelo">Modelo</option>
-                                    <option value="PlanVital">PlanVital</option>
-                                    <option value="Provida">Provida</option>
-                                    <option value="Uno">Uno</option>
-                                </select>
-                            </div>
-                            <div class="campo">
-                                <label>SISTEMA SALUD</label>
-                                <select id="m-salud" required>
-                                    <option value="Fonasa">Fonasa</option>
-                                    <option value="Isapre">Isapre</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="grupo-formulario">
-                            <div class="campo">
-                                <label>CARGO / FUNCIÓN</label>
-                                <select id="m-cargo" onchange="evaluarCamposRequeridos()" required>
-                                    <option value="Cosechero">Cosechero</option>
-                                    <option value="Tractoristas">Tractoristas</option>
-                                    <option value="Obrero agrícola">Obrero agrícola</option>
-                                    <option value="Soldador">Soldador</option>
-                                    <option value="Anotador">Anotador</option>
-                                    <option value="Supervisor">Supervisor</option>
-                                    <option value="Aplicador">Aplicador</option>
-                                    <option value="Ayudante soldador">Ayudante soldador</option>
-                                    <option value="Riego">Riego</option>
-                                    <option value="otro">otro</option>
-                                </select>
-                                <div class="especificar-recuadro">
-                                    <label style="color: #475569; font-size: 11px;">SI ELIGIÓ "OTRO", ESPECIFIQUE AQUÍ:</label>
-                                    <input type="text" id="m-outro-cargo" placeholder="Ej: Mecánico, Bodeguero">
+                            <div class="grupo-formulario">
+                                <div class="campo">
+                                    <label>Nacionalidad</label>
+                                    <select id="m-nacionalidad" onchange="evaluarCamposRequeridos()" required>
+                                        <option value="Chileno">Chileno</option>
+                                        <option value="Haitiano">Haitiano</option>
+                                        <option value="Colombiano">Colombiano</option>
+                                        <option value="Argentino">Argentino</option>
+                                        <option value="Venezolano">Venezolano</option>
+                                        <option value="Peruano">Peruano</option>
+                                        <option value="otro">otro</option>
+                                    </select>
+                                    <div class="especificar-recuadro">
+                                        <label style="color: var(--texto-oscuro);">Especifique Nacionalidad:</label>
+                                        <input type="text" id="m-otra-nacionalidad" placeholder="Ej: Ecuatoriano">
+                                    </div>
+                                </div>
+                                <div class="campo">
+                                    <label>Fecha Nacimiento</label>
+                                    <input type="date" id="m-fecha-nac" required>
                                 </div>
                             </div>
-                            <div class="campo">
-                                <label>FAENA u OBRA</label>
-                                <input type="text" id="m-faena" placeholder="Huerto Principal" required>
-                            </div>
-                        </div>
 
-                        <div class="grupo-formulario">
-                            <div class="campo">
-                                <label>FECHA INICIO CONTRATO</label>
-                                <input type="date" id="m-fecha-inicio" required>
+                            <div class="grupo-formulario">
+                                <div class="campo">
+                                    <label>Estado Civil</label>
+                                    <select id="m-estado-civil" required>
+                                        <option value="Soltero(a)">Soltero(a)</option>
+                                        <option value="Casado(a)">Casado(a)</option>
+                                        <option value="Divorciado(a)">Divorciado(a)</option>
+                                        <option value="Viudo(a)">Viudo(a)</option>
+                                    </select>
+                                </div>
+                                <div class="campo">
+                                    <label>Correo Electrónico</label>
+                                    <input type="email" id="m-correo" placeholder="ejemplo@correo.com">
+                                </div>
                             </div>
-                            <div class="campo">
-                                <label>VIGENCIA</label>
-                                <select id="m-vigencia" required>
-                                    <option value="Obra o Faena">Obra o Faena</option>
-                                    <option value="Plazo Fijo">Plazo Fijo</option>
-                                    <option value="Indefinido">Indefinido</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        <div class="grupo-formulario">
-                            <div class="campo campo-completo">
-                                <label>SUELDO BASE ($)</label>
+                            <div class="campo campo-completo" style="margin-bottom: 16px;">
+                                <label>Domicilio Completo</label>
+                                <input type="text" id="m-domicilio" placeholder="Calle, Número, Comuna" required>
+                            </div>
+
+                            <div class="grupo-formulario">
+                                <div class="campo">
+                                    <label>Afiliación AFP</label>
+                                    <select id="m-afp" required>
+                                        <option value="Habitat">Habitat</option>
+                                        <option value="Capital">Capital</option>
+                                        <option value="Cuprum">Cuprum</option>
+                                        <option value="Modelo">Modelo</option>
+                                        <option value="Provida">Provida</option>
+                                        <option value="Uno">Uno</option>
+                                    </select>
+                                </div>
+                                <div class="campo">
+                                    <label>Sistema Salud</label>
+                                    <select id="m-salud" required>
+                                        <option value="Fonasa">Fonasa</option>
+                                        <option value="Isapre">Isapre</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grupo-formulario">
+                                <div class="campo">
+                                    <label>Cargo / Función</label>
+                                    <select id="m-cargo" onchange="evaluarCamposRequeridos()" required>
+                                        <option value="Cosechero">Cosechero</option>
+                                        <option value="Tractoristas">Tractoristas</option>
+                                        <option value="Obrero agrícola">Obrero agrícola</option>
+                                        <option value="Supervisor">Supervisor</option>
+                                        <option value="otro">otro</option>
+                                    </select>
+                                    <div class="especificar-recuadro">
+                                        <label style="color: var(--texto-oscuro);">Especifique Cargo:</label>
+                                        <input type="text" id="m-outro-cargo" placeholder="Ej: Bodeguero">
+                                    </div>
+                                </div>
+                                <div class="campo">
+                                    <label>Faena u Obra</label>
+                                    <input type="text" id="m-faena" placeholder="Huerto Principal" required>
+                                </div>
+                            </div>
+
+                            <div class="grupo-formulario">
+                                <div class="campo">
+                                    <label>Fecha Inicio Contrato</label>
+                                    <input type="date" id="m-fecha-inicio" required>
+                                </div>
+                                <div class="campo">
+                                    <label>Vigencia</label>
+                                    <select id="m-vigencia" required>
+                                        <option value="Obra o Faena">Obra o Faena</option>
+                                        <option value="Plazo Fijo">Plazo Fijo</option>
+                                        <option value="Indefinido">Indefinido</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="campo campo-completo" style="margin-bottom: 20px;">
+                                <label>Sueldo Base ($)</label>
                                 <input type="number" id="m-sueldo" placeholder="500000" required>
                             </div>
+
+                            <button type="submit" class="btn btn-verde" style="width: 100%;">💾 Registrar e Incorporar</button>
+                        </form>
+                    </div>
+
+                    <div class="tarjeta">
+                        <h3>Carga Masiva por Excel</h3>
+                        <div class="instrucciones-excel">
+                            <strong>📊 Encabezados obligatorios en tu planilla:</strong>
+                            <ul>
+                                <li>RUT | Nombre Completo | Nacionalidad | Fecha Nacimiento</li>
+                                <li>Estado Civil | Domicilio | Correo | AFP | Salud</li>
+                                <li>Cargo | Faena | Fecha Inicio | Vigencia | Sueldo Base</li>
+                            </ul>
                         </div>
-
-                        <button type="submit" class="btn btn-verde" style="width: 100%; margin-top: 10px;">💾 Registrar e Incorporar</button>
-                    </form>
-                </div>
-
-                <!-- COLUMNA DERECHA: REQUISITOS Y CARGA EXCEL -->
-                <div class="tarjeta" style="height: 100%;">
-                    <h3>Carga Masiva por Excel</h3>
-                    
-                    <!-- Panel Informativo del Formato Solicitado -->
-                    <div class="instrucciones-excel">
-                        <strong>📋 Estructura Obligatoria del Archivo:</strong>
-                        <p style="margin: 4px 0; color: #1E3A8A;">Tu archivo Excel debe contener exactamente una fila de títulos con los siguientes nombres en la primera línea:</p>
-                        <ul>
-                            <li><strong>Filas 1 a 7:</strong> RUT, Nombre Completo, Nacionalidad, Fecha Nacimiento, Estado Civil, Domicilio, Correo</li>
-                            <li><strong>Filas 8 a 14:</strong> AFP, Salud, Cargo, Faena, Fecha Inicio, Vigencia, Sueldo Base</li>
-                        </ul>
-                        <!-- Espacio listo por si a futuro quieres linkear tu archivo manual -->
-                        <a href="#" id="link-externo-plantilla" class="btn" style="margin-top: 12px; font-size: 12px; padding: 6px 12px; background-color: #3B82F6; display: none;">🔗 Descargar desde Servidor Alternativo</a>
-                    </div>
-                    
-                    <div class="zona-drop" onclick="document.getElementById('input-excel').click()">
-                        <span style="font-size: 36px;">📊</span>
-                        <p id="texto-drop"><strong>Arrastra tu archivo Excel aquí</strong><br><span style="font-size:12px; color:#94A3B8;">o haz clic para explorar tus carpetas</span></p>
-                        <input type="file" id="input-excel" accept=".xlsx, .xls" style="display: none;" onchange="procesarArchivoExcel(event)">
+                        
+                        <div class="zona-drop" onclick="document.getElementById('input-excel').click()">
+                            <span style="font-size: 40px; display: block; margin-bottom: 10px;">📊</span>
+                            <p id="texto-drop" style="margin:0; font-size:14px; color: var(--texto-oscuro);"><strong>Arrastra tu archivo Excel aquí</strong><br><span style="font-size:12px; color:var(--texto-mutado);">o haz clic para explorar carpetas</span></p>
+                            <input type="file" id="input-excel" accept=".xlsx, .xls" style="display: none;" onchange="procesarArchivoExcel(event)">
+                        </div>
                     </div>
                 </div>
 
+                <div id="seccion-previsualizacion" class="tarjeta" style="display: none; margin-top: 30px;">
+                    <h3>Lista Detectada desde Excel</h3>
+                    <div class="tabla-contenedor">
+                        <table id="tabla-excel">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-verde" style="margin-top: 20px; width: 100%;" onclick="subirDatosASupabase()">🚀 Confirmar y Subir Toda la Lista en Bloque</button>
+                </div>
             </div>
 
-            <!-- PREVISUALIZACIÓN -->
-            <div id="seccion-previsualizacion" class="tarjeta" style="display: none; margin-top: 25px;">
-                <h3>Lista Detectada desde Excel</h3>
-                <p style="font-size: 13px; color: #64748B; margin-top: 0;">Verifica las filas cargadas antes de subirlas permanentemente a la nube.</p>
-                <div class="tabla-contenedor">
-                    <table id="tabla-excel">
-                        <thead><!-- Dinámico --></thead>
-                        <tbody><!-- Dinámico --></tbody>
-                    </table>
-                </div>
-                <button class="btn btn-verde" style="margin-top: 20px; width: 100%;" onclick="subirDatosASupabase()">🚀 Confirmar y Subir Toda la Lista en Bloque</button>
-            </div>
+            <div id="modulo-trabajadores" class="modulo"><h3>Trabajadores</h3><p>Contenido del listado base de operarios.</p></div>
+            <div id="modulo-contratistas" class="modulo"><h3>Contratistas</h3><p>Panel de control de empresas externas.</p></div>
+            <div id="modulo-qr" class="modulo"><h3>Generar Códigos QR</h3><p>Generador masivo de credenciales físicas.</p></div>
+            <div id="modulo-asistencia" class="modulo"><h3>Asistencia</h3><p>Libro electrónico de asistencia agrícola.</p></div>
+            <div id="modulo-exportar" class="modulo"><h3>Exportar Datos</h3><p>Descarga de planillas legales.</p></div>
         </div>
-
-        <!-- MÓDULOS EN ESPERA -->
-        <div id="modulo-trabajadores" class="modulo"><h2>Gestión de Trabajadores y QR</h2><p>Módulo en desarrollo.</p></div>
-        <div id="modulo-empresa" class="modulo"><h2>Ficha Empresa</h2><p>Módulo en desarrollo.</p></div>
-        <div id="modulo-reporte" class="modulo"><h2>Reportes de Asistencia</h2><p>Módulo en desarrollo.</p></div>
-    </div>
+    </main>
 
     <script>
         const SUPABASE_URL = "https://zwkcjeprpcmoXvfagcjy.supabase.co";
@@ -438,9 +540,17 @@
 
         function cambiarModulo(idModulo) {
             document.querySelectorAll('.modulo').forEach(m => m.classList.remove('activo'));
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('activo'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('activo'));
+            
             document.getElementById(idModulo).classList.add('activo');
-            event.currentTarget.classList.add('activo');
+            
+            // Buscar el botón presionado y marcarlo activo
+            const btnId = idModulo.replace('modulo-', 'btn-');
+            const botonActual = document.getElementById(btnId);
+            if(botonActual) botonActual.classList.add('activo');
+
+            // Actualizar título superior
+            document.getElementById('titulo-pagina').innerText = botonActual ? botonActual.innerText.substring(3) : "Panel";
         }
 
         function mostrarAlerta(mensaje, esExito) {
@@ -449,45 +559,25 @@
             alerta.style.display = 'block';
             alerta.style.backgroundColor = esExito ? '#D1FAE5' : '#FEE2E2';
             alerta.style.color = esExito ? '#065F46' : '#991B1B';
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            document.querySelector('main').scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        // CONTROL INTEGRADO DE CAMPOS REQUERIDOS
         function evaluarCamposRequeridos() {
-            const nacionalidadSelect = document.getElementById('m-nacionalidad').value;
-            const inputNac = document.getElementById('m-otra-nacionalidad');
-            if (nacionalidadSelect === 'otro') {
-                inputNac.setAttribute('required', 'true');
-                inputNac.style.borderColor = '#F59E0B';
-            } else {
-                inputNac.removeAttribute('required');
-                inputNac.style.borderColor = '#E2E8F0';
-            }
+            const nac = document.getElementById('m-nacionalidad').value;
+            document.getElementById('m-otra-nacionalidad').toggleAttribute('required', nac === 'otro');
 
-            const cargoSelect = document.getElementById('m-cargo').value;
-            const inputCargo = document.getElementById('m-outro-cargo');
-            if (cargoSelect === 'otro') {
-                inputCargo.setAttribute('required', 'true');
-                inputCargo.style.borderColor = '#F59E0B';
-            } else {
-                inputCargo.removeAttribute('required');
-                inputCargo.style.borderColor = '#E2E8F0';
-            }
+            const cargo = document.getElementById('m-cargo').value;
+            document.getElementById('m-outro-cargo').toggleAttribute('required', cargo === 'otro');
         }
 
-        // GUARDADO MANUAL INDIVIDUAL
         async function guardarTrabajadorManual(e) {
             e.preventDefault();
             try {
                 let nacionalidadFinal = document.getElementById('m-nacionalidad').value;
-                if (nacionalidadFinal === 'otro') {
-                    nacionalidadFinal = document.getElementById('m-otra-nacionalidad').value.trim();
-                }
+                if (nacionalidadFinal === 'otro') nacionalidadFinal = document.getElementById('m-otra-nacionalidad').value.trim();
 
                 let cargoFinal = document.getElementById('m-cargo').value;
-                if (cargoFinal === 'otro') {
-                    cargoFinal = document.getElementById('m-outro-cargo').value.trim();
-                }
+                if (cargoFinal === 'otro') cargoFinal = document.getElementById('m-outro-cargo').value.trim();
 
                 const nuevoTrabajador = {
                     empresa_rut: rutEmpresaTemporal,
@@ -510,34 +600,32 @@
                 const { error } = await supabase.from('trabajadores').insert([nuevoTrabajador]);
 
                 if (error) {
-                    mostrarAlerta(`⚠️ Error al registrar operario: ${error.message}`, false);
+                    mostrarAlerta(`⚠️ Error: ${error.message}`, false);
                 } else {
-                    mostrarAlerta(`✅ Trabajador ${nuevoTrabajador.nombre} ingresado con éxito en la nube.`, true);
+                    mostrarAlerta(`✅ Trabajador ${nuevoTrabajador.nombre} ingresado con éxito.`, true);
                     document.getElementById('form-trabajador').reset();
                     evaluarCamposRequeridos();
                 }
             } catch (err) {
-                mostrarAlerta("❌ Ocurrió un error inesperado al procesar el envío.", false);
+                mostrarAlerta("❌ Ocurrió un error inesperado al guardar.", false);
             }
         }
 
-        // LEER EXCEL
         function procesarArchivoExcel(e) {
             const file = e.target.files[0];
             if (!file) return;
 
-            document.getElementById('texto-drop').innerHTML = `<strong>Archivo seleccionado:</strong><br>${file.name}`;
+            document.getElementById('texto-drop').innerHTML = `<strong>Archivo cargado:</strong><br>${file.name}`;
             const reader = new FileReader();
             
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const primeraHoja = workbook.SheetNames[0];
-                const hoja = workbook.Sheets[primeraHoja];
+                const hoja = workbook.Sheets[workbook.SheetNames[0]];
                 const filas = XLSX.utils.sheet_to_json(hoja, { header: 1 });
                 
                 if(filas.length <= 1) {
-                    mostrarAlerta("❌ El archivo Excel está vacío o no tiene el formato correcto.", false);
+                    mostrarAlerta("❌ El archivo Excel no contiene registros válidos.", false);
                     return;
                 }
                 renderizarPrevisualizacion(filas);
@@ -566,11 +654,8 @@
                 sueldo_base: parseFloat(fila[13]) || 0
             }));
 
-            const thead = document.querySelector('#tabla-excel thead');
-            const tbody = document.querySelector('#tabla-excel tbody');
-            
-            thead.innerHTML = `<tr>${encabezados.map(h => `<th>${h}</th>`).join('')}</tr>`;
-            tbody.innerHTML = cuerpoDatos.map(fila => `<tr>${fila.map(celda => `<td>${celda || ''}</td>`).join('')}</tr>`).join('');
+            document.querySelector('#tabla-excel thead').innerHTML = `<tr>${encabezados.map(h => `<th>${h}</th>`).join('')}</tr>`;
+            document.querySelector('#tabla-excel tbody').innerHTML = cuerpoDatos.map(fila => `<tr>${fila.map(c => `<td>${c || ''}</td>`).join('')}</tr>`).join('');
             
             document.getElementById('seccion-previsualizacion').style.display = 'block';
         }
@@ -580,21 +665,7 @@
                 if (datosExcelProcesados.length === 0) return;
 
                 const filasParaSubir = datosExcelProcesados.map(d => ({
-                    empresa_rut: rutEmpresaTemporal,
-                    rut: d.rut,
-                    nombre: d.nombre,
-                    nacionalidad: d.nacionalidad,
-                    fecha_nacimiento: d.fecha_nacimiento,
-                    estado_civil: d.estado_civil,
-                    domicilio: d.domicilio,
-                    correo_electronico: d.correo_electronico,
-                    afiliacion_afp: d.afiliacion_afp,
-                    sistema_salud: d.sistema_salud,
-                    funcion_cargo: d.funcion_cargo,
-                    faena_obra: d.faena_obra,
-                    fecha_inicio: d.fecha_inicio,
-                    vigencia_contrato: d.vigencia_contrato,
-                    sueldo_base: d.sueldo_base
+                    empresa_rut: rutEmpresaTemporal, ...d
                 }));
 
                 const { error } = await supabase.from('trabajadores').insert(filasParaSubir);
@@ -602,15 +673,18 @@
                 if (error) {
                     mostrarAlerta(`⚠️ Error en la subida masiva: ${error.message}`, false);
                 } else {
-                    mostrarAlerta(`🚀 ¡Lista registrada! Se incorporaron ${filasParaSubir.length} trabajadores en bloque.`, true);
+                    mostrarAlerta(`🚀 ¡Éxito! Se incorporaron ${filasParaSubir.length} trabajadores en bloque a la base de datos.`, true);
                     document.getElementById('seccion-previsualizacion').style.display = 'none';
-                    document.getElementById('texto-drop').innerHTML = "<strong>Arrastra tu archivo Excel aquí</strong><br><span style='font-size:12px; color:#94A3B8;'>o haz clic para explorar tus carpetas</span>";
+                    document.getElementById('texto-drop').innerHTML = "<strong>Arrastra tu archivo Excel aquí</strong><br><span style='font-size:12px; color:var(--texto-mutado);'>o haz clic para explorar carpetas</span>";
                     datosExcelProcesados = [];
                 }
             } catch (err) {
-                mostrarAlerta("❌ Error general en la red.", false);
+                mostrarAlerta("❌ Error general de conexión.", false);
             }
         }
+
+        // Inicializar estados de campos requeridos al arrancar
+        evaluarCamposRequeridos();
     </script>
 </body>
 </html>
