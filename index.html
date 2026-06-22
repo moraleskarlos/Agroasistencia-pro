@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" onerror="console.warn('Tabler icons no disponible')">
   <link rel="stylesheet" href="css/estilos.css">
 </head>
+</head>
 <body>
 <div class="app">
 
@@ -1170,10 +1171,7 @@
 
 
   <!-- ══ MÓDULOS JS ══ -->
-  <!-- 1. Core primero: estado global, utilidades, navegación -->
   <script src="js/core.js"></script>
-
-  <!-- 2. Módulos (orden libre entre sí) -->
   <script src="js/auth.js"></script>
   <script src="js/empresas.js"></script>
   <script src="js/registro-personal.js"></script>
@@ -1183,19 +1181,94 @@
   <script src="js/anexos.js"></script>
   <script src="js/asistencia.js"></script>
   <script src="js/configuracion.js"></script>
-
-  <!-- 3. Script de login inmediato (corre antes que init para mostrar pantalla) -->
-  <script>
-// Garantizar que el login aparezca siempre al cargar
-(function(){
-  var el = document.getElementById('pantalla-login');
-  if(el) el.style.display = 'flex';
-  document.querySelectorAll('.sidebar, .main').forEach(function(e){ e.style.display = 'none'; });
-})();
-</script>
-
-  <!-- 4. Init al final: dispara carga inicial cuando todo lo anterior ya cargó -->
   <script src="js/init.js"></script>
+
+
+<!-- ══════════════════════════════════════
+     PANTALLA DE LOGIN
+══════════════════════════════════════ -->
+<div id="pantalla-login" style="
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#0f2027,#1a3a4a,#1e5631);
+  align-items:center;justify-content:center;padding:20px;">
+
+  <div style="width:100%;max-width:400px;">
+
+    <!-- Logo / Marca -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,0.12);
+        border:2px solid rgba(255,255,255,0.2);display:inline-flex;align-items:center;
+        justify-content:center;margin-bottom:16px;">
+        <i class="ti ti-plant-2" style="font-size:36px;color:#4ade80;"></i>
+      </div>
+      <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;">AgroAsistencia Pro</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:4px;">Sistema de gestión agrícola</div>
+    </div>
+
+    <!-- Tarjeta formulario -->
+    <div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+      border-radius:16px;padding:28px;backdrop-filter:blur(10px);">
+
+      <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:20px;">Iniciar sesión</div>
+
+      <!-- Usuario -->
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);
+          text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">
+          Usuario
+        </label>
+        <input type="text" id="login-usuario" placeholder="Ingresa tu usuario"
+          autocomplete="username"
+          style="width:100%;padding:11px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);
+            background:rgba(255,255,255,0.08);color:#fff;font-size:14px;outline:none;box-sizing:border-box;"
+          onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()">
+      </div>
+
+      <!-- Contraseña -->
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);
+          text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">
+          Contraseña
+        </label>
+        <div style="position:relative;">
+          <input type="password" id="login-password" placeholder="Ingresa tu contraseña"
+            autocomplete="current-password"
+            style="width:100%;padding:11px 40px 11px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);
+              background:rgba(255,255,255,0.08);color:#fff;font-size:14px;outline:none;box-sizing:border-box;"
+            onkeydown="if(event.key==='Enter') iniciarSesion()">
+          <button onclick="togglePasswordLogin()" style="position:absolute;right:12px;top:50%;
+            transform:translateY(-50%);background:none;border:none;cursor:pointer;
+            color:rgba(255,255,255,0.5);font-size:16px;" title="Mostrar/ocultar">
+            <i class="ti ti-eye" id="login-eye-icon"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="login-error" style="display:none;background:rgba(239,68,68,0.15);
+        border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;
+        color:#fca5a5;font-size:13px;margin-bottom:16px;">
+        ❌ Usuario o contraseña incorrectos
+      </div>
+
+      <!-- Botón -->
+      <button onclick="iniciarSesion()" id="btn-login"
+        style="width:100%;padding:12px;border-radius:9px;border:none;cursor:pointer;
+          background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:14px;
+          font-weight:600;transition:.2s;letter-spacing:0.2px;">
+        <i class="ti ti-login"></i> Entrar al sistema
+      </button>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:rgba(255,255,255,0.25);">
+      AgroAsistencia Pro · Versión 4.0
+    </div>
+
+  </div>
+</div>
+</script>
 
 </body>
 </html>
