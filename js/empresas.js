@@ -479,12 +479,13 @@ function verTrabajadoresEmpresaPropia(id){
 }
 
 function poblarSelectsEmpresaPropia(){
-  const ids = ['filtro-empresa-propia', 'asignar-ep-select'];
+  const ids = ['filtro-empresa-propia', 'asignar-ep-select', 'm-empresa-contratista', 'c-empresa-propia'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if(!el) return;
     const val = el.value;
-    el.innerHTML = '<option value="">— Todas las empresas —</option>'
+    const esContratista = (id === 'm-empresa-contratista');
+    el.innerHTML = `<option value="">${esContratista ? '— Seleccionar empresa propia —' : '— Todas las empresas —'}</option>`
       + empresas_propias.map(ep => `<option value="${ep.id}">${ep.nombre}</option>`).join('');
     if(val) el.value = val;
   });
