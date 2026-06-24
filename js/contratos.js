@@ -116,10 +116,11 @@ function precargarContrato(){
   document.getElementById('cp-afp').value           = t.afiliacion_afp || '';
   document.getElementById('cp-salud').value         = t.sistema_salud || '';
 
-  // Precargar datos bloqueados — EMPRESA CONTRATISTA (desde Configuración)
-  const contratista = cfg.empresa || {};
+  // Precargar datos bloqueados — EMPRESA CONTRATISTA (desde select de empresa propia)
+  const epId = document.getElementById('c-empresa-propia')?.value;
+  const contratista = (epId ? empresas_propias.find(e => e.id === epId) : null) || {};
   document.getElementById('cp-empresa-rut').value    = contratista.rut || '';
-  document.getElementById('cp-empresa-nombre').value = contratista.razon_social || '';
+  document.getElementById('cp-empresa-nombre').value = contratista.nombre || contratista.razon_social || '';
   document.getElementById('cp-rep-nombre').value     = contratista.representante || '';
   document.getElementById('cp-rep-rut').value        = contratista.rut_representante || '';
 
@@ -351,7 +352,7 @@ function actualizarPrevia(){
     ['Tipo contrato', tipoTxt],
     ['Trabajador',    t?.nombre || '—'],
     ['RUT',           t?.rut || '—'],
-    ['Empleador',     cfg.empresa?.razon_social || '—'],
+    ['Empleador',     (()=>{ const epId=document.getElementById('c-empresa-propia')?.value; const ep=epId?empresas_propias.find(e=>e.id===epId):null; return ep?.nombre||ep?.razon_social||cfg.empresa?.razon_social||'—'; })()],
     ['Mandante',      emp?.nombre || '—'],
     ['Función',       cargo],
     ['Faena',         faena],
@@ -404,7 +405,8 @@ function generarPDFContrato(){
 
   const datos    = obtenerDatosFormulario();
   const t        = trabajadores.find(x => x.id === id);
-  const emp      = cfg.empresa || {};
+  const epId     = document.getElementById('c-empresa-propia')?.value || t?.empresa_propia_id || '';
+  const emp      = (epId ? empresas_propias.find(e => e.id === epId) : null) || cfg.empresa || {};
   const mandante = findMandante(t);
   const otrosMandantes = empresas.filter(e => e.id !== mandante?.id && e.estado !== 'inactivo');
 
