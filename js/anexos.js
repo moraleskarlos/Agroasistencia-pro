@@ -164,11 +164,12 @@ function generarPDFAnexo(){
   if(!trabajadorId){ toast('⚠️ Selecciona un trabajador primero','error'); return; }
 
   const t       = trabajadores.find(x => x.id === trabajadorId);
-  const emp     = cfg.empresa || {};
+  const epId    = t?.empresa_propia_id || document.getElementById('c-empresa-propia')?.value || '';
+  const emp     = (epId ? empresas_propias.find(e => e.id === epId) : null) || cfg.empresa || {};
   const cont    = contratos.find(c => c.trabajador_id === trabajadorId || c.trabajador_rut === t?.rut);
   const detalle = obtenerDetalleAnexo();
   const fechaVig= document.getElementById('anexo-fecha-vigencia').value;
-  const ciudad  = document.getElementById('anexo-ciudad').value || cfg.empresa?.ciudad || '___________';
+  const ciudad  = document.getElementById('anexo-ciudad').value || emp?.ciudad || '___________';
   const obs     = document.getElementById('anexo-observaciones').value;
 
   if(!detalle){ toast('⚠️ Completa los campos del anexo','error'); return; }
@@ -358,7 +359,8 @@ function actualizarPreviaAnexo(){
   }
 
   const t       = trabajadores.find(x => x.id === id);
-  const emp     = cfg.empresa || {};
+  const epId2   = t?.empresa_propia_id || '';
+  const emp     = (epId2 ? empresas_propias.find(e => e.id === epId2) : null) || cfg.empresa || {};
   const detalle = obtenerDetalleAnexo();
   const fechaVig= document.getElementById('anexo-fecha-vigencia')?.value;
   const obs     = document.getElementById('anexo-observaciones')?.value;
@@ -400,7 +402,8 @@ function onSeleccionTrabajadorAnexo(){
     return;
   }
   const t    = trabajadores.find(x => x.id === id);
-  const emp  = cfg.empresa || {};
+  const epId3 = t?.empresa_propia_id || '';
+  const emp  = (epId3 ? empresas_propias.find(e => e.id === epId3) : null) || cfg.empresa || {};
   const man  = findMandante(t);
   const cont = contratos.find(c => c.trabajador_id === id || c.trabajador_rut === t?.rut);
 
