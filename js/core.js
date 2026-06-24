@@ -249,10 +249,6 @@ function poblarSelects(){
     if(val)el.value=val;
   });
 
-  // Campo empresa contratista en formulario registro (solo lectura)
-  const empCont=document.getElementById('m-empresa-contratista');
-  if(empCont) empCont.value=cfg.empresa?.razon_social||'';
-
   document.getElementById('badge-contratistas').textContent=empresas_propias.length+empresas.length;
   const bMan=document.getElementById('badge-mandantes-tab'); if(bMan) bMan.textContent=empresas.length;
   const bMis=document.getElementById('badge-mis-empresas'); if(bMis) bMis.textContent=empresas_propias.length;
