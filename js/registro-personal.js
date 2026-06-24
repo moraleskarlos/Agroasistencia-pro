@@ -31,9 +31,9 @@ function cargarEnFormulario(t){
       cargoSel.value = t.funcion_cargo || '';
     }
   }
-  // Empresa contratista (solo lectura)
-  const cont = document.getElementById('m-empresa-contratista');
-  if(cont) cont.value = cfg.empresa?.razon_social || '';
+  // Empresa propia (select)
+  const selEP = document.getElementById('m-empresa-contratista');
+  if(selEP){ selEP.value = t.empresa_propia_id || ''; }
   // Mandante
   const selEmp = document.getElementById('m-empresa');
   if(selEmp){ selEmp.value = t.empresa_rut||''; onCambioMandanteRegistro(t.faena_obra); }  document.getElementById('btn-guardar-txt').textContent='Actualizar trabajador';
@@ -92,6 +92,8 @@ async function guardarTrabajador(e){
   let cargo = document.getElementById('m-cargo').value;
   if(cargo === 'otro') cargo = document.getElementById('cargo-otro').value.trim();
   
+  const epId = document.getElementById('m-empresa-contratista')?.value || '';
+  const ep   = empresas_propias.find(e => e.id === epId);
   const datos={
     rut:               document.getElementById('m-rut').value.trim(),
     nombre:            document.getElementById('m-nombre').value.trim(),
@@ -102,6 +104,9 @@ async function guardarTrabajador(e){
     domicilio:         document.getElementById('m-domicilio').value.trim(),
     afiliacion_afp:    document.getElementById('m-afp').value,
     sistema_salud:     document.getElementById('m-salud').value,
+    empresa_propia_id: epId,
+    empresa_propia_rut:ep?.rut || '',
+    empresa_propia_nombre: ep?.nombre || '',
     empresa_rut:       document.getElementById('m-empresa')?.value || '',
     empresa:           document.getElementById('m-empresa')?.value || '',
     mandante_id:       document.getElementById('m-empresa')?.value || '',
