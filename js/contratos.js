@@ -136,8 +136,8 @@ function precargarContrato(){
   // Precargar Cargo y Faena automáticamente desde el trabajador (vienen de Registro Personal)
   const cCargo = document.getElementById('c-cargo');
   const cFaena = document.getElementById('c-faena');
-  if(cCargo && !cCargo.value && t.funcion_cargo) cCargo.value = t.funcion_cargo;
-  if(cFaena && !cFaena.value && t.faena_obra)    cFaena.value = t.faena_obra;
+  if(cCargo) cCargo.value = t.funcion_cargo || '';
+  if(cFaena && !cFaena.value && t.faena_obra) cFaena.value = t.faena_obra;
 
   // Precargar fecha inicio desde fecha_ingreso del trabajador
   const fechaInicio = t.fecha_ingreso || '';
@@ -220,17 +220,7 @@ const t = trabajadores.find(
   };
 }
 
-function mostrarCargoOtro(){
-
-  const cargo =
-    document.getElementById('c-cargo').value;
-
-  document.getElementById('cargo-otro-box').style.display =
-    cargo === 'Otro'
-      ? 'block'
-      : 'none';
-
-}
+function mostrarCargoOtro(){ /* cargo se carga automáticamente desde el trabajador */ }
 
 function guardarContrato(){
   const id = document.getElementById('c-trabajador').value;
