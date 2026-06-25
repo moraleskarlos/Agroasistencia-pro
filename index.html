@@ -472,29 +472,10 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div class="f-group">
   <label class="form-label">Función / cargo *</label>
-
-  <select class="f-input" id="c-cargo"
-          onchange="mostrarCargoOtro();actualizarPrevia()">
-    <option value="">Seleccionar</option>
-    <option>Cosechero</option>
-    <option>Jefe de Cuadrilla</option>
-    <option>Supervisor</option>
-    <option>Tractorista</option>
-    <option>Control Calidad</option>
-    <option>Administrativo</option>
-    <option>Chofer</option>
-    <option>Bodeguero</option>
-    <option>Prevencionista</option>
-    <option value="Otro">Otro</option>
-  </select>
-
-  <div id="cargo-otro-box"
-       style="display:none;margin-top:8px;">
-    <input class="f-input"
-           id="c-cargo-otro"
-           placeholder="Especificar cargo"
-           oninput="actualizarPrevia()">
-  </div>
+  <input class="f-input" id="c-cargo" readonly
+         style="background:var(--gris-bg);color:var(--texto2);"
+         placeholder="Se carga al seleccionar trabajador"
+         oninput="actualizarPrevia()">
 </div>
           <div class="f-group"><label class="form-label">Nombre de la faena *</label><input class="f-input" id="c-faena" placeholder="Ej: Cosecha temporada 2026" oninput="actualizarPrevia()"></div>
 
