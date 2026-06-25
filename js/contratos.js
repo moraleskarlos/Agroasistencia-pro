@@ -118,9 +118,9 @@ function precargarContrato(){
 
   // Precargar datos bloqueados — EMPRESA CONTRATISTA (desde select de empresa propia)
   const epId = document.getElementById('c-empresa-propia')?.value;
-  const contratista = (epId ? empresas_propias.find(e => e.id === epId) : null) || {};
+  const contratista = getEmpresaEmpleadora(epId);
   document.getElementById('cp-empresa-rut').value    = contratista.rut || '';
-  document.getElementById('cp-empresa-nombre').value = contratista.nombre || contratista.razon_social || '';
+  document.getElementById('cp-empresa-nombre').value = contratista.razon_social || '';
   document.getElementById('cp-rep-nombre').value     = contratista.representante || '';
   document.getElementById('cp-rep-rut').value        = contratista.rut_representante || '';
 
@@ -406,7 +406,7 @@ function generarPDFContrato(){
   const datos    = obtenerDatosFormulario();
   const t        = trabajadores.find(x => x.id === id);
   const epId     = document.getElementById('c-empresa-propia')?.value || t?.empresa_propia_id || '';
-  const emp      = (epId ? empresas_propias.find(e => e.id === epId) : null) || cfg.empresa || {};
+  const emp      = getEmpresaEmpleadora(epId);
   const mandante = findMandante(t);
   const otrosMandantes = empresas.filter(e => e.id !== mandante?.id && e.estado !== 'inactivo');
 
