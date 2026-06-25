@@ -188,6 +188,25 @@ function validarRUT(rut){
   return dv === dvCalc;
 }
 
+function normalizarEmpresa(ep){
+  if(!ep) return {};
+  return {
+    ...ep,
+    razon_social:  ep.razon_social  || ep.nombre || '',
+    representante: ep.representante || ep.nombre_representante || '',
+    rut_representante: ep.rut_representante || '',
+    cargo_representante: ep.cargo_representante || '',
+    correo: ep.correo || '',
+    direccion: ep.direccion || '',
+    ciudad: ep.ciudad || '',
+  };
+}
+
+function getEmpresaEmpleadora(epId){
+  const ep = epId ? empresas_propias.find(e => e.id === epId) : null;
+  return normalizarEmpresa(ep || cfg.empresa);
+}
+
 function findMandante(t){
   if(!t) return null;
   const ref = t.mandante_id || t.empresa_rut || t.empresa || '';
