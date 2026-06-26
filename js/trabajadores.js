@@ -209,3 +209,88 @@ function limpiarFiltroFecha(){
   const el = document.getElementById('filtro-fecha-ingreso');
   if(el){ el.value = ''; cargarTrabajadores(); }
 }
+
+function switchTabTrabajadores(tab){
+  const todos      = document.getElementById('sub-tab-todos-trab');
+  const extTab     = document.getElementById('sub-tab-extranjeros-trab');
+  const btnTodos   = document.getElementById('tab-todos-trab');
+  const btnExt     = document.getElementById('tab-extranjeros-trab');
+  if(tab === 'extranjeros'){
+    if(todos)    todos.style.display    = 'none';
+    if(extTab)   extTab.style.display   = 'block';
+    if(btnTodos) { btnTodos.style.background=  'var(--gris-bg)'; btnTodos.style.color='var(--texto2)'; }
+    if(btnExt)   { btnExt.style.background  = 'var(--azul)';    btnExt.style.color  = '#fff'; }
+    cargarExtranjeros();
+  } else {
+    if(todos)    todos.style.display    = 'block';
+    if(extTab)   extTab.style.display   = 'none';
+    if(btnTodos) { btnTodos.style.background= 'var(--azul)';    btnTodos.style.color= '#fff'; }
+    if(btnExt)   { btnExt.style.background = 'var(--gris-bg)'; btnExt.style.color  = 'var(--texto2)'; }
+    cargarTrabajadores();
+  }
+}
+
+function semaforo(fechaVenc, tipoDoc){
+  if(!fechaVenc) return { emoji:'⚫', label:'Sin documento', clase:'vencido' };
+  const hoy   = new Date(); hoy.setHours(0,0,0,0);
+  const venc  = new Date(fechaVenc); venc.setHours(0,0,0,0);
+  const dias  = Math.round((venc - hoy) / 86400000);
+  if(dias < 0)  return { emoji:'⚫', label:'Vencido',              clase:'vencido',    dias };
+  if(dias <= 30) return { emoji:'🔴', label:'Urgente',             clase:'urgente',    dias };
+  if(dias <= 90) return { emoji:'🟡', label:'Iniciar trámite',     clase:'advertencia',dias };
+  return              { emoji:'🟢', label:'Vigente',               clase:'vigente',    dias };
+}
+
+function cargarExtranjeros(){
+  const buscar  = (document.getElementById('buscar-extranjero')?.value||'').toLowerCase().trim();
+  const tbody   = document.getElementById('tbody-extranjeros');
+  if(!tbody) return;
+
+  const extranjeros = trabajadores.filter(t =>
+    t.nacionalidad && t.nacionalidad !== 'Chileno' && t.estado === 'activo'
+  );
+
+  const filtrados = buscar
+    ? extranjeros.filter(t =>
+        (t.nombre||'').toLowerCase().includes(buscar) ||
+        (t.rut||'').toLowerCase().includes(buscar))
+    : extranjeros;
+
+  if(!filtrados.length){
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">Sin trabajadores extranjeros registrados</td></tr>`;
+    actualizarBadgeExtranjeros(extranjeros);
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map(t => {
+    const sem   = semaforo(t.fecha_venc_mig, t.tipo_doc_mig);
+    const dias  = sem.dias !== undefined
+      ? (sem.dias < 0 ? `${Math.abs(sem.dias)} días vencido` : `${sem.dias} días`)
+      : '—';
+    const venc  = t.fecha_venc_mig
+      ? new Date(t.fecha_venc_mig).toLocaleDateString('es-CL')
+      : '—';
+    return `<tr>
+      <td>${t.rut||'—'}</td>
+      <td><strong>${t.nombre||'—'}</strong></td>
+      <td>${t.nacionalidad||'—'}</td>
+      <td>${t.tipo_doc_mig||'Sin registrar'}</td>
+      <td>${venc}</td>
+      <td style="text-align:center;">${dias}</td>
+      <td style="text-align:center;font-size:18px;" title="${sem.label}">${sem.emoji}</td>
+    </tr>`;
+  }).join('');
+
+  actualizarBadgeExtranjeros(extranjeros);
+}
+
+function actualizarBadgeExtranjeros(lista){
+  const badge = document.getElementById('badge-extranjeros-urgente');
+  if(!badge) return;
+  const urgentes = lista.filter(t => {
+    const s = semaforo(t.fecha_venc_mig, t.tipo_doc_mig);
+    return s.clase === 'urgente' || s.clase === 'vencido';
+  }).length;
+  badge.style.display = urgentes > 0 ? 'inline' : 'none';
+  badge.textContent   = urgentes > 0 ? urgentes : '';
+}
