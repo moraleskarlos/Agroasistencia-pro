@@ -78,7 +78,7 @@ function irA(idPagina, botonEl) {
     paginaActiva.classList.add('activa');
     paginaActiva.style.display = 'block';
     // Inicializar módulo al entrar
-    if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); cargarTrabajadores(); }
+    if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
     if(idPagina === 'contratistas' || idPagina === 'p-contratistas'){ switchTabEmpresas(tabEmpresasActivo||'mis-empresas'); }
     if(idPagina === 'qr'           || idPagina === 'p-qr'){           poblarSelects(); cargarListaQR(); }
     if(idPagina === 'asistencia'   || idPagina === 'p-asistencia'){   initAsistencia(); }
