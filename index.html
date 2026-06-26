@@ -138,7 +138,7 @@
 
     <div class="form-group">
       <label>Nacionalidad *</label>
-      <select id="m-nacionalidad" required onchange="evaluarCampos()">
+      <select id="m-nacionalidad" required onchange="evaluarCampos();mostrarCamposMigratorios()">
         <option value="Chileno">Chileno</option>
         <option value="Haitiano">Haitiano</option>
         <option value="Colombiano">Colombiano</option>
@@ -155,6 +155,40 @@
         <input type="text" id="m-otra-nac" placeholder="Ej: Ecuatoriano">
       </div>
     </div>
+
+    <!-- DATOS MIGRATORIOS — solo si nacionalidad ≠ Chileno -->
+    <div id="bloque-migratorio" style="display:none;">
+      <div class="form-section"><i class="ti ti-world"></i> Datos Migratorios</div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Tipo de documento *</label>
+          <select id="m-tipo-doc-mig" onchange="onCambioTipoDocMig()">
+            <option value="">— Seleccionar —</option>
+            <option value="Residencia Temporal">Residencia Temporal</option>
+            <option value="Visa Temporaria / Sujeta a Contrato">Visa Temporaria / Sujeta a Contrato</option>
+            <option value="Visa de Temporada">Visa de Temporada</option>
+            <option value="Residencia Definitiva">Residencia Definitiva</option>
+            <option value="Visa de Estudiante">Visa de Estudiante</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Número de documento</label>
+          <input type="text" id="m-num-doc-mig" placeholder="Ej: 123456789">
+        </div>
+      </div>
+
+      <div class="form-group" id="grupo-fecha-venc-mig">
+        <label id="lbl-fecha-venc-mig">Fecha de vencimiento *</label>
+        <input type="date" id="m-fecha-venc-mig">
+        <div id="nota-res-definitiva" style="display:none;font-size:12px;color:var(--texto2);margin-top:4px;">
+          ℹ️ Para Residencia Definitiva, ingresa la fecha de vencimiento de la <strong>cédula de identidad</strong> (se renueva cada 5 años).
+        </div>
+      </div>
+    </div>
+    <!-- FIN DATOS MIGRATORIOS -->
 
     <div class="form-group">
       <label>Fecha de nacimiento</label>
@@ -322,6 +356,21 @@
             <button class="btn btn-secondary" onclick="exportarTrabajadoresExcel()"><i class="ti ti-download"></i> Excel</button>
           </div>
         </div>
+
+        <!-- TABS — mismo patrón que Empresas -->
+        <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--borde);padding-bottom:0;">
+          <button id="tab-todos-trab" onclick="switchTabTrabajadores('todos')"
+            style="padding:8px 18px;font-size:13px;font-weight:600;border:none;cursor:pointer;border-radius:6px 6px 0 0;background:var(--azul);color:#fff;">
+            <i class="ti ti-users"></i> Trabajadores
+          </button>
+          <button id="tab-extranjeros-trab" onclick="switchTabTrabajadores('extranjeros')"
+            style="padding:8px 18px;font-size:13px;font-weight:600;border:none;cursor:pointer;border-radius:6px 6px 0 0;background:var(--gris-bg);color:var(--texto2);">
+            <i class="ti ti-world"></i> Extranjeros <span id="badge-extranjeros-urgente" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:11px;margin-left:4px;">!</span>
+          </button>
+        </div>
+
+        <!-- SUB-TAB TODOS -->
+        <div id="sub-tab-todos-trab">
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
           <div class="kpi azul"><div class="kpi-label">Total registrados</div><div class="kpi-value" id="kpi-t-total">0</div><div class="kpi-sub">en el sistema</div></div>
           <div class="kpi verde"><div class="kpi-label">Activos</div><div class="kpi-value" id="kpi-t-activos">0</div><div class="kpi-sub">trabajando</div></div>
@@ -392,7 +441,48 @@
 </table>
           </div>
         </div>
-      </div>
+        </div><!-- /sub-tab-todos-trab -->
+
+        <!-- SUB-TAB EXTRANJEROS -->
+        <div id="sub-tab-extranjeros-trab" style="display:none;">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div class="card-title" style="margin:0;"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
+              <input type="text" id="buscar-extranjero" placeholder="Buscar nombre o RUT..."
+                style="width:200px;padding:7px 10px;font-size:12px;"
+                oninput="cargarExtranjeros()">
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="tabla" style="min-width:750px;">
+                <thead><tr>
+                  <th>RUT</th>
+                  <th>Nombre</th>
+                  <th>Nacionalidad</th>
+                  <th>Tipo documento</th>
+                  <th>Vencimiento</th>
+                  <th>Días restantes</th>
+                  <th style="text-align:center;">Estado</th>
+                </tr></thead>
+                <tbody id="tbody-extranjeros">
+                  <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">Sin trabajadores extranjeros registrados</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Leyenda semáforo -->
+            <div style="margin-top:14px;font-size:12px;color:var(--texto2);display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+              <span>🟢 Vigente (+90 días)</span>
+              <span>🟡 Iniciar trámite (31–90 días)</span>
+              <span>🔴 Urgente (0–30 días)</span>
+              <span>⚫ Vencido</span>
+            </div>
+            <!-- Nota legal -->
+            <div style="margin-top:10px;padding:10px 14px;background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:0 6px 6px 0;font-size:12px;color:#0369a1;line-height:1.6;">
+              ℹ️ <strong>Sobre los 90 días:</strong> La Residencia Temporal debe renovarse dentro de los últimos 90 días antes de su vencimiento. Durante el trámite, el <strong>Certificado de Residencia en Trámite</strong> emitido por SERMIG habilita al trabajador a continuar sus labores con normalidad. <em>(Fuente: Ley N°21.325 de Migración y Extranjería)</em>
+            </div>
+          </div>
+        </div><!-- /sub-tab-extranjeros-trab -->
+
+      </div><!-- /p-trabajadores -->
 <!-- ═══ PÁGINA: CONTRATOS ═══ -->
     <div id="p-contratos" class="pagina">
       <div class="sec-header">
