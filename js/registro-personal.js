@@ -1,5 +1,27 @@
 /* ════ REGISTRO PERSONAL ════ */
 
+function onCambioTipoDocMig(){
+  const tipo = document.getElementById('m-tipo-doc-mig')?.value;
+  const nota = document.getElementById('nota-res-definitiva');
+  const lbl  = document.getElementById('lbl-fecha-venc-mig');
+  if(nota) nota.style.display = tipo === 'Residencia Definitiva' ? 'block' : 'none';
+  if(lbl)  lbl.textContent   = tipo === 'Residencia Definitiva'
+    ? 'Fecha de vencimiento de la cédula *'
+    : 'Fecha de vencimiento *';
+}
+
+function mostrarCamposMigratorios(){
+  const nac = document.getElementById('m-nacionalidad')?.value;
+  const esExtranjero = nac && nac !== 'Chileno';
+  const bloque = document.getElementById('bloque-migratorio');
+  if(bloque) bloque.style.display = esExtranjero ? 'block' : 'none';
+  if(!esExtranjero){
+    ['m-tipo-doc-mig','m-num-doc-mig','m-fecha-venc-mig'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value = '';
+    });
+  }
+}
+
 async function buscarPorRUT(){
   const rut=document.getElementById('rut-buscar').value.trim();
   if(!rut){toast('⚠️ Ingresa un RUT','error');return;}
@@ -36,7 +58,14 @@ function cargarEnFormulario(t){
   if(selEP){ selEP.value = t.empresa_propia_id || ''; }
   // Mandante
   const selEmp = document.getElementById('m-empresa');
-  if(selEmp){ selEmp.value = t.empresa_rut||''; onCambioMandanteRegistro(t.faena_obra); }  document.getElementById('btn-guardar-txt').textContent='Actualizar trabajador';
+  if(selEmp){ selEmp.value = t.empresa_rut||''; onCambioMandanteRegistro(t.faena_obra); }
+  // Datos migratorios
+  set('m-tipo-doc-mig',  t.tipo_doc_mig);
+  set('m-num-doc-mig',   t.num_doc_mig);
+  set('m-fecha-venc-mig',t.fecha_venc_mig);
+  mostrarCamposMigratorios();
+  onCambioTipoDocMig();
+  document.getElementById('btn-guardar-txt').textContent='Actualizar trabajador';
   evaluarCampos();
 }
 
@@ -113,7 +142,11 @@ async function guardarTrabajador(e){
     faena_obra:        document.getElementById('m-faena')?.value || '',
     funcion_cargo:     cargo || '',
     fecha_ingreso:     document.getElementById('m-fecha-ingreso')?.value || null,
-    estado:            'activo'
+    estado:            'activo',
+    // Datos migratorios (solo si es extranjero)
+    tipo_doc_mig:      document.getElementById('m-tipo-doc-mig')?.value || '',
+    num_doc_mig:       document.getElementById('m-num-doc-mig')?.value.trim() || '',
+    fecha_venc_mig:    document.getElementById('m-fecha-venc-mig')?.value || '',
   };
   if(!supabaseClient){
     const idx=trabajadores.findIndex(t=>t.rut===datos.rut);
