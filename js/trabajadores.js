@@ -95,15 +95,15 @@ function cargarTrabajadores(){
         </span>
       </td>
       <td>${estadoContrato}</td>
-      <td style="min-width:120px;">
+      <td style="min-width:140px;">
         <div style="display:flex;gap:5px;flex-wrap:nowrap;align-items:center;">
+          <button class="btn btn-primary btn-sm"
+            onclick="verPerfilTrabajador('${t.id}')" title="Ver perfil">
+            <i class="ti ti-user"></i> Ver
+          </button>
           <button class="btn btn-secondary btn-sm"
             onclick="editarTrabajador('${t.rut}')" title="Editar">
             <i class="ti ti-edit"></i>
-          </button>
-          <button class="btn btn-secondary btn-sm"
-            onclick="irAContrato('${t.rut}')" title="Ver contrato">
-            <i class="ti ti-file-text"></i>
           </button>
           <button class="btn ${activo ? 'btn-danger' : 'btn-secondary'} btn-sm"
             onclick="cambiarEstado('${t.rut}','${activo ? 'inactivo' : 'activo'}')"
@@ -293,4 +293,93 @@ function actualizarBadgeExtranjeros(lista){
   }).length;
   badge.style.display = urgentes > 0 ? 'inline' : 'none';
   badge.textContent   = urgentes > 0 ? urgentes : '';
+}
+
+function verPerfilTrabajador(id){
+  const t = trabajadores.find(x => x.id === id);
+  if(!t){ toast('⚠️ Trabajador no encontrado','error'); return; }
+
+  // Guardar ID en variable global para uso del perfil
+  window._perfilTrabajadorId = id;
+
+  // Header del perfil
+  const ep    = getEmpresaEmpleadora(t.empresa_propia_id);
+  const man   = findMandante(t);
+  const iniciales = (t.nombre||'?').split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase();
+  const activo    = t.estado === 'activo';
+
+  const hEl = document.getElementById('perfil-header');
+  if(hEl) hEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="width:54px;height:54px;border-radius:50%;background:var(--azul);
+        display:flex;align-items:center;justify-content:center;
+        font-size:20px;font-weight:700;color:#fff;flex-shrink:0;">${iniciales}</div>
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--texto);">${t.nombre||'—'}</div>
+        <div style="font-size:13px;color:var(--texto2);margin-top:2px;">
+          RUT ${t.rut||'—'} &nbsp;·&nbsp; ${t.funcion_cargo||'Sin cargo'}
+          &nbsp;·&nbsp; <span class="badge ${activo?'badge-verde':'badge-rojo'}">${activo?'Activo':'Inactivo'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--texto3);margin-top:2px;">
+          ${ep?.razon_social||'Sin empresa'} ${man?'· '+man.nombre:''}
+        </div>
+      </div>
+    </div>`;
+
+  irA('p-perfil-trabajador');
+  switchTabPerfil('datos');
+}
+
+function switchTabPerfil(tab){
+  const tabDatos    = document.getElementById('tab-perfil-datos');
+  const tabCarpeta  = document.getElementById('tab-perfil-carpeta');
+  const subDatos    = document.getElementById('sub-perfil-datos');
+  const subCarpeta  = document.getElementById('sub-perfil-carpeta');
+
+  if(tab === 'carpeta'){
+    tabDatos.style.borderBottomColor   = 'transparent'; tabDatos.style.color   = 'var(--texto2)';
+    tabCarpeta.style.borderBottomColor = 'var(--azul)'; tabCarpeta.style.color = 'var(--azul)';
+    subDatos.style.display   = 'none';
+    subCarpeta.style.display = 'block';
+    renderCarpetaLaboral(window._perfilTrabajadorId);
+  } else {
+    tabCarpeta.style.borderBottomColor = 'transparent'; tabCarpeta.style.color = 'var(--texto2)';
+    tabDatos.style.borderBottomColor   = 'var(--azul)'; tabDatos.style.color   = 'var(--azul)';
+    subCarpeta.style.display = 'none';
+    subDatos.style.display   = 'block';
+  }
+}
+
+function renderCarpetaLaboral(id){
+  const tbody = document.getElementById('tbody-carpeta');
+  if(!tbody) return;
+  const t   = trabajadores.find(x => x.id === id);
+  const docs = (carpeta||[])
+    .filter(d => d.trabajador_id === id || d.trabajador_rut === t?.rut)
+    .sort((a,b) => b.fecha_generacion.localeCompare(a.fecha_generacion));
+
+  if(!docs.length){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--texto3);">
+      Sin documentos en la carpeta laboral</td></tr>`;
+    return;
+  }
+
+  const ICONOS = {
+    contrato:'ti-file-text', anexo:'ti-file-plus', epp_riohs_irl:'ti-shield-check',
+    liquidacion:'ti-cash', finiquito:'ti-file-x', carta:'ti-mail', otro:'ti-paperclip'
+  };
+  const LABELS = {
+    contrato:'Contrato', anexo:'Anexo', epp_riohs_irl:'EPP / RIOHS / IRL',
+    liquidacion:'Liquidación', finiquito:'Finiquito', carta:'Carta', otro:'Otro'
+  };
+
+  tbody.innerHTML = docs.map(d => `<tr>
+    <td><i class="ti ${ICONOS[d.tipo]||'ti-file'}" style="color:var(--azul);margin-right:6px;"></i>
+        ${LABELS[d.tipo]||d.tipo}</td>
+    <td>${d.descripcion||'—'}</td>
+    <td style="font-family:monospace;font-size:11px;">${d.folio||'—'}</td>
+    <td>${d.fecha_firma ? new Date(d.fecha_firma).toLocaleDateString('es-CL') : '—'}</td>
+    <td>${d.fecha_generacion ? new Date(d.fecha_generacion).toLocaleDateString('es-CL') : '—'}</td>
+    <td>${d.generado_por||'—'}</td>
+  </tr>`).join('');
 }
