@@ -483,6 +483,68 @@
         </div><!-- /sub-tab-extranjeros-trab -->
 
       </div><!-- /p-trabajadores -->
+<!-- ═══ PERFIL TRABAJADOR ═══ -->
+<div id="p-perfil-trabajador" class="pagina">
+
+  <!-- Header trabajador -->
+  <div class="sec-header" style="margin-bottom:0;">
+    <div id="perfil-header"><!-- se llena con JS --></div>
+    <button class="btn btn-secondary" onclick="irA('trabajadores')">
+      <i class="ti ti-arrow-left"></i> Volver
+    </button>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display:flex;gap:4px;margin:16px 0 0;border-bottom:2px solid var(--borde);padding-bottom:0;">
+    <button id="tab-perfil-datos" onclick="switchTabPerfil('datos')"
+      style="padding:8px 18px;font-size:13px;font-weight:600;border:none;cursor:pointer;
+             border-radius:6px 6px 0 0;background:none;color:var(--azul);
+             border-bottom:2px solid var(--azul);margin-bottom:-2px;">
+      <i class="ti ti-user"></i> Datos Personales
+    </button>
+    <button id="tab-perfil-carpeta" onclick="switchTabPerfil('carpeta')"
+      style="padding:8px 18px;font-size:13px;font-weight:600;border:none;cursor:pointer;
+             border-radius:6px 6px 0 0;background:none;color:var(--texto2);
+             border-bottom:2px solid transparent;margin-bottom:-2px;">
+      <i class="ti ti-folder"></i> Carpeta Laboral
+    </button>
+  </div>
+
+  <!-- Sub-tab Datos Personales -->
+  <div id="sub-perfil-datos" style="padding-top:16px;">
+    <p style="color:var(--texto2);font-size:13px;">
+      Para editar los datos del trabajador, usá el botón
+      <strong>Editar</strong> desde la lista de trabajadores.
+    </p>
+  </div>
+
+  <!-- Sub-tab Carpeta Laboral -->
+  <div id="sub-perfil-carpeta" style="display:none;padding-top:16px;">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px;">
+        <i class="ti ti-folder"></i> Documentos del trabajador
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tabla">
+          <thead><tr>
+            <th>Tipo</th>
+            <th>Descripción</th>
+            <th>Folio</th>
+            <th>Fecha firma</th>
+            <th>Generado</th>
+            <th>Por</th>
+          </tr></thead>
+          <tbody id="tbody-carpeta">
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--texto3);">
+              Sin documentos registrados</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /p-perfil-trabajador -->
+
 <!-- ═══ PÁGINA: CONTRATOS ═══ -->
     <div id="p-contratos" class="pagina">
       <div class="sec-header">
