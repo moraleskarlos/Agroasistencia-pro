@@ -959,6 +959,18 @@ ${clausulasHTML}
 </div>
 </body></html>`);
   win.document.close();
+
+  // Registrar en Carpeta Laboral
+  const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[tipo] || tipo;
+  registrarDocumentoCarpeta({
+    trabajador_id:  id,
+    trabajador_rut: t?.rut || '',
+    tipo:           'contrato',
+    subtipo:        tipo,
+    folio:          folioDoc,
+    fecha_firma:    datos.fecha_firma || '',
+    descripcion:    `Contrato ${tipoTxt} — ${datos.nombre_faena || ''} — ${datos.temporada || ''}`.trim().replace(/—\s*$/, ''),
+  });
 }
 
 function switchTabContratos(tab){
