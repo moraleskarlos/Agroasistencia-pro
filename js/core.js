@@ -1,9 +1,9 @@
 /* ════ CORE — estado global, utilidades, navegación ════ */
 
 const CFG_KEY='agro_cfg', LOCAL_T='agro_trabajadores', LOCAL_E='agro_empresas', LOCAL_EP='agro_empresas_propias';
-const LOCAL_C='agro_contratos', LOCAL_AN='agro_anexos';
+const LOCAL_C='agro_contratos', LOCAL_AN='agro_anexos', LOCAL_CARPETA='agro_carpeta';
 let cfg={}, supabaseClient=null, trabajadores=[], empresas=[], datosExcel=[];
-let contratos=[], anexos=[], empresas_propias=[];
+let contratos=[], anexos=[], empresas_propias=[], carpeta=[];
 let contratoEditandoId=null, _rutPrecontratoTemp=null;
 let tabEmpresasActivo='mis-empresas', tabContratosActivo='contratos';
 let toastTimer;
@@ -79,6 +79,7 @@ function irA(idPagina, botonEl) {
     paginaActiva.style.display = 'block';
     // Inicializar módulo al entrar
     if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
+    if(idPagina === 'p-perfil-trabajador'){ /* contenido se carga desde verPerfilTrabajador */ }
     if(idPagina === 'contratistas' || idPagina === 'p-contratistas'){ switchTabEmpresas(tabEmpresasActivo||'mis-empresas'); }
     if(idPagina === 'qr'           || idPagina === 'p-qr'){           poblarSelects(); cargarListaQR(); }
     if(idPagina === 'asistencia'   || idPagina === 'p-asistencia'){   initAsistencia(); }
@@ -220,11 +221,31 @@ function toast(msg,tipo='exito'){
 }
 
 function guardarLocal(){localStorage.setItem(LOCAL_T,JSON.stringify(trabajadores));localStorage.setItem(LOCAL_E,JSON.stringify(empresas));localStorage.setItem(LOCAL_EP,JSON.stringify(empresas_propias));}
+function guardarCarpeta(){ localStorage.setItem(LOCAL_CARPETA, JSON.stringify(carpeta)); }
+
+function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, tipo, subtipo, folio, fecha_firma, descripcion }){
+  const doc = {
+    id:              Date.now().toString(),
+    trabajador_id,
+    trabajador_rut,
+    tipo,            // 'contrato' | 'anexo' | 'epp_riohs_irl' | 'liquidacion' | 'finiquito' | 'carta' | 'otro'
+    subtipo:         subtipo || '',
+    folio:           folio   || '',
+    fecha_generacion: new Date().toISOString().slice(0,10),
+    fecha_firma:     fecha_firma || '',
+    generado_por:    sesionActiva?.usuario || 'admin',
+    descripcion:     descripcion || '',
+  };
+  carpeta.push(doc);
+  guardarCarpeta();
+  return doc;
+}
 
 function cargarLocal(){
   try{trabajadores=JSON.parse(localStorage.getItem(LOCAL_T))||[];}catch{trabajadores=[];}
   try{empresas=JSON.parse(localStorage.getItem(LOCAL_E))||[];}catch{empresas=[];}
   try{empresas_propias=JSON.parse(localStorage.getItem(LOCAL_EP))||[];}catch{empresas_propias=[];}
+  try{carpeta=JSON.parse(localStorage.getItem(LOCAL_CARPETA))||[];}catch{carpeta=[];}
 }
 
 function migrarIDs(){
