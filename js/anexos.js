@@ -313,6 +313,17 @@ se acuerda el siguiente anexo al contrato de trabajo suscrito con fecha
 </div>
 </body></html>`);
   win.document.close();
+
+  // Registrar en Carpeta Laboral
+  registrarDocumentoCarpeta({
+    trabajador_id:  trabajadorId,
+    trabajador_rut: t?.rut || '',
+    tipo:           'anexo',
+    subtipo:        tipo,
+    folio:          folioDoc,
+    fecha_firma:    fechaVig || '',
+    descripcion:    `Anexo — ${TIPOS_ANEXO[tipo] || tipo}`,
+  });
 }
 
 function generarPDFAnexoPorId(id){
