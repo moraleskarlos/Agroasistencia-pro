@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>App Asistencia</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
+  onerror="console.warn('Tabler icons no disponible')">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"
+  onerror="console.warn('jsQR no disponible — el escaneo por cámara no funcionará')"></script>
+<style>
+  :root{
+    --azul:#0f2942; --verde:#10b981; --verde-dark:#059669;
+    --verde-sel:#D1FAE5; --verde-sel-t:#065F46;
+    --gris-bg:#F1F5F9; --blanco:#FFFFFF; --borde:#E2E8F0;
+    --texto:#1E293B; --texto2:#64748B; --texto3:#94A3B8;
+    --danger:#EF4444; --danger-bg:#FEE2E2;
+    --warn:#F59E0B; --warn-bg:#FEF3C7;
+    --radius:12px; --radius-lg:18px;
+    --shadow:0 2px 8px rgba(0,0,0,0.08);
+    --shadow-md:0 8px 24px rgba(0,0,0,0.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:'Segoe UI',system-ui,sans-serif;background:var(--gris-bg);
+    color:var(--texto);min-height:100vh;font-size:15px;
+    -webkit-user-select:none;user-select:none;
+  }
+  input,button,textarea{font-family:inherit;-webkit-user-select:text;user-select:text}
+  button{cursor:pointer;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;
+    padding:13px 18px;border-radius:var(--radius);border:none;
+    font-size:14px;font-weight:600;transition:.15s;text-decoration:none;
+  }
+  .btn-primary{background:var(--azul);color:#fff}
+  .btn-primary:active{transform:scale(0.97);background:#1a3a5c}
+  .btn-secondary{background:#fff;color:var(--texto);border:1px solid var(--borde)}
+  .btn-secondary:active{background:var(--gris-bg)}
+  .btn-success{background:var(--verde);color:#fff}
+  .btn-full{width:100%}
+  .card{
+    background:#fff;border-radius:var(--radius-lg);padding:16px;
+    box-shadow:var(--shadow);margin-bottom:12px;
+  }
+  .form-group label{
+    display:block;font-size:11px;font-weight:700;color:var(--texto2);
+    text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;
+  }
+  .form-input{
+    width:100%;padding:13px;border-radius:var(--radius);
+    border:1.5px solid var(--borde);font-size:15px;background:#fff;
+  }
+  .form-input:focus{outline:none;border-color:var(--azul)}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:2px}
+  .fade-in{animation:fadeIn .2s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .checkbox-square{
+    width:13px;height:13px;border:1.5px solid #000;display:inline-block;
+    text-align:center;line-height:13px;font-size:10px;
+  }
+
+  /* ---- Pantalla Login ---- */
+  #pantalla-login{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:24px;background:linear-gradient(160deg,#0f2027,#1a3a4a,#1e5631);
+  }
+  .login-box{
+    background:#fff;border-radius:20px;padding:30px 24px;width:100%;max-width:380px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.35);
+  }
+
+  /* ---- Header app ---- */
+  .app-header{
+    background:var(--azul);padding:16px 18px;display:flex;
+    justify-content:space-between;align-items:center;color:#fff;
+    position:sticky;top:0;z-index:50;
+  }
+  .app-header-icon{
+    width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.15);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .header-close-btn{
+    background:rgba(255,255,255,0.15);border:none;border-radius:9px;
+    color:#fff;width:38px;height:38px;cursor:pointer;flex-shrink:0;
+  }
+
+  /* ---- Tabs ---- */
+  .tabs{display:flex;background:#fff;border-bottom:1px solid var(--borde);
+    position:sticky;top:70px;z-index:49;}
+  .tab-btn{
+    flex:1;padding:15px 8px;border:none;background:none;font-size:13px;
+    font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--texto2);
+  }
+  .tab-btn.activo{border-bottom-color:var(--azul);color:var(--azul)}
+
+  .pantalla-contenido{padding:16px;max-width:520px;margin:0 auto;padding-bottom:60px}
+
+  /* ---- QR Scanner ---- */
+  #qr-video-wrap{
+    border-radius:14px;overflow:hidden;margin-bottom:12px;background:#000;
+    position:relative;aspect-ratio:1/1;
+  }
+  #qr-video{width:100%;height:100%;object-fit:cover;display:block}
+  .qr-frame-overlay{
+    position:absolute;inset:0;pointer-events:none;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .qr-frame-overlay div{
+    width:70%;height:70%;border:3px solid var(--verde);border-radius:16px;
+    box-shadow:0 0 0 2000px rgba(0,0,0,0.35);
+  }
+
+  .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .kpi-box{background:#fff;border-radius:14px;padding:14px 8px;text-align:center;box-shadow:var(--shadow)}
+  .kpi-num{font-size:24px;font-weight:800}
+  .kpi-label{font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+
+  .worker-row{
+    background:#fff;border-radius:14px;padding:13px 14px;margin-bottom:8px;
+    display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);
+  }
+  .worker-info{flex:1;min-width:0}
+  .worker-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .worker-rut{font-size:11px;color:var(--texto2);font-family:monospace}
+  .worker-time{text-align:center;min-width:54px}
+  .worker-time-label{font-size:9px;color:var(--texto3);text-transform:uppercase}
+  .worker-time-val{font-size:13px;font-weight:700}
+  .status-pill{
+    border-radius:99px;padding:5px 10px;font-size:11px;font-weight:700;
+    white-space:nowrap;display:flex;align-items:center;gap:4px;flex-shrink:0;
+  }
+
+  .result-banner{
+    border-radius:14px;padding:16px;font-size:14px;font-weight:700;
+    display:flex;align-items:center;gap:10px;margin-bottom:12px;
+  }
+
+  .offline-badge{
+    position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+    background:var(--warn-bg);color:#92400E;font-size:12px;font-weight:700;
+    padding:8px 16px;border-radius:99px;box-shadow:var(--shadow-md);
+    display:none;align-items:center;gap:6px;z-index:100;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     PANTALLA LOGIN
+══════════════════════════════════════ -->
+<div id="pantalla-login">
+  <div class="login-box">
+    <div style="text-align:center;margin-bottom:26px;">
+      <div style="width:68px;height:68px;border-radius:18px;background:var(--azul);
+        display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+        <i class="ti ti-scan" style="font-size:32px;color:var(--verde);"></i>
+      </div>
+      <div style="font-size:20px;font-weight:800;">App Asistencia</div>
+      <div style="font-size:12px;color:var(--texto2);margin-top:2px;">Marcación de entrada y salida</div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Empresa Mandante</label>
+      <select id="login-mandante" class="form-input"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Usuario</label>
+      <input type="text" id="login-user" class="form-input" placeholder="usuario" autocomplete="username">
+    </div>
+    <div class="form-group" style="margin-bottom:22px;">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" class="form-input" placeholder="••••••••"
+        autocomplete="current-password" onkeydown="if(event.key==='Enter') hacerLogin()">
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="hacerLogin()">
+      <i class="ti ti-login"></i> Ingresar
+    </button>
+
+    <div id="login-error" style="color:var(--danger);font-size:12px;text-align:center;
+      margin-top:12px;min-height:16px;font-weight:600;"></div>
+
+    <div id="sin-config-aviso" style="display:none;background:var(--warn-bg);color:#92400E;
+      border-radius:10px;padding:12px;font-size:12px;margin-top:14px;text-align:center;line-height:1.5;">
+      ⚠️ No hay datos sincronizados aún.<br>
+      Conecta esta app a Supabase o importa los datos desde el sistema principal.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     APP PRINCIPAL (post-login)
+══════════════════════════════════════ -->
+<div id="app-main" style="display:none;">
+
+  <div class="app-header">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+      <div class="app-header-icon"><i class="ti ti-scan" style="font-size:18px;color:var(--verde);"></i></div>
+      <div style="min-width:0;">
+        <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;
+          text-overflow:ellipsis;" id="header-empresa">—</div>
+        <div style="font-size:10px;opacity:0.7;" id="header-fecha">—</div>
+      </div>
+    </div>
+    <button class="header-close-btn" onclick="cerrarSesionApp()"><i class="ti ti-logout"></i></button>
+  </div>
+
+  <div class="tabs">
+    <button id="tab-marcar" class="tab-btn activo" onclick="cambiarTab('marcar')">
+      <i class="ti ti-scan"></i> Marcar
+    </button>
+    <button id="tab-gestion" class="tab-btn" onclick="cambiarTab('gestion')">
+      <i class="ti ti-list-check"></i> Gestión del día
+    </button>
+  </div>
+
+  <!-- ══ PANTALLA 1: MARCAR ══ -->
+  <div id="pantalla-marcar" class="pantalla-contenido">
+
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div>
+        <div style="font-size:11px;color:var(--texto3);text-transform:uppercase;font-weight:700;
+          letter-spacing:.3px;">Hora estándar de marcación</div>
+        <div style="font-size:11px;color:var(--texto2);margin-top:2px;">Se aplica a todos los ingresos del turno</div>
+      </div>
+      <input type="time" id="hora-estandar" value="08:00" style="width:96px;padding:9px;
+        border-radius:10px;border:1.5px solid var(--borde);font-size:15px;font-weight:700;text-align:center;">
+    </div>
+
+    <div class="card" style="text-align:center;padding:18px;">
+      <div id="qr-video-wrap" style="display:none;">
+        <video id="qr-video" muted playsinline></video>
+        <div class="qr-frame-overlay"><div></div></div>
+      </div>
+      <div id="qr-placeholder" style="padding:20px 10px;">
+        <i class="ti ti-qrcode" style="font-size:46px;color:var(--texto3);"></i>
+        <div style="font-size:13px;color:var(--texto2);margin-top:10px;line-height:1.4;">
+          Activa la cámara para escanear<br>el código QR del trabajador
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" id="btn-camara" style="margin-top:12px;" onclick="toggleCamara()">
+        <i class="ti ti-camera"></i> Activar cámara
+      </button>
+    </div>
+
+    <div class="card">
+      <div style="font-size:12px;font-weight:700;color:var(--texto2);margin-bottom:10px;
+        display:flex;align-items:center;gap:6px;">
+        <i class="ti ti-keyboard"></i> Ingreso manual por RUT
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="rut-manual" class="form-input" placeholder="12.345.678-9"
+          style="flex:1;" oninput="formatearRut(this)" onkeydown="if(event.key==='Enter') marcarPorRut()">
+        <button class="btn btn-primary" onclick="marcarPorRut()"><i class="ti ti-check"></i></button>
+      </div>
+    </div>
+
+    <div id="resultado-marcacion"></div>
+
+  </div>
+
+  <!-- ══ PANTALLA 2: GESTIÓN DEL DÍA ══ -->
+  <div id="pantalla-gestion" class="pantalla-contenido" style="display:none;">
+
+    <div class="kpi-row">
+      <div class="kpi-box"><div class="kpi-num" id="kpi-total">0</div><div class="kpi-label">Marcados</div></div>
+      <div class="kpi-box"><div class="kpi-num" id="kpi-activos" style="color:var(--verde-dark);">0</div><div class="kpi-label">Activos</div></div>
+      <div class="kpi-box"><div class="kpi-num" id="kpi-cerrados" style="color:var(--texto2);">0</div><div class="kpi-label">Cerrados</div></div>
+    </div>
+
+    <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <input type="text" id="buscar-trabajador" class="form-input" style="flex:1;min-width:140px;"
+        placeholder="Buscar trabajador o RUT..." oninput="renderGestion()">
+      <button class="btn btn-secondary" onclick="cierreMasivo()">
+        <i class="ti ti-door-exit"></i> Cierre masivo
+      </button>
+    </div>
+
+    <div id="lista-gestion"></div>
+
+  </div>
+
+</div>
+
+<!-- Indicador modo offline -->
+<div id="offline-badge" class="offline-badge">
+  <i class="ti ti-cloud-off"></i> Trabajando sin conexión — los datos se guardan localmente
+</div>
+
+<script>
+/* ══════════════════════════════════════
+   APP DE ASISTENCIA — Independiente
+   Diseñada para celular. Comparte el modelo
+   de datos de AgroAsistencia Pro (web).
+   Preparada para Supabase: cuando se conecte,
+   reemplazar las funciones marcadas con
+   "SUPABASE-READY" por llamadas reales.
+══════════════════════════════════════ */
+
+/* ---- Configuración / constantes ---- */
+const SUPERADMIN = { usuario: 'admin', password: 'agro2024', rol: 'superadmin' };
+const LS_CFG       = 'agro_cfg';
+const LS_EMPRESAS  = 'agro_empresas';           // mandantes
+const LS_TRABAJ    = 'agro_trabajadores';
+const LS_ASISTENCIA_PREFIX = 'asistencia_';     // + fecha YYYY-MM-DD
+
+let cfg = {};
+let empresas = [];       // mandantes
+let trabajadores = [];
+let sesion = null;       // { rol, mandante_id, usuario }
+let qrStream = null;
+let qrAnimId = null;
+let tabActual = 'marcar';
+let ultimoQrLeido = '';
+let ultimoQrTime = 0;
+let supabaseClient = null; // se activa cuando se conecte Supabase
+
+/* ---- Carga inicial de datos compartidos ---- */
+function cargarDatosCompartidos(){
+  try{ cfg = JSON.parse(localStorage.getItem(LS_CFG)) || {}; } catch{ cfg = {}; }
+  try{ empresas = JSON.parse(localStorage.getItem(LS_EMPRESAS)) || []; } catch{ empresas = []; }
+  try{ trabajadores = JSON.parse(localStorage.getItem(LS_TRABAJ)) || []; } catch{ trabajadores = []; }
+}
+
+/* Helper de mandante — espejo del usado en el sistema principal */
+function findMandante(t){
+  if(!t) return null;
+  const ref = t.mandante_id || t.empresa_rut || t.empresa || '';
+  return empresas.find(e => e.id === ref || e.rut === ref) || null;
+}
+
+function formatearRut(input){
+  let v = input.value.replace(/[^0-9kK]/g,'').toUpperCase();
+  if(v.length > 9) v = v.slice(0,9);
+  if(v.length > 1){
+    const dv = v.slice(-1);
+    const num = v.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+    input.value = num + '-' + dv;
+  } else {
+    input.value = v;
+  }
+}
+
+/* ══════════════════════════════════════
+   LOGIN
+══════════════════════════════════════ */
+function initLoginScreen(){
+  cargarDatosCompartidos();
+  const sel = document.getElementById('login-mandante');
+  const activas = empresas.filter(e => e.estado !== 'inactivo');
+
+  sel.innerHTML = activas.length
+    ? '<option value="">— Seleccionar —</option>' +
+      activas.map(e => `<option value="${e.id||e.rut}">${e.nombre}</option>`).join('')
+    : '<option value="">Sin mandantes disponibles</option>';
+
+  document.getElementById('sin-config-aviso').style.display =
+    (!empresas.length && !trabajadores.length) ? 'block' : 'none';
+}
+
+function hacerLogin(){
+  const mandanteId = document.getElementById('login-mandante').value;
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-error');
+  err.textContent = '';
+
+  if(!mandanteId){ err.textContent = 'Selecciona una empresa mandante'; return; }
+  if(!user || !pass){ err.textContent = 'Ingresa usuario y contraseña'; return; }
+
+  // SUPABASE-READY: cuando se conecte, validar usuario/pass contra la tabla "usuarios" en vez de cfg local
+  let rolValido = null;
+  if(user === SUPERADMIN.usuario && pass === SUPERADMIN.password){
+    rolValido = 'superadmin';
+  } else if(cfg.admin_user && user === cfg.admin_user && pass === cfg.admin_pass){
+    rolValido = 'admin';
+  } else {
+    const op = (cfg.operadores||[]).find(o => o.usuario === user && o.password === pass);
+    if(op) rolValido = 'operador';
+  }
+
+  if(!rolValido){ err.textContent = 'Usuario o contraseña incorrectos'; return; }
+
+  sesion = { rol: rolValido, mandante_id: mandanteId, usuario: user };
+
+  const mandante = empresas.find(e => (e.id||e.rut) === mandanteId);
+  document.getElementById('header-empresa').textContent = mandante?.nombre || cfg.empresa?.razon_social || '—';
+  document.getElementById('header-fecha').textContent = new Date().toLocaleDateString('es-CL',
+    { weekday:'long', day:'numeric', month:'long' });
+
+  document.getElementById('pantalla-login').style.display = 'none';
+  document.getElementById('app-main').style.display = 'block';
+  cambiarTab('marcar');
+}
+
+function cerrarSesionApp(){
+  if(!confirm('¿Cerrar sesión?')) return;
+  detenerCamara();
+  sesion = null;
+  document.getElementById('app-main').style.display = 'none';
+  document.getElementById('pantalla-login').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  initLoginScreen();
+}
+
+/* ══════════════════════════════════════
+   TABS
+══════════════════════════════════════ */
+function cambiarTab(tab){
+  tabActual = tab;
+  document.getElementById('tab-marcar').classList.toggle('activo', tab==='marcar');
+  document.getElementById('tab-gestion').classList.toggle('activo', tab==='gestion');
+  document.getElementById('pantalla-marcar').style.display  = tab==='marcar' ? '' : 'none';
+  document.getElementById('pantalla-gestion').style.display = tab==='gestion' ? '' : 'none';
+  if(tab === 'gestion'){ detenerCamara(); renderGestion(); }
+}
+
+/* ══════════════════════════════════════
+   TRABAJADORES DEL MANDANTE ACTIVO
+══════════════════════════════════════ */
+function trabajadoresDelMandante(){
+  if(!sesion) return [];
+  return trabajadores.filter(t => {
+    if(t.estado !== 'activo') return false;
+    const m = findMandante(t);
+    return (m?.id || m?.rut) === sesion.mandante_id;
+  });
+}
+
+/* ══════════════════════════════════════
+   CÁMARA Y LECTURA QR
+══════════════════════════════════════ */
+async function toggleCamara(){
+  if(qrStream){ detenerCamara(); return; }
+  try{
+    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('qr-video');
+    video.srcObject = qrStream;
+    await video.play();
+    document.getElementById('qr-video-wrap').style.display = 'block';
+    document.getElementById('qr-placeholder').style.display = 'none';
+    document.getElementById('btn-camara').innerHTML = '<i class="ti ti-camera-off"></i> Detener cámara';
+    escanearFrame(video);
+  } catch(err){
+    mostrarResultado('❌ No se pudo acceder a la cámara: ' + err.message, 'error');
+  }
+}
+
+function detenerCamara(){
+  if(qrAnimId) cancelAnimationFrame(qrAnimId);
+  qrAnimId = null;
+  if(qrStream){ qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+  const wrap = document.getElementById('qr-video-wrap');
+  const ph   = document.getElementById('qr-placeholder');
+  const btn  = document.getElementById('btn-camara');
+  if(wrap) wrap.style.display = 'none';
+  if(ph)   ph.style.display = 'block';
+  if(btn)  btn.innerHTML = '<i class="ti ti-camera"></i> Activar cámara';
+}
+
+function escanearFrame(video){
+  if(!qrStream) return;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  function tick(){
+    if(!qrStream) return;
+    if(video.readyState === video.HAVE_ENOUGH_DATA && typeof jsQR !== 'undefined'){
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(img.data, img.width, img.height);
+      if(code && code.data){
+        const now = Date.now();
+        if(code.data !== ultimoQrLeido || now - ultimoQrTime > 3000){
+          ultimoQrLeido = code.data;
+          ultimoQrTime = now;
+          procesarQrLeido(code.data);
+        }
+      }
+    }
+    qrAnimId = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function procesarQrLeido(data){
+  let rut = data;
+  try{
+    const url = new URL(data);
+    rut = url.searchParams.get('rut') || data;
+  } catch{ /* no es URL, se asume que data ES el rut */ }
+  registrarMarcacion(decodeURIComponent(rut));
+}
+
+function marcarPorRut(){
+  const rut = document.getElementById('rut-manual').value.trim();
+  if(!rut){ mostrarResultado('⚠️ Ingresa un RUT', 'error'); return; }
+  registrarMarcacion(rut);
+  document.getElementById('rut-manual').value = '';
+}
+
+/* ══════════════════════════════════════
+   REGISTRAR MARCACIÓN (entrada/salida)
+   SUPABASE-READY: reemplazar localStorage
+   por insert/update en tabla "asistencia"
+══════════════════════════════════════ */
+function registrarMarcacion(rut){
+  const rutLimpio = rut.replace(/\./g,'');
+  const t = trabajadores.find(x => x.rut === rut || x.rut.replace(/\./g,'') === rutLimpio);
+
+  if(!t){ mostrarResultado(`❌ RUT ${rut} no encontrado`, 'error'); return; }
+
+  const m = findMandante(t);
+  if((m?.id || m?.rut) !== sesion.mandante_id){
+    mostrarResultado(`⚠️ ${t.nombre} no pertenece a esta empresa mandante`, 'error');
+    return;
+  }
+
+  const hoy   = new Date().toISOString().split('T')[0];
+  const clave = LS_ASISTENCIA_PREFIX + hoy;
+  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+  const horaEstandar = document.getElementById('hora-estandar').value || '08:00';
+  const ahoraReal     = new Date().toTimeString().slice(0,5);
+  const idx = data.findIndex(r => r.rut === t.rut);
+
+  if(idx < 0){
+    // Primera marcación del día = ENTRADA (hora estándar normalizada)
+    data.push({
+      rut: t.rut,
+      hora_entrada: horaEstandar,
+      hora_entrada_real: ahoraReal,
+      hora_salida: null,
+      horas_trabajadas: null,
+      registrado_por: sesion.usuario,
+    });
+    localStorage.setItem(clave, JSON.stringify(data));
+    mostrarResultado(`✅ Entrada registrada — ${t.nombre} (${horaEstandar})`, 'exito');
+  } else if(!data[idx].hora_salida){
+    // Segunda marcación = SALIDA
+    const [eh, em] = data[idx].hora_entrada.split(':').map(Number);
+    const [sh, sm] = ahoraReal.split(':').map(Number);
+    let horas = (sh*60+sm - (eh*60+em)) / 60;
+    if(horas < 0) horas += 24;
+    data[idx].hora_salida = ahoraReal;
+    data[idx].horas_trabajadas = Math.round(horas*10)/10;
+    localStorage.setItem(clave, JSON.stringify(data));
+    mostrarResultado(`✅ Salida registrada — ${t.nombre} (${ahoraReal}, ${data[idx].horas_trabajadas}h)`, 'exito');
+  } else {
+    // Doble marcación bloqueada
+    mostrarResultado(`⚠️ ${t.nombre} ya completó su jornada hoy (${data[idx].hora_entrada} – ${data[idx].hora_salida})`, 'warn');
+    return;
+  }
+
+  if(tabActual === 'gestion') renderGestion();
+}
+
+function mostrarResultado(msg, tipo){
+  const el = document.getElementById('resultado-marcacion');
+  const colores = {
+    exito: { bg:'#D1FAE5', txt:'#065F46', icon:'circle-check' },
+    error: { bg:'#FEE2E2', txt:'#991B1B', icon:'circle-x' },
+    warn:  { bg:'#FEF3C7', txt:'#92400E', icon:'alert-triangle' },
+  };
+  const c = colores[tipo] || colores.exito;
+  el.innerHTML = `<div class="result-banner fade-in" style="background:${c.bg};color:${c.txt};">
+    <i class="ti ti-${c.icon}" style="font-size:20px;flex-shrink:0;"></i> ${msg}
+  </div>`;
+  setTimeout(() => { if(el) el.innerHTML = ''; }, 4000);
+}
+
+/* ══════════════════════════════════════
+   PANTALLA 2: GESTIÓN DEL DÍA
+══════════════════════════════════════ */
+function renderGestion(){
+  const hoy   = new Date().toISOString().split('T')[0];
+  const clave = LS_ASISTENCIA_PREFIX + hoy;
+  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+  const buscar = (document.getElementById('buscar-trabajador')?.value || '').toLowerCase().replace(/\./g,'');
+
+  const lista = trabajadoresDelMandante().filter(t => {
+    if(!buscar) return true;
+    const rutLimp = t.rut.replace(/\./g,'').toLowerCase();
+    return t.nombre.toLowerCase().includes(buscar) || rutLimp.includes(buscar);
+  });
+
+  let activos = 0, cerrados = 0, marcados = 0;
+  const filas = lista.map(t => {
+    const r = data.find(x => x.rut === t.rut);
+    if(r){ marcados++; if(r.hora_salida) cerrados++; else activos++; }
+    return { t, r };
+  }).sort((a,b) => {
+    const rank = x => !x.r ? 2 : x.r.hora_salida ? 1 : 0;
+    return rank(a) - rank(b);
+  });
+
+  document.getElementById('kpi-total').textContent    = marcados;
+  document.getElementById('kpi-activos').textContent  = activos;
+  document.getElementById('kpi-cerrados').textContent = cerrados;
+
+  const cont = document.getElementById('lista-gestion');
+  if(!filas.length){
+    cont.innerHTML = `<div class="card" style="text-align:center;padding:30px;color:var(--texto3);">
+      Sin trabajadores para mostrar</div>`;
+    return;
+  }
+
+  cont.innerHTML = filas.map(({t,r}) => {
+    const estado = !r ? { txt:'Sin marcar', bg:'#F1F5F9', col:'var(--texto3)', icon:'clock' }
+      : !r.hora_salida ? { txt:'Activo', bg:'#D1FAE5', col:'#065F46', icon:'circle-check' }
+      : { txt:'Cerrado', bg:'#F1F5F9', col:'#475569', icon:'door-exit' };
+
+    return `<div class="worker-row">
+      <div class="worker-info">
+        <div class="worker-name">${t.nombre}</div>
+        <div class="worker-rut">${t.rut}</div>
+      </div>
+      <div class="worker-time">
+        <div class="worker-time-label">Entrada</div>
+        <div class="worker-time-val">${r?.hora_entrada || '—'}</div>
+      </div>
+      <div class="worker-time">
+        <div class="worker-time-label">Salida</div>
+        <div class="worker-time-val">${r?.hora_salida || (r ? 'En faena' : '—')}</div>
+      </div>
+      <span class="status-pill" style="background:${estado.bg};color:${estado.col};">
+        <i class="ti ti-${estado.icon}" style="font-size:12px;"></i>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+function cierreMasivo(){
+  const hoy   = new Date().toISOString().split('T')[0];
+  const clave = LS_ASISTENCIA_PREFIX + hoy;
+  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+  const ahoraReal = new Date().toTimeString().slice(0,5);
+  const mandanteRuts = trabajadoresDelMandante().map(t => t.rut);
+  let cerrados = 0;
+
+  data.forEach(r => {
+    if(mandanteRuts.includes(r.rut) && !r.hora_salida){
+      const [eh, em] = r.hora_entrada.split(':').map(Number);
+      const [sh, sm] = ahoraReal.split(':').map(Number);
+      let horas = (sh*60+sm - (eh*60+em)) / 60;
+      if(horas < 0) horas += 24;
+      r.hora_salida = ahoraReal;
+      r.horas_trabajadas = Math.round(horas*10)/10;
+      cerrados++;
+    }
+  });
+
+  if(!cerrados){ alert('No hay marcaciones activas para cerrar'); return; }
+  if(!confirm(`¿Cerrar la jornada de ${cerrados} trabajador${cerrados>1?'es':''} activos a las ${ahoraReal}?`)) return;
+
+  localStorage.setItem(clave, JSON.stringify(data));
+  renderGestion();
+}
+
+/* ══════════════════════════════════════
+   INDICADOR OFFLINE
+══════════════════════════════════════ */
+function actualizarIndicadorOffline(){
+  const badge = document.getElementById('offline-badge');
+  badge.style.display = navigator.onLine ? 'none' : 'flex';
+}
+window.addEventListener('online',  actualizarIndicadorOffline);
+window.addEventListener('offline', actualizarIndicadorOffline);
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+initLoginScreen();
+actualizarIndicadorOffline();
+</script>
+</body>
+</html>
