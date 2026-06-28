@@ -922,7 +922,7 @@
         <div class="g3">
           <div class="card" style="text-align:center;padding:24px;"><i class="ti ti-file-spreadsheet" style="font-size:32px;color:var(--verde-dark);display:block;margin-bottom:10px;"></i><div style="font-size:14px;font-weight:600;margin-bottom:5px;">Asistencia Excel</div><div style="font-size:12px;color:var(--texto2);margin-bottom:14px;">Exportar marcaciones del período seleccionado</div><button class="btn btn-primary btn-full" onclick="exportarAsistenciaExcel()"><i class="ti ti-download"></i> Descargar .xlsx</button></div>
           <div class="card" style="text-align:center;padding:24px;"><i class="ti ti-users" style="font-size:32px;color:#2563EB;display:block;margin-bottom:10px;"></i><div style="font-size:14px;font-weight:600;margin-bottom:5px;">Nómina de personal</div><div style="font-size:12px;color:var(--texto2);margin-bottom:14px;">Lista completa de trabajadores activos</div><button class="btn btn-dark btn-full" onclick="exportarTrabajadoresExcel()"><i class="ti ti-download"></i> Descargar .xlsx</button></div>
-          <div class="card" style="text-align:center;padding:24px;"><i class="ti ti-building-factory" style="font-size:32px;color:#D97706;display:block;margin-bottom:10px;"></i><div style="font-size:14px;font-weight:600;margin-bottom:5px;">Por mandante</div><div style="font-size:12px;color:var(--texto2);margin-bottom:14px;">Asistencia desglosada por mandante</div><button class="btn btn-secondary btn-full" onclick="toast('Disponible con Supabase conectado','error')"><i class="ti ti-download"></i> Descargar .xlsx</button></div>
+          <div class="card" style="text-align:center;padding:24px;"><i class="ti ti-building-factory" style="font-size:32px;color:#D97706;display:block;margin-bottom:10px;"></i><div style="font-size:14px;font-weight:600;margin-bottom:5px;">Por mandante</div><div style="font-size:12px;color:var(--texto2);margin-bottom:14px;">Asistencia desglosada por mandante</div><button class="btn btn-secondary btn-full" onclick="exportarAsistenciaPorMandante()"><i class="ti ti-download"></i> Descargar .xlsx</button></div>
         </div>
       </div>
 
@@ -1383,6 +1383,7 @@
   <script src="js/anexos.js"></script>
   <script src="js/asistencia.js"></script>
   <script src="js/configuracion.js"></script>
+  <script src="js/exportar.js"></script>
   <script src="js/ayuda.js"></script>
   <script src="js/init.js"></script>
   <script>
