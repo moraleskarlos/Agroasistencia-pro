@@ -74,46 +74,46 @@ function irA(idPagina, botonEl) {
   let idDestino = idPagina.startsWith('p-') ? idPagina : 'p-' + idPagina;
   const paginaActiva = document.getElementById(idDestino);
   
- if (paginaActiva) {
-    paginaActiva.classList.add('activa');
-    paginaActiva.style.display = 'block';
-    // Inicializar módulo al entrar
-    if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
-    if(idPagina === 'p-perfil-trabajador'){ /* contenido se carga desde verPerfilTrabajador */ }
-    if(idPagina === 'contratistas' || idPagina === 'p-contratistas'){ switchTabEmpresas(tabEmpresasActivo||'mis-empresas'); }
-    if(idPagina === 'qr'           || idPagina === 'p-qr'){           poblarSelects(); cargarListaQR(); }
-    if(idPagina === 'asistencia'   || idPagina === 'p-asistencia'){   initAsistencia(); }
-    if(idPagina === 'contratos'    || idPagina === 'p-contratos'){
-      const rut = _rutPrecontratoTemp;
-      _rutPrecontratoTemp = null;
-      initContratos(rut);
-    }
-    if(idPagina === 'dashboard'    || idPagina === 'p-dashboard'){    renderDashboard(); }
-    if(idPagina === 'config'       || idPagina === 'p-config'){       cargarFormConfig(); }
-  } else {
-
-    console.error(`La página con ID "${idDestino}" no existe en el HTML.`);
-  }
-
-  // 3. Manejar el estado visual del botón activo en el menú lateral (.sb-item)
-  document.querySelectorAll('.sb-item').forEach(btn => {
-    btn.classList.remove('activo');
-  });
+  // 1. Manejar estado visual del botón activo PRIMERO (antes de cualquier init)
+  document.querySelectorAll('.sb-item').forEach(btn => btn.classList.remove('activo'));
 
   if (botonEl) {
     botonEl.classList.add('activo');
   } else {
-
-    // Si se gatilla internamente, busca el botón correspondiente
     document.querySelectorAll('.sb-item').forEach(btn => {
-      let attrClick = btn.getAttribute('onclick') || '';
+      const attrClick = btn.getAttribute('onclick') || '';
       if (attrClick.includes(`'${idPagina.replace('p-', '')}'`)) {
         btn.classList.add('activo');
       }
     });
   }
 
-  // Notificar al módulo de ayuda qué página está activa
+  // 2. Mostrar página
+  if (paginaActiva) {
+    paginaActiva.classList.add('activa');
+    paginaActiva.style.display = 'block';
+
+    // 3. Inicializar módulo en siguiente tick para no bloquear el render visual
+    setTimeout(() => {
+      if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
+      if(idPagina === 'p-perfil-trabajador'){ /* contenido se carga desde verPerfilTrabajador */ }
+      if(idPagina === 'contratistas' || idPagina === 'p-contratistas'){ switchTabEmpresas(tabEmpresasActivo||'mis-empresas'); }
+      if(idPagina === 'qr'           || idPagina === 'p-qr'){           poblarSelects(); cargarListaQR(); }
+      if(idPagina === 'asistencia'   || idPagina === 'p-asistencia'){   initAsistencia(); }
+      if(idPagina === 'contratos'    || idPagina === 'p-contratos'){
+        const rut = _rutPrecontratoTemp;
+        _rutPrecontratoTemp = null;
+        initContratos(rut);
+      }
+      if(idPagina === 'dashboard'    || idPagina === 'p-dashboard'){    renderDashboard(); }
+      if(idPagina === 'config'       || idPagina === 'p-config'){       cargarFormConfig(); }
+    }, 0);
+
+  } else {
+    console.error(`La página con ID "${idDestino}" no existe en el HTML.`);
+  }
+
+  // 4. Notificar al módulo de ayuda
   if (typeof onCambioModuloAyuda === 'function') {
     onCambioModuloAyuda(idPagina);
   }
