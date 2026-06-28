@@ -274,29 +274,78 @@ function verTrabajadoresEmpresa(idOrRut){
   setTimeout(() => { if(sel){ sel.value = idOrRut; cargarTrabajadores(); } }, 50);
 }
 
+function _kpiCard(label, value, sub, color){
+  return `<div class="kpi"><div class="kpi-label">${label}</div>
+    <div class="kpi-value" style="color:${color||'var(--texto)'};">${value}</div>
+    <div class="kpi-sub">${sub}</div></div>`;
+}
+
+function renderKpisMisEmpresas(){
+  const zona = document.getElementById('kpi-mis-empresas-zone');
+  if(!zona) return;
+  const total   = empresas_propias.length;
+  const trabEP  = trabajadores.filter(t => t.empresa_propia_id);
+  const activos = trabEP.filter(t => t.estado === 'activo').length;
+  const inact   = trabEP.filter(t => t.estado !== 'activo').length;
+  const contr   = contratos.filter(c =>
+    trabEP.some(t => t.id === c.trabajador_id || t.rut === c.trabajador_rut)
+  ).length;
+
+  zona.style.display = 'grid';
+  zona.style.gridTemplateColumns = 'repeat(4,1fr)';
+  zona.style.gap = '14px';
+  zona.innerHTML =
+    _kpiCard('Mis Empresas',        total,   'empresas propias',   'var(--azul)')  +
+    _kpiCard('Trabajadores Activos',activos, 'trabajando',         'var(--verde)') +
+    _kpiCard('Inactivos',           inact,   'dados de baja',      '#ef4444')      +
+    _kpiCard('Contratos',           contr,   'registrados',        'var(--verde-dark)');
+}
+
+function renderKpisMandantes(){
+  const zona = document.getElementById('kpi-mandantes-zone');
+  if(!zona) return;
+  const total   = empresas.length;
+  const trabMan = trabajadores.filter(t => t.mandante_id || t.empresa_rut || t.empresa);
+  const activos = trabMan.filter(t => t.estado === 'activo').length;
+  const inact   = trabMan.filter(t => t.estado !== 'activo').length;
+  const contr   = contratos.filter(c =>
+    trabMan.some(t => t.id === c.trabajador_id || t.rut === c.trabajador_rut)
+  ).length;
+
+  zona.style.display = 'grid';
+  zona.style.gridTemplateColumns = 'repeat(4,1fr)';
+  zona.style.gap = '14px';
+  zona.innerHTML =
+    _kpiCard('Mandantes',           total,   'empresas registradas','var(--azul)') +
+    _kpiCard('Trabajadores Activos',activos, 'asignados a faenas', 'var(--verde)') +
+    _kpiCard('Inactivos',           inact,   'dados de baja',      '#ef4444')      +
+    _kpiCard('Contratos',           contr,   'registrados',        'var(--verde-dark)');
+}
+
 function switchTabEmpresas(tab){
   tabEmpresasActivo = tab;
-  // Tabs visuales
   const tabMis  = document.getElementById('tab-mis-empresas');
   const tabMan  = document.getElementById('tab-mandantes');
   const subMis  = document.getElementById('sub-mis-empresas');
   const subMan  = document.getElementById('sub-mandantes');
+  const kpiMis  = document.getElementById('kpi-mis-empresas-zone');
+  const kpiMan  = document.getElementById('kpi-mandantes-zone');
 
   if(tab === 'mis-empresas'){
-    tabMis.style.borderBottomColor = 'var(--azul)';
-    tabMis.style.color = 'var(--azul)';
-    tabMan.style.borderBottomColor = 'transparent';
-    tabMan.style.color = 'var(--texto2)';
-    subMis.style.display = '';
-    subMan.style.display = 'none';
+    tabMis.style.borderBottomColor = 'var(--azul)';   tabMis.style.color = 'var(--azul)';
+    tabMan.style.borderBottomColor = 'transparent';    tabMan.style.color = 'var(--texto2)';
+    subMis.style.display = '';    subMan.style.display = 'none';
+    if(kpiMis) kpiMis.style.display = '';
+    if(kpiMan) kpiMan.style.display = 'none';
+    renderKpisMisEmpresas();
     renderMisEmpresas();
   } else {
-    tabMan.style.borderBottomColor = 'var(--azul)';
-    tabMan.style.color = 'var(--azul)';
-    tabMis.style.borderBottomColor = 'transparent';
-    tabMis.style.color = 'var(--texto2)';
-    subMan.style.display = '';
-    subMis.style.display = 'none';
+    tabMan.style.borderBottomColor = 'var(--azul)';   tabMan.style.color = 'var(--azul)';
+    tabMis.style.borderBottomColor = 'transparent';    tabMis.style.color = 'var(--texto2)';
+    subMan.style.display = '';    subMis.style.display = 'none';
+    if(kpiMan) kpiMan.style.display = '';
+    if(kpiMis) kpiMis.style.display = 'none';
+    renderKpisMandantes();
     renderContratistas();
   }
 }
@@ -305,13 +354,7 @@ function renderMisEmpresas(){
   const el = document.getElementById('lista-mis-empresas');
   if(!el) return;
 
-  // Rellenar tarjeta empresa contratista desde cfg
-  const empNomEl = document.getElementById('empresa-principal-nombre');
-  const empRutEl = document.getElementById('empresa-principal-rut');
-  if(empNomEl) empNomEl.textContent = cfg.empresa?.razon_social || '— Sin configurar —';
-  if(empRutEl) empRutEl.textContent = cfg.empresa?.rut ? 'RUT: ' + cfg.empresa.rut : '';
-
-  // Actualizar badges
+  // Actualizar badges de tabs
   const bMis = document.getElementById('badge-mis-empresas');
   const bMan = document.getElementById('badge-mandantes-tab');
   if(bMis) bMis.textContent = empresas_propias.length;
@@ -491,35 +534,6 @@ function poblarSelectsEmpresaPropia(){
   });
 }
 
-function exportarEmpresasExcel(){
-  if(!empresas_propias.length && !empresas.length){
-    toast('⚠️ Sin datos para exportar','error'); return;
-  }
-  const wb = XLSX.utils.book_new();
-
-  if(empresas_propias.length){
-    const ws1 = XLSX.utils.json_to_sheet(empresas_propias.map(ep => ({
-      'Razón Social': ep.nombre, 'RUT': ep.rut,
-      'Representante': ep.nombre_representante, 'RUT Rep.': ep.rut_representante,
-      'Correo': ep.correo, 'Teléfono': ep.telefono,
-      'Ciudad': ep.ciudad, 'Dirección': ep.direccion,
-      'Trabajadores': trabajadores.filter(t=>t.empresa_propia_id===ep.id).length,
-    })));
-    XLSX.utils.book_append_sheet(wb, ws1, 'Mis Empresas');
-  }
-  if(empresas.length){
-    const ws2 = XLSX.utils.json_to_sheet(empresas.map(e => ({
-      'Mandante': e.nombre, 'RUT': e.rut, 'Dirección': e.direccion,
-      'Comuna': e.comuna, 'Región': e.region,
-      'Vencimiento': e.vigencia_contrato||'',
-      'Trabajadores': trabajadores.filter(t=>findMandante(t)?.id===e.id).length,
-      'Activos': trabajadores.filter(t=>findMandante(t)?.id===e.id && t.estado==='activo').length,
-    })));
-    XLSX.utils.book_append_sheet(wb, ws2, 'Mandantes');
-  }
-  XLSX.writeFile(wb, `Empresas_${new Date().toLocaleDateString('es-CL').replace(/\//g,'-')}.xlsx`);
-  toast('⬇️ Exportado correctamente','exito');
-}
 
 function abrirModalMandante(){
   abrirModalEmpresa(null); // reutiliza el modal existente
