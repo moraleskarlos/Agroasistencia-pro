@@ -112,6 +112,11 @@ function irA(idPagina, botonEl) {
       }
     });
   }
+
+  // Notificar al módulo de ayuda qué página está activa
+  if (typeof onCambioModuloAyuda === 'function') {
+    onCambioModuloAyuda(idPagina);
+  }
 }
 
 function renderDashboard(){
