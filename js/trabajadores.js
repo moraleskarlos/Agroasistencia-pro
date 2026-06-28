@@ -65,7 +65,7 @@ function cargarTrabajadores(){
     const mandanteNom  = mandante ? mandante.nombre : '—';
     const faenaNom     = t.faena_obra || '—';
     const cargoNom     = t.funcion_cargo || '—';
-    const empPrincipal = getEmpresaEmpleadora(t.empresa_propia_id)?.razon_social || '—';
+    const empPrincipal = cfg.empresa?.razon_social || '—';
     const activo       = t.estado !== 'inactivo';
 
     const contrato = (contratos || []).find(c => c.trabajador_id === t.id || c.trabajador_rut === t.rut);
@@ -95,15 +95,15 @@ function cargarTrabajadores(){
         </span>
       </td>
       <td>${estadoContrato}</td>
-      <td style="min-width:140px;">
+      <td style="min-width:120px;">
         <div style="display:flex;gap:5px;flex-wrap:nowrap;align-items:center;">
-          <button class="btn btn-primary btn-sm"
-            onclick="verPerfilTrabajador('${t.id}')" title="Ver perfil">
-            <i class="ti ti-user"></i> Ver
-          </button>
           <button class="btn btn-secondary btn-sm"
             onclick="editarTrabajador('${t.rut}')" title="Editar">
             <i class="ti ti-edit"></i>
+          </button>
+          <button class="btn btn-secondary btn-sm"
+            onclick="irAContrato('${t.rut}')" title="Ver contrato">
+            <i class="ti ti-file-text"></i>
           </button>
           <button class="btn ${activo ? 'btn-danger' : 'btn-secondary'} btn-sm"
             onclick="cambiarEstado('${t.rut}','${activo ? 'inactivo' : 'activo'}')"
@@ -156,230 +156,8 @@ function irAContrato(rut){
   if(btn) irA('contratos', btn);
 }
 
-function exportarTrabajadoresExcel(){
-  if(!trabajadores.length){
-    toast('⚠️ Sin datos para exportar','error');
-    return;
-  }
-
-  const data = trabajadores.map(t => {
-    const mandante = findMandante(t);
-    const cont = contratos.find(c => c.trabajador_id === t.id || c.trabajador_rut === t.rut);
-    const fmt = v => v ? new Date(v).toLocaleDateString('es-CL') : '';
-
-    return {
-      RUT: t.rut,
-      'Nombre Completo': t.nombre,
-      Nacionalidad: t.nacionalidad || '',
-      'Fecha Nacimiento': fmt(t.fecha_nacimiento),
-      'Estado Civil': t.estado_civil || '',
-      'Correo Electrónico': t.correo_electronico || '',
-      Domicilio: t.domicilio || '',
-      'AFP': t.afiliacion_afp || '',
-      'Sistema de Salud': t.sistema_salud || '',
-      'Empresa Mandante': mandante?.nombre || '',
-      'RUT Mandante': mandante?.rut || '',
-      Faena: t.faena_obra || '',
-      Cargo: t.funcion_cargo || '',
-      'Fecha Ingreso': fmt(t.fecha_ingreso),
-      Estado: t.estado === 'activo' ? 'Activo' : 'Inactivo',
-      Contrato: cont ? 'Firmado' : 'Pendiente',
-      'Fecha Firma Contrato': fmt(cont?.fecha_firma),
-      'Sueldo Base': cont?.sueldo_monto ? '$' + parseInt(cont.sueldo_monto).toLocaleString('es-CL') : '',
-    };
-  });
-
-  const ws = XLSX.utils.json_to_sheet(data);
-  // Ajustar ancho de columnas automáticamente según contenido
-  const anchos = Object.keys(data[0] || {}).map(key => {
-    const maxLen = Math.max(key.length, ...data.map(row => String(row[key]||'').length));
-    return { wch: Math.min(Math.max(maxLen + 2, 10), 35) };
-  });
-  ws['!cols'] = anchos;
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Trabajadores');
-
-  XLSX.writeFile(wb, `Nomina_${new Date().toLocaleDateString('es-CL').replace(/\//g,'-')}.xlsx`);
-
-  toast('⬇️ Nómina exportada con todos los campos','exito');
-}
 
 function limpiarFiltroFecha(){
   const el = document.getElementById('filtro-fecha-ingreso');
   if(el){ el.value = ''; cargarTrabajadores(); }
-}
-
-function switchTabTrabajadores(tab){
-  const todos      = document.getElementById('sub-tab-todos-trab');
-  const extTab     = document.getElementById('sub-tab-extranjeros-trab');
-  const btnTodos   = document.getElementById('tab-todos-trab');
-  const btnExt     = document.getElementById('tab-extranjeros-trab');
-  if(tab === 'extranjeros'){
-    if(todos)    todos.style.display    = 'none';
-    if(extTab)   extTab.style.display   = 'block';
-    if(btnTodos) { btnTodos.style.background=  'var(--gris-bg)'; btnTodos.style.color='var(--texto2)'; }
-    if(btnExt)   { btnExt.style.background  = 'var(--azul)';    btnExt.style.color  = '#fff'; }
-    cargarExtranjeros();
-  } else {
-    if(todos)    todos.style.display    = 'block';
-    if(extTab)   extTab.style.display   = 'none';
-    if(btnTodos) { btnTodos.style.background= 'var(--azul)';    btnTodos.style.color= '#fff'; }
-    if(btnExt)   { btnExt.style.background = 'var(--gris-bg)'; btnExt.style.color  = 'var(--texto2)'; }
-    cargarTrabajadores();
-  }
-}
-
-function semaforo(fechaVenc, tipoDoc){
-  if(!fechaVenc) return { emoji:'⚫', label:'Sin documento', clase:'vencido' };
-  const hoy   = new Date(); hoy.setHours(0,0,0,0);
-  const venc  = new Date(fechaVenc); venc.setHours(0,0,0,0);
-  const dias  = Math.round((venc - hoy) / 86400000);
-  if(dias < 0)  return { emoji:'⚫', label:'Vencido',              clase:'vencido',    dias };
-  if(dias <= 30) return { emoji:'🔴', label:'Urgente',             clase:'urgente',    dias };
-  if(dias <= 90) return { emoji:'🟡', label:'Iniciar trámite',     clase:'advertencia',dias };
-  return              { emoji:'🟢', label:'Vigente',               clase:'vigente',    dias };
-}
-
-function cargarExtranjeros(){
-  const buscar  = (document.getElementById('buscar-extranjero')?.value||'').toLowerCase().trim();
-  const tbody   = document.getElementById('tbody-extranjeros');
-  if(!tbody) return;
-
-  const extranjeros = trabajadores.filter(t =>
-    t.nacionalidad && t.nacionalidad !== 'Chileno' && t.estado === 'activo'
-  );
-
-  const filtrados = buscar
-    ? extranjeros.filter(t =>
-        (t.nombre||'').toLowerCase().includes(buscar) ||
-        (t.rut||'').toLowerCase().includes(buscar))
-    : extranjeros;
-
-  if(!filtrados.length){
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">Sin trabajadores extranjeros registrados</td></tr>`;
-    actualizarBadgeExtranjeros(extranjeros);
-    return;
-  }
-
-  tbody.innerHTML = filtrados.map(t => {
-    const sem   = semaforo(t.fecha_venc_mig, t.tipo_doc_mig);
-    const dias  = sem.dias !== undefined
-      ? (sem.dias < 0 ? `${Math.abs(sem.dias)} días vencido` : `${sem.dias} días`)
-      : '—';
-    const venc  = t.fecha_venc_mig
-      ? new Date(t.fecha_venc_mig).toLocaleDateString('es-CL')
-      : '—';
-    return `<tr>
-      <td>${t.rut||'—'}</td>
-      <td><strong>${t.nombre||'—'}</strong></td>
-      <td>${t.nacionalidad||'—'}</td>
-      <td>${t.tipo_doc_mig||'Sin registrar'}</td>
-      <td>${venc}</td>
-      <td style="text-align:center;">${dias}</td>
-      <td style="text-align:center;font-size:18px;" title="${sem.label}">${sem.emoji}</td>
-    </tr>`;
-  }).join('');
-
-  actualizarBadgeExtranjeros(extranjeros);
-}
-
-function actualizarBadgeExtranjeros(lista){
-  const badge = document.getElementById('badge-extranjeros-urgente');
-  if(!badge) return;
-  const urgentes = lista.filter(t => {
-    const s = semaforo(t.fecha_venc_mig, t.tipo_doc_mig);
-    return s.clase === 'urgente' || s.clase === 'vencido';
-  }).length;
-  badge.style.display = urgentes > 0 ? 'inline' : 'none';
-  badge.textContent   = urgentes > 0 ? urgentes : '';
-}
-
-function verPerfilTrabajador(id){
-  const t = trabajadores.find(x => x.id === id);
-  if(!t){ toast('⚠️ Trabajador no encontrado','error'); return; }
-
-  // Guardar ID en variable global para uso del perfil
-  window._perfilTrabajadorId = id;
-
-  // Header del perfil
-  const ep    = getEmpresaEmpleadora(t.empresa_propia_id);
-  const man   = findMandante(t);
-  const iniciales = (t.nombre||'?').split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase();
-  const activo    = t.estado === 'activo';
-
-  const hEl = document.getElementById('perfil-header');
-  if(hEl) hEl.innerHTML = `
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <div style="width:54px;height:54px;border-radius:50%;background:var(--azul);
-        display:flex;align-items:center;justify-content:center;
-        font-size:20px;font-weight:700;color:#fff;flex-shrink:0;">${iniciales}</div>
-      <div>
-        <div style="font-size:18px;font-weight:700;color:var(--texto);">${t.nombre||'—'}</div>
-        <div style="font-size:13px;color:var(--texto2);margin-top:2px;">
-          RUT ${t.rut||'—'} &nbsp;·&nbsp; ${t.funcion_cargo||'Sin cargo'}
-          &nbsp;·&nbsp; <span class="badge ${activo?'badge-verde':'badge-rojo'}">${activo?'Activo':'Inactivo'}</span>
-        </div>
-        <div style="font-size:12px;color:var(--texto3);margin-top:2px;">
-          ${ep?.razon_social||'Sin empresa'} ${man?'· '+man.nombre:''}
-        </div>
-      </div>
-    </div>`;
-
-  irA('p-perfil-trabajador');
-  switchTabPerfil('datos');
-}
-
-function switchTabPerfil(tab){
-  const tabDatos    = document.getElementById('tab-perfil-datos');
-  const tabCarpeta  = document.getElementById('tab-perfil-carpeta');
-  const subDatos    = document.getElementById('sub-perfil-datos');
-  const subCarpeta  = document.getElementById('sub-perfil-carpeta');
-
-  if(tab === 'carpeta'){
-    tabDatos.style.borderBottomColor   = 'transparent'; tabDatos.style.color   = 'var(--texto2)';
-    tabCarpeta.style.borderBottomColor = 'var(--azul)'; tabCarpeta.style.color = 'var(--azul)';
-    subDatos.style.display   = 'none';
-    subCarpeta.style.display = 'block';
-    renderCarpetaLaboral(window._perfilTrabajadorId);
-  } else {
-    tabCarpeta.style.borderBottomColor = 'transparent'; tabCarpeta.style.color = 'var(--texto2)';
-    tabDatos.style.borderBottomColor   = 'var(--azul)'; tabDatos.style.color   = 'var(--azul)';
-    subCarpeta.style.display = 'none';
-    subDatos.style.display   = 'block';
-  }
-}
-
-function renderCarpetaLaboral(id){
-  const tbody = document.getElementById('tbody-carpeta');
-  if(!tbody) return;
-  const t   = trabajadores.find(x => x.id === id);
-  const docs = (carpeta||[])
-    .filter(d => d.trabajador_id === id || d.trabajador_rut === t?.rut)
-    .sort((a,b) => b.fecha_generacion.localeCompare(a.fecha_generacion));
-
-  if(!docs.length){
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--texto3);">
-      Sin documentos en la carpeta laboral</td></tr>`;
-    return;
-  }
-
-  const ICONOS = {
-    contrato:'ti-file-text', anexo:'ti-file-plus', epp_riohs_irl:'ti-shield-check',
-    liquidacion:'ti-cash', finiquito:'ti-file-x', carta:'ti-mail', otro:'ti-paperclip'
-  };
-  const LABELS = {
-    contrato:'Contrato', anexo:'Anexo', epp_riohs_irl:'EPP / RIOHS / IRL',
-    liquidacion:'Liquidación', finiquito:'Finiquito', carta:'Carta', otro:'Otro'
-  };
-
-  tbody.innerHTML = docs.map(d => `<tr>
-    <td><i class="ti ${ICONOS[d.tipo]||'ti-file'}" style="color:var(--azul);margin-right:6px;"></i>
-        ${LABELS[d.tipo]||d.tipo}</td>
-    <td>${d.descripcion||'—'}</td>
-    <td style="font-family:monospace;font-size:11px;">${d.folio||'—'}</td>
-    <td>${d.fecha_firma ? new Date(d.fecha_firma).toLocaleDateString('es-CL') : '—'}</td>
-    <td>${d.fecha_generacion ? new Date(d.fecha_generacion).toLocaleDateString('es-CL') : '—'}</td>
-    <td>${d.generado_por||'—'}</td>
-  </tr>`).join('');
 }
