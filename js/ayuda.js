@@ -204,6 +204,41 @@ const AYUDA_CONTENIDO = {
       { p: '¿Puedo generar contratos en masa?', r: 'Actualmente los contratos se generan uno por uno para garantizar precisión en los datos de cada trabajador.' }
     ]
   },
+    qr: {
+    titulo: '🪪 Generar QR',
+    secciones: [
+      {
+        icono: '🎯',
+        titulo: 'Objetivo',
+        contenido: 'Generar credenciales de identificación en formato QR para cada trabajador. El código QR permite identificar al trabajador en terreno de forma rápida, sin necesidad de buscar en el sistema.'
+      },
+      {
+        icono: '📋',
+        titulo: 'Paso a paso',
+        contenido: '<ol><li>Filtra por <strong>mandante</strong> si deseas ver solo un grupo</li><li>Selecciona uno o más trabajadores de la lista</li><li>Clic en <strong>Generar QR</strong> — se crea el código con los datos del trabajador</li><li>Imprime o descarga la credencial en PDF</li></ol>'
+      },
+      {
+        icono: '📌',
+        titulo: 'Qué contiene el QR',
+        contenido: '<ul><li>RUT del trabajador</li><li>Nombre completo</li><li>Empresa mandante</li><li>Fecha de ingreso</li><li>Labor / cargo asignado</li></ul>Al escanearlo, muestra la ficha del trabajador directamente.'
+      },
+      {
+        icono: '💡',
+        titulo: 'Consejo',
+        contenido: 'Genera las credenciales QR al inicio de cada temporada y entrégatelas plastificadas. Facilitan el control de acceso a faena y el registro de asistencia desde la app móvil.'
+      },
+      {
+        icono: '🔗',
+        titulo: 'Flujo relacionado',
+        contenido: 'Trabajadores (datos) → Generar QR (credencial) → AppAsistencia.html (escanear en terreno)'
+      }
+    ],
+    faq: [
+      { p: '¿El QR caduca?', r: 'No. El QR es estático y contiene los datos al momento de generarse. Si cambias datos del trabajador, deberás regenerar su credencial.' },
+      { p: '¿Puedo generar QR para todos los trabajadores a la vez?', r: 'Sí. Sin selección específica, el botón genera las credenciales de todos los trabajadores visibles en la lista.' },
+      { p: '¿Necesito Supabase para usar el módulo QR?', r: 'No. Funciona completamente en modo local con los datos ya registrados en el sistema.' }
+    ]
+  },
 
   asistencia: {
     titulo: '📅 Control de Asistencia',
