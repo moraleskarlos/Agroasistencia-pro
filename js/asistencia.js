@@ -257,39 +257,3 @@ function cierreMasivoTurno(){
 function seleccionarTodosAsist(checked){
   document.querySelectorAll('.asist-check:not(:disabled)').forEach(c => c.checked = checked);
 }
-
-function exportarAsistenciaExcel(){
-  const fecha = document.getElementById('asist-fecha').value;
-  const clave = 'asistencia_' + fecha;
-  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
-
-  if(!data.length){ toast('⚠️ Sin marcaciones para exportar','error'); return; }
-
-  const rows = data.map(r => {
-    const t   = trabajadores.find(x => x.rut === r.rut);
-    const emp = empresas.find(e => e.id===(t?.mandante_id||t?.empresa||t?.empresa_rut) || e.rut===(t?.empresa||t?.empresa_rut));
-    const horas = r.horas_trabajadas;
-    const estado = !r.hora_entrada ? 'Pendiente'
-      : !r.hora_salida ? 'Activo' : 'Cerrado';
-
-    return {
-      Fecha:              r.fecha,
-      RUT:                r.rut,
-      Nombre:             t?.nombre || '',
-      Mandante:           emp?.nombre || '',
-      'Registrado por':   r.registrado_por || '',
-      'Hora Entrada':     r.hora_entrada || '',
-      'Hora Salida':      r.hora_salida || '',
-      'Total Horas':      horas !== null && horas !== undefined ? Number(horas).toFixed(1) : '',
-      Jornada:            r.jornada || '',
-      'Valor Jornada':    r.jornada_valor !== null ? r.jornada_valor : '',
-      Estado:             estado
-    };
-  });
-
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
-  XLSX.writeFile(wb, `Asistencia_${fecha}.xlsx`);
-  toast('⬇️ Asistencia exportada','exito');
-}
