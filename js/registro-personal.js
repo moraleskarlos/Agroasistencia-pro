@@ -1,27 +1,5 @@
 /* ════ REGISTRO PERSONAL ════ */
 
-function onCambioTipoDocMig(){
-  const tipo = document.getElementById('m-tipo-doc-mig')?.value;
-  const nota = document.getElementById('nota-res-definitiva');
-  const lbl  = document.getElementById('lbl-fecha-venc-mig');
-  if(nota) nota.style.display = tipo === 'Residencia Definitiva' ? 'block' : 'none';
-  if(lbl)  lbl.textContent   = tipo === 'Residencia Definitiva'
-    ? 'Fecha de vencimiento de la cédula *'
-    : 'Fecha de vencimiento *';
-}
-
-function mostrarCamposMigratorios(){
-  const nac = document.getElementById('m-nacionalidad')?.value;
-  const esExtranjero = nac && nac !== 'Chileno';
-  const bloque = document.getElementById('bloque-migratorio');
-  if(bloque) bloque.style.display = esExtranjero ? 'block' : 'none';
-  if(!esExtranjero){
-    ['m-tipo-doc-mig','m-num-doc-mig','m-fecha-venc-mig'].forEach(id => {
-      const el = document.getElementById(id); if(el) el.value = '';
-    });
-  }
-}
-
 async function buscarPorRUT(){
   const rut=document.getElementById('rut-buscar').value.trim();
   if(!rut){toast('⚠️ Ingresa un RUT','error');return;}
@@ -53,19 +31,12 @@ function cargarEnFormulario(t){
       cargoSel.value = t.funcion_cargo || '';
     }
   }
-  // Empresa propia (select)
-  const selEP = document.getElementById('m-empresa-contratista');
-  if(selEP){ selEP.value = t.empresa_propia_id || ''; }
+  // Empresa contratista (solo lectura)
+  const cont = document.getElementById('m-empresa-contratista');
+  if(cont) cont.value = cfg.empresa?.razon_social || '';
   // Mandante
   const selEmp = document.getElementById('m-empresa');
-  if(selEmp){ selEmp.value = t.empresa_rut||''; onCambioMandanteRegistro(t.faena_obra); }
-  // Datos migratorios
-  set('m-tipo-doc-mig',  t.tipo_doc_mig);
-  set('m-num-doc-mig',   t.num_doc_mig);
-  set('m-fecha-venc-mig',t.fecha_venc_mig);
-  mostrarCamposMigratorios();
-  onCambioTipoDocMig();
-  document.getElementById('btn-guardar-txt').textContent='Actualizar trabajador';
+  if(selEmp){ selEmp.value = t.empresa_rut||''; onCambioMandanteRegistro(t.faena_obra); }  document.getElementById('btn-guardar-txt').textContent='Actualizar trabajador';
   evaluarCampos();
 }
 
@@ -121,8 +92,6 @@ async function guardarTrabajador(e){
   let cargo = document.getElementById('m-cargo').value;
   if(cargo === 'otro') cargo = document.getElementById('cargo-otro').value.trim();
   
-  const epId = document.getElementById('m-empresa-contratista')?.value || '';
-  const ep   = empresas_propias.find(e => e.id === epId);
   const datos={
     rut:               document.getElementById('m-rut').value.trim(),
     nombre:            document.getElementById('m-nombre').value.trim(),
@@ -133,20 +102,13 @@ async function guardarTrabajador(e){
     domicilio:         document.getElementById('m-domicilio').value.trim(),
     afiliacion_afp:    document.getElementById('m-afp').value,
     sistema_salud:     document.getElementById('m-salud').value,
-    empresa_propia_id: epId,
-    empresa_propia_rut:ep?.rut || '',
-    empresa_propia_nombre: ep?.nombre || '',
     empresa_rut:       document.getElementById('m-empresa')?.value || '',
     empresa:           document.getElementById('m-empresa')?.value || '',
     mandante_id:       document.getElementById('m-empresa')?.value || '',
     faena_obra:        document.getElementById('m-faena')?.value || '',
     funcion_cargo:     cargo || '',
     fecha_ingreso:     document.getElementById('m-fecha-ingreso')?.value || null,
-    estado:            'activo',
-    // Datos migratorios (solo si es extranjero)
-    tipo_doc_mig:      document.getElementById('m-tipo-doc-mig')?.value || '',
-    num_doc_mig:       document.getElementById('m-num-doc-mig')?.value.trim() || '',
-    fecha_venc_mig:    document.getElementById('m-fecha-venc-mig')?.value || '',
+    estado:            'activo'
   };
   if(!supabaseClient){
     const idx=trabajadores.findIndex(t=>t.rut===datos.rut);
@@ -293,53 +255,6 @@ function cancelarMasivo(){
   document.getElementById('archivo-excel').value = '';
 }
 
-function descargarPlantilla(){
-  const wb = XLSX.utils.book_new();
-
-  /* ── HOJA 1: Ejemplo con un trabajador de muestra ── */
-  const ejemplo = [
-    {
-      'RUT':               '12.345.678-9',
-      'Nombre':            'Juan Pérez González',
-      'Nacionalidad':      'Chileno',
-      'Fecha Nacimiento':  '1990-05-15',
-      'Estado Civil':      'Soltero',
-      'Domicilio':         'Av. Principal 123, Curicó',
-      'Correo':            'juan.perez@gmail.com',
-      'AFP':               'Habitat',
-      'Salud':             'Fonasa',
-      'Fecha Ingreso':     '2026-01-10'
-    }
-  ];
-  const ws1 = XLSX.utils.json_to_sheet(ejemplo);
-
-  // Ancho de columnas
-  ws1['!cols'] = [
-    {wch:14},{wch:24},{wch:12},{wch:16},{wch:12},
-    {wch:28},{wch:26},{wch:10},{wch:10},{wch:14}
-  ];
-  XLSX.utils.book_append_sheet(wb, ws1, '1. Datos');
-
-  /* ── HOJA 2: Diccionario de valores válidos ── */
-  const dict = [
-    { Campo:'RUT',              'Formato / Valores aceptados':'12.345.678-9  (con puntos y guión)',        Obligatorio:'Sí',  Ejemplo:'12.345.678-9' },
-    { Campo:'Nombre',           'Formato / Valores aceptados':'Nombre completo',                           Obligatorio:'Sí',  Ejemplo:'Juan Pérez González' },
-    { Campo:'Nacionalidad',     'Formato / Valores aceptados':'Chileno · Colombiano · Peruano · Boliviano · Venezolano · Ecuatoriano · Haitiano · Argentino · Otro', Obligatorio:'Sí', Ejemplo:'Chileno' },
-    { Campo:'Fecha Nacimiento', 'Formato / Valores aceptados':'AAAA-MM-DD',                               Obligatorio:'Sí',  Ejemplo:'1990-05-15' },
-    { Campo:'Estado Civil',     'Formato / Valores aceptados':'Soltero · Casado · Divorciado · Viudo · Conviviente', Obligatorio:'Sí', Ejemplo:'Soltero' },
-    { Campo:'Domicilio',        'Formato / Valores aceptados':'Texto libre (calle, número, ciudad)',       Obligatorio:'Sí',  Ejemplo:'Av. Principal 123, Curicó' },
-    { Campo:'Correo',           'Formato / Valores aceptados':'correo@dominio.com',                       Obligatorio:'No', Ejemplo:'juan@gmail.com' },
-    { Campo:'AFP',              'Formato / Valores aceptados':'Habitat · Provida · Capital · Cuprum · Planvital · Modelo · Uno · No cotiza', Obligatorio:'Sí', Ejemplo:'Habitat' },
-    { Campo:'Salud',            'Formato / Valores aceptados':'Fonasa · Isapre Banmédica · Isapre Cruz Blanca · Isapre Colmena · Isapre Consalud · Isapre Esencial · Isapre Vida Tres · Isapre Nueva Más Vida', Obligatorio:'Sí', Ejemplo:'Fonasa' },
-    { Campo:'Fecha Ingreso',    'Formato / Valores aceptados':'AAAA-MM-DD',                               Obligatorio:'No', Ejemplo:'2026-01-10' },
-  ];
-  const ws2 = XLSX.utils.json_to_sheet(dict);
-  ws2['!cols'] = [{wch:16},{wch:70},{wch:12},{wch:26}];
-  XLSX.utils.book_append_sheet(wb, ws2, '2. Valores válidos');
-
-  XLSX.writeFile(wb, 'Plantilla_Trabajadores.xlsx');
-  toast('⬇️ Plantilla descargada — revisa las 2 hojas','exito');
-}
 
 function onCambioMandanteRegistro(faenaPreseleccionada){
   const rutMandante = document.getElementById('m-empresa')?.value || '';
