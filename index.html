@@ -138,7 +138,7 @@
 
     <div class="form-group">
       <label>Nacionalidad *</label>
-      <select id="m-nacionalidad" required onchange="evaluarCampos();mostrarCamposMigratorios()">
+      <select id="m-nacionalidad" required onchange="evaluarCampos()">
         <option value="Chileno">Chileno</option>
         <option value="Haitiano">Haitiano</option>
         <option value="Colombiano">Colombiano</option>
@@ -155,40 +155,6 @@
         <input type="text" id="m-otra-nac" placeholder="Ej: Ecuatoriano">
       </div>
     </div>
-
-    <!-- DATOS MIGRATORIOS — solo si nacionalidad ≠ Chileno -->
-    <div id="bloque-migratorio" style="display:none;">
-      <div class="form-section"><i class="ti ti-world"></i> Datos Migratorios</div>
-
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Tipo de documento *</label>
-          <select id="m-tipo-doc-mig" onchange="onCambioTipoDocMig()">
-            <option value="">— Seleccionar —</option>
-            <option value="Residencia Temporal">Residencia Temporal</option>
-            <option value="Visa Temporaria / Sujeta a Contrato">Visa Temporaria / Sujeta a Contrato</option>
-            <option value="Visa de Temporada">Visa de Temporada</option>
-            <option value="Residencia Definitiva">Residencia Definitiva</option>
-            <option value="Visa de Estudiante">Visa de Estudiante</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Número de documento</label>
-          <input type="text" id="m-num-doc-mig" placeholder="Ej: 123456789">
-        </div>
-      </div>
-
-      <div class="form-group" id="grupo-fecha-venc-mig">
-        <label id="lbl-fecha-venc-mig">Fecha de vencimiento *</label>
-        <input type="date" id="m-fecha-venc-mig">
-        <div id="nota-res-definitiva" style="display:none;font-size:12px;color:var(--texto2);margin-top:4px;">
-          ℹ️ Para Residencia Definitiva, ingresa la fecha de vencimiento de la <strong>cédula de identidad</strong> (se renueva cada 5 años).
-        </div>
-      </div>
-    </div>
-    <!-- FIN DATOS MIGRATORIOS -->
 
     <div class="form-group">
       <label>Fecha de nacimiento</label>
@@ -261,10 +227,10 @@
   <div class="form-grid" style="margin-bottom:12px;">
 
     <div class="form-group full">
-      <label>Empresa Contratista (Empleador)</label>
-      <select id="m-empresa-contratista" onchange="evaluarCampos()" style="width:100%;">
-        <option value="">— Seleccionar empresa propia —</option>
-      </select>
+      <label>Empresa Contratista</label>
+      <input type="text" id="m-empresa-contratista" readonly
+             style="background:var(--gris-bg);color:var(--texto2);"
+             placeholder="Configura tu empresa en Configuración">
     </div>
 
     <div class="form-group">
@@ -356,21 +322,6 @@
             <button class="btn btn-secondary" onclick="exportarTrabajadoresExcel()"><i class="ti ti-download"></i> Excel</button>
           </div>
         </div>
-
-        <!-- TABS — mismo patrón que Empresas -->
-        <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--borde);padding-bottom:0;">
-          <button id="tab-todos-trab" onclick="switchTabTrabajadores('todos')"
-            style="padding:8px 18px;font-size:13px;font-weight:600;border:none;cursor:pointer;border-radius:6px 6px 0 0;background:var(--azul);color:#fff;">
-            <i class="ti ti-users"></i> Trabajadores
-          </button>
-          <button id="tab-extranjeros-trab" onclick="switchTabTrabajadores('extranjeros')"
-            style="padding:8px 18px;font-size:13px;font-weight:600;border:none;cursor:pointer;border-radius:6px 6px 0 0;background:var(--gris-bg);color:var(--texto2);">
-            <i class="ti ti-world"></i> Extranjeros <span id="badge-extranjeros-urgente" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:11px;margin-left:4px;">!</span>
-          </button>
-        </div>
-
-        <!-- SUB-TAB TODOS -->
-        <div id="sub-tab-todos-trab">
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
           <div class="kpi azul"><div class="kpi-label">Total registrados</div><div class="kpi-value" id="kpi-t-total">0</div><div class="kpi-sub">en el sistema</div></div>
           <div class="kpi verde"><div class="kpi-label">Activos</div><div class="kpi-value" id="kpi-t-activos">0</div><div class="kpi-sub">trabajando</div></div>
@@ -441,110 +392,7 @@
 </table>
           </div>
         </div>
-        </div><!-- /sub-tab-todos-trab -->
-
-        <!-- SUB-TAB EXTRANJEROS -->
-        <div id="sub-tab-extranjeros-trab" style="display:none;">
-          <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
-              <input type="text" id="buscar-extranjero" placeholder="Buscar nombre o RUT..."
-                style="width:200px;padding:7px 10px;font-size:12px;"
-                oninput="cargarExtranjeros()">
-            </div>
-            <div style="overflow-x:auto;">
-              <table class="tabla" style="min-width:750px;">
-                <thead><tr>
-                  <th>RUT</th>
-                  <th>Nombre</th>
-                  <th>Nacionalidad</th>
-                  <th>Tipo documento</th>
-                  <th>Vencimiento</th>
-                  <th>Días restantes</th>
-                  <th style="text-align:center;">Estado</th>
-                </tr></thead>
-                <tbody id="tbody-extranjeros">
-                  <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">Sin trabajadores extranjeros registrados</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <!-- Leyenda semáforo -->
-            <div style="margin-top:14px;font-size:12px;color:var(--texto2);display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
-              <span>🟢 Vigente (+90 días)</span>
-              <span>🟡 Iniciar trámite (31–90 días)</span>
-              <span>🔴 Urgente (0–30 días)</span>
-              <span>⚫ Vencido</span>
-            </div>
-            <!-- Nota legal -->
-            <div style="margin-top:10px;padding:10px 14px;background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:0 6px 6px 0;font-size:12px;color:#0369a1;line-height:1.6;">
-              ℹ️ <strong>Sobre los 90 días:</strong> La Residencia Temporal debe renovarse dentro de los últimos 90 días antes de su vencimiento. Durante el trámite, el <strong>Certificado de Residencia en Trámite</strong> emitido por SERMIG habilita al trabajador a continuar sus labores con normalidad. <em>(Fuente: Ley N°21.325 de Migración y Extranjería)</em>
-            </div>
-          </div>
-        </div><!-- /sub-tab-extranjeros-trab -->
-
-      </div><!-- /p-trabajadores -->
-<!-- ═══ PERFIL TRABAJADOR ═══ -->
-<div id="p-perfil-trabajador" class="pagina">
-
-  <!-- Header trabajador -->
-  <div class="sec-header" style="margin-bottom:0;">
-    <div id="perfil-header"><!-- se llena con JS --></div>
-    <button class="btn btn-secondary" onclick="irA('trabajadores')">
-      <i class="ti ti-arrow-left"></i> Volver
-    </button>
-  </div>
-
-  <!-- Tabs -->
-  <div style="display:flex;gap:4px;margin:16px 0 0;border-bottom:2px solid var(--borde);padding-bottom:0;">
-    <button id="tab-perfil-datos" onclick="switchTabPerfil('datos')"
-      style="padding:8px 18px;font-size:13px;font-weight:600;border:none;cursor:pointer;
-             border-radius:6px 6px 0 0;background:none;color:var(--azul);
-             border-bottom:2px solid var(--azul);margin-bottom:-2px;">
-      <i class="ti ti-user"></i> Datos Personales
-    </button>
-    <button id="tab-perfil-carpeta" onclick="switchTabPerfil('carpeta')"
-      style="padding:8px 18px;font-size:13px;font-weight:600;border:none;cursor:pointer;
-             border-radius:6px 6px 0 0;background:none;color:var(--texto2);
-             border-bottom:2px solid transparent;margin-bottom:-2px;">
-      <i class="ti ti-folder"></i> Carpeta Laboral
-    </button>
-  </div>
-
-  <!-- Sub-tab Datos Personales -->
-  <div id="sub-perfil-datos" style="padding-top:16px;">
-    <p style="color:var(--texto2);font-size:13px;">
-      Para editar los datos del trabajador, usá el botón
-      <strong>Editar</strong> desde la lista de trabajadores.
-    </p>
-  </div>
-
-  <!-- Sub-tab Carpeta Laboral -->
-  <div id="sub-perfil-carpeta" style="display:none;padding-top:16px;">
-    <div class="card">
-      <div class="card-title" style="margin-bottom:12px;">
-        <i class="ti ti-folder"></i> Documentos del trabajador
       </div>
-      <div style="overflow-x:auto;">
-        <table class="tabla">
-          <thead><tr>
-            <th>Tipo</th>
-            <th>Descripción</th>
-            <th>Folio</th>
-            <th>Fecha firma</th>
-            <th>Generado</th>
-            <th>Por</th>
-          </tr></thead>
-          <tbody id="tbody-carpeta">
-            <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--texto3);">
-              Sin documentos registrados</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /p-perfil-trabajador -->
-
 <!-- ═══ PÁGINA: CONTRATOS ═══ -->
     <div id="p-contratos" class="pagina">
       <div class="sec-header">
@@ -581,7 +429,6 @@
       <div class="card" style="margin-bottom:14px;">
         <div class="g2">
           <div class="f-group"><label class="form-label">Tipo de contrato</label><select class="f-input" id="c-tipo" onchange="cambiarTipoContrato()"><option value="temporada">Contrato de temporada</option><option value="indefinido">Contrato indefinido</option><option value="plazo_fijo">Contrato a plazo fijo</option></select></div>
-          <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="precargarContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
           <div class="f-group"><label class="form-label">Seleccionar trabajador</label><select class="f-input" id="c-trabajador" onchange="precargarContrato()"><option value="">— Seleccionar trabajador —</option></select></div>
         </div>
       </div>
@@ -624,10 +471,29 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div class="f-group">
   <label class="form-label">Función / cargo *</label>
-  <input class="f-input" id="c-cargo" readonly
-         style="background:var(--gris-bg);color:var(--texto2);"
-         placeholder="Se carga al seleccionar trabajador"
-         oninput="actualizarPrevia()">
+
+  <select class="f-input" id="c-cargo"
+          onchange="mostrarCargoOtro();actualizarPrevia()">
+    <option value="">Seleccionar</option>
+    <option>Cosechero</option>
+    <option>Jefe de Cuadrilla</option>
+    <option>Supervisor</option>
+    <option>Tractorista</option>
+    <option>Control Calidad</option>
+    <option>Administrativo</option>
+    <option>Chofer</option>
+    <option>Bodeguero</option>
+    <option>Prevencionista</option>
+    <option value="Otro">Otro</option>
+  </select>
+
+  <div id="cargo-otro-box"
+       style="display:none;margin-top:8px;">
+    <input class="f-input"
+           id="c-cargo-otro"
+           placeholder="Especificar cargo"
+           oninput="actualizarPrevia()">
+  </div>
 </div>
           <div class="f-group"><label class="form-label">Nombre de la faena *</label><input class="f-input" id="c-faena" placeholder="Ej: Cosecha temporada 2026" oninput="actualizarPrevia()"></div>
 
@@ -790,9 +656,8 @@
     </div>
   </div>
 
-  <!-- KPIs dinámicos por tab -->
-  <div id="kpi-mis-empresas-zone" style="margin-bottom:16px;"></div>
-  <div id="kpi-mandantes-zone"    style="margin-bottom:16px;display:none;"></div>
+  <!-- KPIs globales -->
+  <div id="kpi-contratistas-zone" style="margin-bottom:16px;"></div>
 
   <!-- TABS -->
   <div style="display:flex;gap:0;border-bottom:2px solid var(--borde);margin-bottom:16px;">
@@ -814,6 +679,26 @@
 
   <!-- SUBMÓDULO: MIS EMPRESAS -->
   <div id="sub-mis-empresas">
+
+    <!-- Mi Empresa (empresa contratista principal — usada en Contratos) -->
+    <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;
+      border:1.5px solid var(--azul);">
+      <div style="width:46px;height:46px;border-radius:10px;background:var(--azul);
+        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="ti ti-building-skyscraper" style="font-size:22px;color:#fff;"></i>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:11px;font-weight:600;color:var(--texto3);
+          text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">
+          Mi Empresa <span style="color:var(--verde-dark);">· Empresa Contratista Principal</span>
+        </div>
+        <div style="font-size:17px;font-weight:700;" id="empresa-principal-nombre">—</div>
+        <div style="font-size:12px;color:var(--texto2);margin-top:1px;" id="empresa-principal-rut">RUT: —</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="abrirModalMiEmpresa()">
+        <i class="ti ti-edit"></i> Editar
+      </button>
+    </div>
 
     <div style="display:flex;gap:8px;margin-bottom:14px;">
       <button class="btn btn-primary" onclick="abrirModalEmpresaPropia()">
