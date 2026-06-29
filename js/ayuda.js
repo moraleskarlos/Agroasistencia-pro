@@ -204,41 +204,6 @@ const AYUDA_CONTENIDO = {
       { p: '¿Puedo generar contratos en masa?', r: 'Actualmente los contratos se generan uno por uno para garantizar precisión en los datos de cada trabajador.' }
     ]
   },
- qr: {
-    titulo: '🪪 Generar QR',
-    secciones: [
-      {
-        icono: '🎯',
-        titulo: 'Objetivo',
-        contenido: 'Generar credenciales de identificación en formato QR para cada trabajador. El código QR permite identificar al trabajador en terreno de forma rápida, sin necesidad de buscar en el sistema.'
-      },
-      {
-        icono: '📋',
-        titulo: 'Paso a paso',
-        contenido: '<ol><li>Filtra por <strong>mandante</strong> si deseas ver solo un grupo</li><li>Selecciona uno o más trabajadores de la lista</li><li>Clic en <strong>Generar QR</strong> — se crea el código con los datos del trabajador</li><li>Imprime o descarga la credencial en PDF</li></ol>'
-      },
-      {
-        icono: '📌',
-        titulo: 'Qué contiene el QR',
-        contenido: '<ul><li>RUT del trabajador</li><li>Nombre completo</li><li>Empresa mandante</li><li>Fecha de ingreso</li><li>Labor / cargo asignado</li></ul>Al escanearlo, muestra la ficha del trabajador directamente.'
-      },
-      {
-        icono: '💡',
-        titulo: 'Consejo',
-        contenido: 'Genera las credenciales QR al inicio de cada temporada y entrégatelas plastificadas. Facilitan el control de acceso a faena y el registro de asistencia desde la app móvil.'
-      },
-      {
-        icono: '🔗',
-        titulo: 'Flujo relacionado',
-        contenido: 'Trabajadores (datos) → Generar QR (credencial) → AppAsistencia.html (escanear en terreno)'
-      }
-    ],
-    faq: [
-      { p: '¿El QR caduca?', r: 'No. El QR es estático y contiene los datos al momento de generarse. Si cambias datos del trabajador, deberás regenerar su credencial.' },
-      { p: '¿Puedo generar QR para todos los trabajadores a la vez?', r: 'Sí. Sin selección específica, el botón genera las credenciales de todos los trabajadores visibles en la lista.' },
-      { p: '¿Necesito Supabase para usar el módulo QR?', r: 'No. Funciona completamente en modo local con los datos ya registrados en el sistema.' }
-    ]
-  },
 
   asistencia: {
     titulo: '📅 Control de Asistencia',
@@ -349,6 +314,54 @@ const AYUDA_CONTENIDO = {
       { p: '¿Qué pasa si no configuro Supabase?', r: 'El sistema funciona completamente en modo local (localStorage del navegador). Los datos se guardan solo en ese dispositivo y no se sincronizan.' },
       { p: '¿Puedo tener varios operadores?', r: 'Sí. Puedes crear múltiples usuarios operadores con contraseñas independientes.' },
       { p: '¿Dónde encuentro las credenciales de Supabase?', r: 'En tu proyecto de Supabase → Settings → API. Copia la "Project URL" y la "anon public key".' }
+    ]
+  },
+
+  'gestion-laboral': {
+    titulo: '📋 Gestión Laboral',
+    secciones: [
+      {
+        icono: '🎯',
+        titulo: 'Objetivo',
+        contenido: 'Registrar todas las novedades del período laboral que afectan la remuneración: ausencias justificadas e injustificadas, bonos, descuentos y jornadas especiales. Este módulo es el input directo al Motor de Remuneraciones.'
+      },
+      {
+        icono: '📋',
+        titulo: 'Pestaña Novedades',
+        contenido: 'Las ausencias se detectan <strong>automáticamente</strong> desde el módulo Asistencia — si un trabajador no tiene marcación un día hábil, aparece aquí en amarillo como "Sin clasificar". Tu tarea es clasificar cada ausencia:<ul><li>🏥 <strong>Licencia Médica:</strong> reposo con certificado médico</li><li>✅ <strong>Permiso con goce:</strong> autorizado, se paga igual</li><li>⚠️ <strong>Permiso sin goce:</strong> autorizado, se descuenta</li><li>🏖️ <strong>Vacaciones:</strong> período de descanso legal</li><li>❌ <strong>Injustificada:</strong> falta sin aviso ni justificación</li></ul>'
+      },
+      {
+        icono: '💰',
+        titulo: 'Pestaña Haberes Variables',
+        contenido: 'Registra los montos adicionales al sueldo base que corresponden en el período:<ul><li><strong>Bonos:</strong> producción, asistencia, puntualidad, responsabilidad</li><li><strong>Colación y movilización:</strong> beneficios de traslado y alimentación</li><li><strong>Viáticos:</strong> gastos por trabajos fuera de la faena habitual</li><li><strong>Asignaciones especiales:</strong> cualquier pago extraordinario acordado</li></ul>'
+      },
+      {
+        icono: '➖',
+        titulo: 'Pestaña Descuentos',
+        contenido: 'Registra los descuentos que se aplicarán en la liquidación:<ul><li><strong>Anticipos:</strong> dinero entregado antes del cierre del período</li><li><strong>Préstamos:</strong> con control de cuotas y saldo pendiente</li><li><strong>Caja de Compensación:</strong> cuotas de beneficios solicitados</li><li><strong>Cuota sindical:</strong> aporte mensual al sindicato</li><li><strong>Retención judicial:</strong> pensión de alimentos u orden judicial</li></ul>'
+      },
+      {
+        icono: '⏱️',
+        titulo: 'Pestaña Jornada Especial',
+        contenido: 'Registra situaciones fuera de la jornada habitual:<ul><li><strong>Horas extra:</strong> con recargo 50% (día hábil) o 100% (domingo/festivo) según Art. 32 CT</li><li><strong>Horas compensadas:</strong> horas que se compensan con descanso en lugar de pago</li><li><strong>Cambio de turno:</strong> modificación puntual del horario acordado</li></ul>'
+      },
+      {
+        icono: '🔄',
+        titulo: 'Filtros — Período y Mandante',
+        contenido: 'Usa el selector de período (mes/año) en la parte superior para navegar entre meses. El filtro de mandante permite ver solo los trabajadores de una empresa en particular. Ambos filtros afectan todas las pestañas simultáneamente.'
+      },
+      {
+        icono: '🔗',
+        titulo: 'Flujo relacionado',
+        contenido: 'Asistencia (registro diario) → Gestión Laboral (clasificar y complementar) → Remuneraciones (calcular liquidación)'
+      }
+    ],
+    faq: [
+      { p: '¿Debo registrar manualmente todas las ausencias?', r: 'No. Las ausencias se detectan automáticamente desde Asistencia. Solo debes clasificar el motivo de cada una.' },
+      { p: '¿Qué pasa si no clasifico una ausencia?', r: 'Quedará marcada como "Sin clasificar" y Remuneraciones la tratará como ausencia injustificada al calcular.' },
+      { p: '¿Los anticipos quedan registrados en la Carpeta Laboral?', r: 'Sí. Cada novedad registrada queda automáticamente en la Carpeta Laboral del trabajador.' },
+      { p: '¿Puedo registrar horas extra de varios días a la vez?', r: 'Por ahora se registran de a una por fecha. Esto garantiza el cálculo correcto del recargo según si el día es hábil o festivo.' },
+      { p: '¿El período se cierra automáticamente?', r: 'No. El sistema es flexible — puedes agregar o modificar registros hasta el momento de generar la liquidación.' }
     ]
   }
 };
