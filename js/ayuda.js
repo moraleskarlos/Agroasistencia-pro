@@ -204,7 +204,7 @@ const AYUDA_CONTENIDO = {
       { p: '¿Puedo generar contratos en masa?', r: 'Actualmente los contratos se generan uno por uno para garantizar precisión en los datos de cada trabajador.' }
     ]
   },
-    qr: {
+ qr: {
     titulo: '🪪 Generar QR',
     secciones: [
       {
