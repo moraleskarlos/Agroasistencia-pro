@@ -910,9 +910,24 @@
         <!-- PANEL NOVEDADES -->
         <div id="panel-gl-novedades">
           <div class="card" style="margin-bottom:14px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <!-- Cabecera con filtros -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-alert-circle"></i> Novedades del período</div>
-              <button class="btn btn-primary btn-sm" onclick="toggleFormNovedad()"><i class="ti ti-plus"></i> Nueva novedad</button>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <select id="gl-nov-filtro-trab" style="font-size:12px;padding:6px 10px;border:1px solid var(--borde);border-radius:var(--radius);background:var(--gris-bg);" onchange="renderNovedades()">
+                  <option value="">Todos los trabajadores</option>
+                </select>
+                <select id="gl-nov-filtro-tipo" style="font-size:12px;padding:6px 10px;border:1px solid var(--borde);border-radius:var(--radius);background:var(--gris-bg);" onchange="renderNovedades()">
+                  <option value="">Todos los tipos</option>
+                  <option value="sin_clasificar">⚠️ Sin clasificar</option>
+                  <option value="licencia_medica">🏥 Lic. Médica</option>
+                  <option value="permiso_goce">✅ Permiso c/goce</option>
+                  <option value="permiso_sin_goce">⚠️ Permiso s/goce</option>
+                  <option value="vacaciones">🏖️ Vacaciones</option>
+                  <option value="ausencia_injustificada">❌ Injustificada</option>
+                </select>
+                <button class="btn btn-primary btn-sm" onclick="toggleFormNovedad()"><i class="ti ti-plus"></i> Nueva novedad</button>
+              </div>
             </div>
             <!-- Formulario nueva novedad -->
             <div id="gl-nov-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;margin-bottom:14px;">
@@ -943,14 +958,18 @@
                 </div>
               </form>
             </div>
+            <!-- Tabla resumen por trabajador -->
             <div class="tabla-wrap">
-              <table class="tabla" style="min-width:800px;">
+              <table class="tabla" style="min-width:700px;">
                 <thead><tr>
-                  <th>Fecha</th><th>Trabajador</th><th>Tipo</th>
-                  <th style="text-align:center;">Días</th><th>Estado</th>
-                  <th>Observación</th><th>Acción</th>
+                  <th>Trabajador</th>
+                  <th>RUT</th>
+                  <th>Estado</th>
+                  <th>Tipos registrados</th>
+                  <th style="text-align:center;">Días</th>
+                  <th>Detalle</th>
                 </tr></thead>
-                <tbody id="tbody-novedades"><tr><td colspan="7" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+                <tbody id="tbody-novedades"><tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
               </table>
             </div>
           </div>
