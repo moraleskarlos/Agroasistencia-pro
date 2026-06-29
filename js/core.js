@@ -4,6 +4,7 @@ const CFG_KEY='agro_cfg', LOCAL_T='agro_trabajadores', LOCAL_E='agro_empresas', 
 const LOCAL_C='agro_contratos', LOCAL_AN='agro_anexos', LOCAL_CARPETA='agro_carpeta';
 let cfg={}, supabaseClient=null, trabajadores=[], empresas=[], datosExcel=[];
 let contratos=[], anexos=[], empresas_propias=[], carpeta=[];
+let novedades=[], haberes_variables=[], descuentos=[], jornada_especial=[];
 let contratoEditandoId=null, _rutPrecontratoTemp=null;
 let tabEmpresasActivo='mis-empresas', tabContratosActivo='contratos';
 let toastTimer;
@@ -95,6 +96,7 @@ function irA(idPagina, botonEl) {
 
     // 3. Inicializar módulo en siguiente tick para no bloquear el render visual
     setTimeout(() => {
+      if(idPagina === 'gestion-laboral' || idPagina === 'p-gestion-laboral'){ initGestionLaboral(); }
       if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
       if(idPagina === 'p-perfil-trabajador'){ /* contenido se carga desde verPerfilTrabajador */ }
       if(idPagina === 'contratistas' || idPagina === 'p-contratistas'){ switchTabEmpresas(tabEmpresasActivo||'mis-empresas'); }
