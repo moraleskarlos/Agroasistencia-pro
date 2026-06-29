@@ -2,6 +2,7 @@
 try {
   cargarConfig();
   cargarLocal();
+  cargarGestionLaboral();
   migrarIDs();
   iniciarSupabase();
   poblarSelects();
