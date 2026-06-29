@@ -47,15 +47,18 @@ function switchTabGL(tab){
 }
 
 function _poblarSelectsGL(){
-  const selects = ['gl-filtro-mandante','gl-nov-trabajador','gl-hab-trabajador','gl-des-trabajador','gl-jor-trabajador'];
+  const selects = ['gl-filtro-mandante','gl-nov-trabajador','gl-nov-filtro-trab','gl-hab-trabajador','gl-des-trabajador','gl-jor-trabajador'];
   selects.forEach(id => {
     const el = document.getElementById(id); if(!el) return;
     const val = el.value;
-    const esFiltro = id.includes('filtro');
     const esMandante = id.includes('mandante');
     if(esMandante){
       el.innerHTML = '<option value="">Todos los mandantes</option>'
         + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+    } else if(id === 'gl-nov-filtro-trab'){
+      el.innerHTML = '<option value="">Todos los trabajadores</option>'
+        + trabajadores.filter(t => t.estado === 'activo')
+          .map(t => `<option value="${t.rut}">${t.nombre}</option>`).join('');
     } else {
       el.innerHTML = '<option value="">— Seleccionar trabajador —</option>'
         + trabajadores.filter(t => t.estado === 'activo')
@@ -111,65 +114,116 @@ function _setKPI(id, val, sub){
 }
 
 /* ════════════════════════════════════════════════════════
-   TAB 1 — NOVEDADES
+   TAB 1 — NOVEDADES (vista resumen por trabajador)
    ════════════════════════════════════════════════════════ */
 function renderNovedades(){
-  const periodo  = _getPeriodo();
-  const mandante = document.getElementById('gl-filtro-mandante')?.value || '';
-  const ruts     = _rutsFiltrados(mandante);
-
-  const lista = novedades.filter(n => n.periodo === periodo && ruts.includes(n.trabajador_rut));
-
-  // Ausencias desde asistencia (solo lectura)
-  const ausencias = _leerAusenciasAsistencia(periodo, ruts);
-
-  const tbody = document.getElementById('tbody-novedades');
+  const periodo   = _getPeriodo();
+  const mandante  = document.getElementById('gl-filtro-mandante')?.value || '';
+  const filtroRut = document.getElementById('gl-nov-filtro-trab')?.value || '';
+  const filtroTipo= document.getElementById('gl-nov-filtro-tipo')?.value || '';
+  const ruts      = _rutsFiltrados(mandante);
+  const tbody     = document.getElementById('tbody-novedades');
   if(!tbody) return;
 
-  // Primero mostrar ausencias detectadas sin clasificar
-  const ausenciasHtml = ausencias.length ? ausencias.map(a => {
-    const t    = trabajadores.find(x => x.rut === a.rut);
-    const yaReg = lista.find(n => n.trabajador_rut === a.rut && n.fecha_inicio === a.fecha);
-    if(yaReg) return ''; // ya fue clasificada
-    return `<tr style="background:#FFFBEB;">
-      <td style="font-size:12px;">${_fmtFecha(a.fecha)}</td>
-      <td style="font-size:13px;font-weight:500;">${t?.nombre||a.rut}</td>
-      <td><span class="badge badge-amarillo">⚠️ Sin clasificar</span></td>
-      <td>—</td><td>—</td><td style="font-size:12px;color:var(--texto3);">Detectada desde Asistencia</td>
-      <td>
-        <button class="btn btn-secondary btn-sm" onclick="clasificarAusencia('${a.rut}','${a.fecha}')">
-          <i class="ti ti-tag"></i> Clasificar
-        </button>
-      </td>
-    </tr>`;
-  }).join('') : '';
+  const ausencias  = _leerAusenciasAsistencia(periodo, ruts);
+  const novsPer    = novedades.filter(n => n.periodo === periodo && ruts.includes(n.trabajador_rut));
 
-  // Novedades registradas
-  const novedadesHtml = lista.length ? lista.map(n => {
-    const t = trabajadores.find(x => x.rut === n.trabajador_rut);
-    return `<tr>
-      <td style="font-size:12px;">${_fmtFecha(n.fecha_inicio)}</td>
-      <td style="font-size:13px;font-weight:500;">${t?.nombre||n.trabajador_rut}</td>
-      <td>${_badgeNovedad(n.tipo)}</td>
-      <td style="font-size:12px;text-align:center;">${n.dias||1} día${(n.dias||1)>1?'s':''}</td>
-      <td><span class="badge ${n.aprobado ? 'badge-verde':'badge-gris'}">${n.aprobado?'Aprobada':'Pendiente'}</span></td>
-      <td style="font-size:12px;color:var(--texto2);">${n.observacion||'—'}</td>
-      <td>
-        <div style="display:flex;gap:4px;">
-          ${!n.aprobado ? `<button class="btn btn-primary btn-sm" onclick="aprobarNovedad('${n.id}')"><i class="ti ti-check"></i></button>` : ''}
-          <button class="btn btn-danger btn-sm" onclick="eliminarNovedad('${n.id}')"><i class="ti ti-trash"></i></button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('') : '';
+  // Agrupar por trabajador
+  const rutsMostrar = filtroRut ? [filtroRut] : ruts;
+  const filas = rutsMostrar.map(rut => {
+    const t           = trabajadores.find(x => x.rut === rut);
+    if(!t) return null;
+    const ausRut      = ausencias.filter(a => a.rut === rut);
+    const novsRut     = novsPer.filter(n => n.trabajador_rut === rut);
+    const fechasClasif= novsRut.map(n => n.fecha_inicio);
+    const sinClasif   = ausRut.filter(a => !fechasClasif.includes(a.fecha));
 
-  if(!ausenciasHtml && !novedadesHtml){
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--texto3);">
-      Sin novedades en este período · Las ausencias aparecen automáticamente desde Asistencia
+    // Filtro por tipo
+    if(filtroTipo === 'sin_clasificar' && sinClasif.length === 0) return null;
+    if(filtroTipo && filtroTipo !== 'sin_clasificar'){
+      if(!novsRut.some(n => n.tipo === filtroTipo)) return null;
+    }
+
+    const totalDias   = novsRut.reduce((s,n) => s + (n.dias||1), 0);
+    const pendientes  = novsRut.filter(n => !n.aprobado).length;
+
+    return { rut, t, sinClasif, novsRut, totalDias, pendientes };
+  }).filter(Boolean);
+
+  if(!filas.length){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">
+      Sin novedades en este período · Las ausencias se detectan automáticamente desde Asistencia
     </td></tr>`;
     return;
   }
-  tbody.innerHTML = ausenciasHtml + novedadesHtml;
+
+  tbody.innerHTML = filas.map(f => {
+    const alertaBadge = f.sinClasif.length
+      ? `<span class="badge badge-amarillo">⚠️ ${f.sinClasif.length} sin clasificar</span>`
+      : `<span class="badge badge-verde">✅ Al día</span>`;
+    const novBadges = f.novsRut.length
+      ? [...new Set(f.novsRut.map(n=>n.tipo))].slice(0,3)
+          .map(tipo => _badgeNovedad(tipo)).join(' ')
+      : '<span style="color:var(--texto3);font-size:12px;">—</span>';
+
+    return `<tr id="fila-res-${f.rut.replace(/\W/g,'')}">
+      <td style="font-size:13px;font-weight:600;">${f.t.nombre}</td>
+      <td style="font-size:12px;font-family:monospace;color:var(--texto2);">${f.rut}</td>
+      <td>${alertaBadge}</td>
+      <td>${novBadges}</td>
+      <td style="text-align:center;font-size:13px;font-weight:500;">${f.totalDias > 0 ? f.totalDias+' día'+(f.totalDias>1?'s':'') : '—'}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="toggleDetalleNovedad('${f.rut}')">
+          <i class="ti ti-chevron-down"></i> Ver detalle
+        </button>
+      </td>
+    </tr>
+    <tr id="detalle-${f.rut.replace(/\W/g,'')}" style="display:none;">
+      <td colspan="6" style="padding:0;background:var(--gris-bg);">
+        <div style="padding:14px 20px;">
+          ${_htmlDetalleNovedad(f)}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleDetalleNovedad(rut){
+  const rid  = rut.replace(/\W/g,'');
+  const fila = document.getElementById(`detalle-${rid}`);
+  const btn  = document.querySelector(`#fila-res-${rid} button i`);
+  if(!fila) return;
+  const abierto = fila.style.display !== 'none';
+  fila.style.display = abierto ? 'none' : 'table-row';
+  if(btn) btn.className = abierto ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
+}
+
+function _htmlDetalleNovedad(f){
+  const ausenciasHtml = f.sinClasif.map(a => `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde);">
+      <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(a.fecha)}</span>
+      <span class="badge badge-amarillo">⚠️ Sin clasificar</span>
+      <span style="font-size:12px;color:var(--texto3);flex:1;">Detectada desde Asistencia</span>
+      <button class="btn btn-secondary btn-sm" onclick="clasificarAusencia('${a.rut}','${a.fecha}')">
+        <i class="ti ti-tag"></i> Clasificar
+      </button>
+    </div>`).join('');
+
+  const novsHtml = f.novsRut.map(n => `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde);">
+      <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(n.fecha_inicio)}${n.fecha_fin&&n.fecha_fin!==n.fecha_inicio?' → '+_fmtFecha(n.fecha_fin):''}</span>
+      ${_badgeNovedad(n.tipo)}
+      <span style="font-size:12px;color:var(--texto2);flex:1;">${n.observacion||'—'}</span>
+      <span class="badge ${n.aprobado?'badge-verde':'badge-gris'}">${n.aprobado?'Aprobada':'Pendiente'}</span>
+      ${!n.aprobado?`<button class="btn btn-primary btn-sm" onclick="aprobarNovedad('${n.id}')"><i class="ti ti-check"></i></button>`:''}
+      <button class="btn btn-danger btn-sm" onclick="eliminarNovedad('${n.id}')"><i class="ti ti-trash"></i></button>
+    </div>`).join('');
+
+  const vacio = !ausenciasHtml && !novsHtml
+    ? '<div style="color:var(--texto3);font-size:13px;padding:8px 0;">Sin movimientos este período</div>'
+    : '';
+
+  return `<div style="max-width:900px;">${ausenciasHtml}${novsHtml}${vacio}</div>`;
 }
 
 function _leerAusenciasAsistencia(periodo, ruts){
