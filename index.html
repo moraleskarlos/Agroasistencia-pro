@@ -28,6 +28,8 @@
       <button class="sb-item" onclick="irA('trabajadores',this)"><i class="ti ti-users"></i><span>Trabajadores</span><span class="sb-badge" id="badge-trabajadores">0</span></button>
       <button class="sb-item" onclick="irA('qr',this)"><i class="ti ti-qrcode"></i><span>Generar QR</span></button>
       <button class="sb-item" onclick="irA('contratos',this)"><i class="ti ti-file-text"></i><span>Contratos</span><span class="sb-badge" id="badge-contratos">0</span></button>
+      <div class="sb-section">Operaciones</div>
+      <button class="sb-item" onclick="irA('gestion-laboral',this)"><i class="ti ti-clipboard-list"></i><span>Gestión Laboral</span></button>
       <div class="sb-section">Reportes</div>
       <button class="sb-item" onclick="irA('asistencia',this)"><i class="ti ti-calendar-stats"></i><span>Asistencia</span></button>
       <button class="sb-item" onclick="irA('exportar',this)"><i class="ti ti-download"></i><span>Exportar</span></button>
@@ -868,6 +870,232 @@
       </div>
 
       <!-- ASISTENCIA -->
+      <!-- GESTIÓN LABORAL -->
+      <div id="p-gestion-laboral" class="pagina">
+        <div class="sec-header">
+          <div>
+            <div class="sec-title">Gestión Laboral</div>
+            <div class="sec-sub">Novedades, haberes variables, descuentos y jornada especial</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="month" id="gl-filtro-periodo" class="btn btn-secondary" style="font-size:13px;" onchange="switchTabGL(_tabGLActivo)">
+            <select id="gl-filtro-mandante" class="btn btn-secondary" style="font-size:13px;" onchange="switchTabGL(_tabGLActivo)"><option value="">Todos los mandantes</option></select>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="g4" style="margin-bottom:16px;">
+          <div class="kpi azul" id="gl-kpi-novedades"><div class="kpi-label">Novedades</div><div class="kpi-value">0</div><div class="kpi-sub">período actual</div></div>
+          <div class="kpi verde" id="gl-kpi-haberes"><div class="kpi-label">Haberes Variables</div><div class="kpi-value">$0</div><div class="kpi-sub">haberes variables</div></div>
+          <div class="kpi rojo" id="gl-kpi-descuentos"><div class="kpi-label">Descuentos</div><div class="kpi-value">$0</div><div class="kpi-sub">descuentos período</div></div>
+          <div class="kpi amarillo" id="gl-kpi-hextra"><div class="kpi-label">Horas Extra</div><div class="kpi-value">0.0 h</div><div class="kpi-sub">horas extra</div></div>
+        </div>
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--borde);padding-bottom:0;">
+          <button id="tab-gl-novedades" onclick="switchTabGL('gl-novedades')"
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;"
+            class="activo">📋 Novedades</button>
+          <button id="tab-gl-haberes" onclick="switchTabGL('gl-haberes')"
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
+            💰 Haberes Variables</button>
+          <button id="tab-gl-descuentos" onclick="switchTabGL('gl-descuentos')"
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
+            ➖ Descuentos</button>
+          <button id="tab-gl-jornada" onclick="switchTabGL('gl-jornada')"
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
+            ⏱️ Jornada Especial</button>
+        </div>
+
+        <!-- PANEL NOVEDADES -->
+        <div id="panel-gl-novedades">
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div class="card-title" style="margin:0;"><i class="ti ti-alert-circle"></i> Novedades del período</div>
+              <button class="btn btn-primary btn-sm" onclick="toggleFormNovedad()"><i class="ti ti-plus"></i> Nueva novedad</button>
+            </div>
+            <!-- Formulario nueva novedad -->
+            <div id="gl-nov-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;margin-bottom:14px;">
+              <form id="form-novedad" onsubmit="event.preventDefault();guardarNovedad();">
+                <div class="form-grid" style="margin-bottom:10px;">
+                  <div class="form-group"><label>Trabajador</label>
+                    <select id="gl-nov-trabajador"><option value="">— Seleccionar —</option></select></div>
+                  <div class="form-group"><label>Tipo de novedad</label>
+                    <select id="gl-nov-tipo">
+                      <option value="">— Seleccionar —</option>
+                      <option value="licencia_medica">🏥 Licencia Médica</option>
+                      <option value="permiso_goce">✅ Permiso con goce de sueldo</option>
+                      <option value="permiso_sin_goce">⚠️ Permiso sin goce de sueldo</option>
+                      <option value="vacaciones">🏖️ Vacaciones</option>
+                      <option value="ausencia_injustificada">❌ Ausencia injustificada</option>
+                      <option value="otro">📋 Otro</option>
+                    </select></div>
+                  <div class="form-group"><label>Fecha inicio</label>
+                    <input type="date" id="gl-nov-fecha-inicio"></div>
+                  <div class="form-group"><label>Fecha término</label>
+                    <input type="date" id="gl-nov-fecha-fin"></div>
+                  <div class="form-group full"><label>Observación</label>
+                    <input type="text" id="gl-nov-obs" placeholder="Ej: Reposo médico por 3 días, certificado N° 1234"></div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Guardar</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFormNovedad()">Cancelar</button>
+                </div>
+              </form>
+            </div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:800px;">
+                <thead><tr>
+                  <th>Fecha</th><th>Trabajador</th><th>Tipo</th>
+                  <th style="text-align:center;">Días</th><th>Estado</th>
+                  <th>Observación</th><th>Acción</th>
+                </tr></thead>
+                <tbody id="tbody-novedades"><tr><td colspan="7" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL HABERES -->
+        <div id="panel-gl-haberes" style="display:none;">
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div class="card-title" style="margin:0;"><i class="ti ti-cash"></i> Haberes variables del período</div>
+              <button class="btn btn-primary btn-sm" onclick="toggleFormHaber()"><i class="ti ti-plus"></i> Agregar haber</button>
+            </div>
+            <div id="gl-hab-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;margin-bottom:14px;">
+              <form id="form-haber" onsubmit="event.preventDefault();guardarHaber();">
+                <div class="form-grid" style="margin-bottom:10px;">
+                  <div class="form-group"><label>Trabajador</label>
+                    <select id="gl-hab-trabajador"><option value="">— Seleccionar —</option></select></div>
+                  <div class="form-group"><label>Tipo de haber</label>
+                    <select id="gl-hab-tipo">
+                      <option value="">— Seleccionar —</option>
+                      <option value="bono_produccion">🌿 Bono producción</option>
+                      <option value="bono_asistencia">📅 Bono asistencia</option>
+                      <option value="bono_puntualidad">⏰ Bono puntualidad</option>
+                      <option value="bono_responsabilidad">⭐ Bono responsabilidad</option>
+                      <option value="colacion">🍽️ Colación</option>
+                      <option value="movilizacion">🚌 Movilización</option>
+                      <option value="viatico">✈️ Viático</option>
+                      <option value="asignacion_especial">💼 Asignación especial</option>
+                      <option value="otro">📋 Otro</option>
+                    </select></div>
+                  <div class="form-group"><label>Monto ($)</label>
+                    <input type="number" id="gl-hab-monto" placeholder="0" min="0"></div>
+                  <div class="form-group"><label>Fecha</label>
+                    <input type="date" id="gl-hab-fecha"></div>
+                  <div class="form-group full"><label>Observación</label>
+                    <input type="text" id="gl-hab-obs" placeholder="Descripción del haber"></div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Guardar</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFormHaber()">Cancelar</button>
+                </div>
+              </form>
+            </div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:700px;">
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Monto</th><th>Fecha</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-haberes"><tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL DESCUENTOS -->
+        <div id="panel-gl-descuentos" style="display:none;">
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div class="card-title" style="margin:0;"><i class="ti ti-minus-vertical"></i> Descuentos del período</div>
+              <button class="btn btn-primary btn-sm" onclick="toggleFormDescuento()"><i class="ti ti-plus"></i> Agregar descuento</button>
+            </div>
+            <div id="gl-des-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;margin-bottom:14px;">
+              <form id="form-descuento" onsubmit="event.preventDefault();guardarDescuento();">
+                <div class="form-grid" style="margin-bottom:10px;">
+                  <div class="form-group"><label>Trabajador</label>
+                    <select id="gl-des-trabajador"><option value="">— Seleccionar —</option></select></div>
+                  <div class="form-group"><label>Tipo de descuento</label>
+                    <select id="gl-des-tipo">
+                      <option value="">— Seleccionar —</option>
+                      <option value="anticipo">💸 Anticipo</option>
+                      <option value="prestamo">🏦 Préstamo</option>
+                      <option value="caja_compensacion">🏢 Caja de Compensación</option>
+                      <option value="cuota_sindical">👥 Cuota sindical</option>
+                      <option value="retencion_judicial">⚖️ Retención judicial</option>
+                      <option value="otro">📋 Otro</option>
+                    </select></div>
+                  <div class="form-group"><label>Monto cuota ($)</label>
+                    <input type="number" id="gl-des-monto" placeholder="0" min="0"></div>
+                  <div class="form-group"><label>N° de cuotas</label>
+                    <input type="number" id="gl-des-cuotas" placeholder="1" min="1" value="1"></div>
+                  <div class="form-group full"><label>Observación</label>
+                    <input type="text" id="gl-des-obs" placeholder="Ej: Anticipo quincena, préstamo aprobado el..."></div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Guardar</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFormDescuento()">Cancelar</button>
+                </div>
+              </form>
+            </div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:800px;">
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Cuota</th><th style="text-align:center;">Cuotas</th><th style="text-align:center;">Pagadas</th><th>Saldo</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-descuentos"><tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL JORNADA ESPECIAL -->
+        <div id="panel-gl-jornada" style="display:none;">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div class="card-title" style="margin:0;"><i class="ti ti-clock-hour-4"></i> Jornada especial del período</div>
+              <button class="btn btn-primary btn-sm" onclick="toggleFormJornada()"><i class="ti ti-plus"></i> Agregar registro</button>
+            </div>
+            <div id="gl-jor-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;margin-bottom:14px;">
+              <form id="form-jornada" onsubmit="event.preventDefault();guardarJornada();">
+                <div class="form-grid" style="margin-bottom:10px;">
+                  <div class="form-group"><label>Trabajador</label>
+                    <select id="gl-jor-trabajador"><option value="">— Seleccionar —</option></select></div>
+                  <div class="form-group"><label>Tipo</label>
+                    <select id="gl-jor-tipo" onchange="onCambioTipoJornada()">
+                      <option value="">— Seleccionar —</option>
+                      <option value="hora_extra">⏱️ Horas extra</option>
+                      <option value="hora_compensada">🔄 Horas compensadas</option>
+                      <option value="cambio_turno">🔀 Cambio de turno</option>
+                      <option value="turno_especial">📋 Turno especial</option>
+                    </select></div>
+                  <div class="form-group"><label>Fecha</label>
+                    <input type="date" id="gl-jor-fecha"></div>
+                  <div class="form-group"><label>Horas</label>
+                    <input type="number" id="gl-jor-horas" placeholder="0.0" min="0" step="0.5"></div>
+                  <div class="form-group" id="gl-jor-recargo-grp" style="display:none;"><label>Recargo hora extra</label>
+                    <select id="gl-jor-recargo">
+                      <option value="50">50% (día hábil)</option>
+                      <option value="100">100% (festivo/domingo)</option>
+                    </select></div>
+                  <div class="form-group full"><label>Observación</label>
+                    <input type="text" id="gl-jor-obs" placeholder="Motivo del registro"></div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Guardar</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFormJornada()">Cancelar</button>
+                </div>
+              </form>
+            </div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:750px;">
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Fecha</th><th style="text-align:center;">Horas</th><th style="text-align:center;">Recargo</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-jornada"><tr><td colspan="7" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /p-gestion-laboral -->
+
       <div id="p-asistencia" class="pagina">
         <div class="sec-header">
           <div><div class="sec-title">Control de Asistencia</div><div class="sec-sub">Tareo diario y registro de jornadas</div></div>
@@ -1383,6 +1611,7 @@
   <script src="js/anexos.js"></script>
   <script src="js/asistencia.js"></script>
   <script src="js/configuracion.js"></script>
+  <script src="js/gestion-laboral.js"></script>
   <script src="js/exportar.js"></script>
   <script src="js/ayuda.js"></script>
   <script src="js/init.js"></script>
