@@ -3,6 +3,7 @@ try {
   cargarConfig();
   cargarLocal();
   cargarGestionLaboral();
+  cargarIndicadores();
   migrarIDs();
   iniciarSupabase();
   poblarSelects();
