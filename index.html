@@ -6,9 +6,9 @@
   <title>AgroAsistencia Pro</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="console.warn('Supabase CDN no disponible')"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" onerror="console.warn('XLSX CDN no disponible'); window.XLSX={utils:{json_to_sheet:()=>({}),book_new:()=>({}),book_append_sheet:()=>{},sheet_to_json:()=>[]},read:()=>({}),writeFile:()=>{}};"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js" onerror="console.warn('pdf.js CDN no disponible — lectura de PDF Previred no funcionará')"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" onerror="console.warn('Tabler icons no disponible')">
   <link rel="stylesheet" href="css/estilos.css">
-</head>
 </head>
 <body>
 <div class="app">
@@ -30,6 +30,7 @@
       <button class="sb-item" onclick="irA('contratos',this)"><i class="ti ti-file-text"></i><span>Contratos</span><span class="sb-badge" id="badge-contratos">0</span></button>
       <div class="sb-section">Operaciones</div>
       <button class="sb-item" onclick="irA('gestion-laboral',this)"><i class="ti ti-clipboard-list"></i><span>Gestión Laboral</span></button>
+      <button class="sb-item" onclick="irA('remuneraciones',this)"><i class="ti ti-calculator"></i><span>Remuneraciones</span></button>
       <div class="sb-section">Reportes</div>
       <button class="sb-item" onclick="irA('asistencia',this)"><i class="ti ti-calendar-stats"></i><span>Asistencia</span></button>
       <button class="sb-item" onclick="irA('exportar',this)"><i class="ti ti-download"></i><span>Exportar</span></button>
@@ -1115,6 +1116,111 @@
 
       </div><!-- /p-gestion-laboral -->
 
+      <!-- REMUNERACIONES -->
+      <div id="p-remuneraciones" class="pagina">
+        <div class="sec-header">
+          <div>
+            <div class="sec-title">Remuneraciones</div>
+            <div class="sec-sub">Indicadores, cálculo de liquidaciones y documentos previsionales</div>
+          </div>
+        </div>
+
+        <!-- Tabs del módulo -->
+        <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--borde);padding-bottom:0;">
+          <button id="tab-rem-indicadores" onclick="switchTabRem('rem-indicadores')"
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--verde-dark);border-bottom:2px solid var(--verde-dark);margin-bottom:-2px;">
+            📊 Indicadores</button>
+        </div>
+
+        <!-- PANEL INDICADORES -->
+        <div id="panel-rem-indicadores">
+
+          <div class="card" style="margin-bottom:14px;">
+            <div class="card-title"><i class="ti ti-file-upload"></i> Subir PDF Previred del mes</div>
+            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+              <div class="form-group" style="flex:0 0 160px;">
+                <label>Período (remuneración)</label>
+                <input type="month" id="ind-periodo-selector" onchange="renderDetalleIndicador(this.value)">
+              </div>
+              <div class="form-group" style="flex:1;min-width:220px;">
+                <label>Archivo PDF Previred</label>
+                <input type="file" id="ind-pdf-input" accept="application/pdf" onchange="procesarPdfPrevired(event)">
+              </div>
+              <button class="btn btn-secondary" onclick="nuevoIndicadorManual()"><i class="ti ti-pencil"></i> Ingresar manual</button>
+            </div>
+            <div id="ind-pdf-status" style="margin-top:8px;font-size:12px;color:var(--texto2);"></div>
+          </div>
+
+          <!-- Formulario de revisión / edición -->
+          <div id="ind-form-wrap" style="display:none;">
+            <div class="card" style="margin-bottom:14px;">
+              <div class="card-title"><i class="ti ti-clipboard-check"></i> Revisar y confirmar indicadores</div>
+
+              <div id="ind-aviso-pendientes" style="display:none;background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start;">
+                <i class="ti ti-alert-triangle" style="color:#D97706;flex-shrink:0;margin-top:1px;"></i>
+                <span style="font-size:12px;color:#92400E;"></span>
+              </div>
+
+              <div class="form-section">Generales</div>
+              <div class="form-grid" style="margin-bottom:10px;">
+                <div class="form-group"><label>Período (AAAA-MM)</label><input type="text" id="ind-f-periodo" placeholder="2025-09"></div>
+                <div class="form-group"><label>Valor UF ($)</label><input type="number" id="ind-f-uf" step="0.01"></div>
+                <div class="form-group"><label>UTM ($)</label><input type="number" id="ind-f-utm"></div>
+                <div class="form-group"><label>UTA ($)</label><input type="number" id="ind-f-uta"></div>
+                <div class="form-group"><label>Tope imponible AFP ($)</label><input type="number" id="ind-f-tope-afp"></div>
+                <div class="form-group"><label>Tope imponible AFC ($)</label><input type="number" id="ind-f-tope-afc"></div>
+                <div class="form-group"><label>Renta mínima imponible ($)</label><input type="number" id="ind-f-renta-min"></div>
+                <div class="form-group"><label>Tasa SIS (%)</label><input type="number" id="ind-f-sis" step="0.01"></div>
+              </div>
+
+              <div class="form-section">Tasas AFP (%)</div>
+              <div id="ind-afp-grid" class="form-grid" style="margin-bottom:10px;"></div>
+
+              <div class="form-section">Seguro de Cesantía (AFC) — % Empleador / Trabajador</div>
+              <div class="form-grid" style="margin-bottom:10px;">
+                <div class="form-group"><label>Plazo Indefinido — Empleador</label><input type="number" id="ind-f-afc-indef-emp" step="0.01"></div>
+                <div class="form-group"><label>Plazo Indefinido — Trabajador</label><input type="number" id="ind-f-afc-indef-trab" step="0.01"></div>
+                <div class="form-group"><label>Plazo Fijo — Empleador</label><input type="number" id="ind-f-afc-fijo-emp" step="0.01"></div>
+                <div class="form-group"><label>Indefinido 11+ años — Empleador</label><input type="number" id="ind-f-afc-11-emp" step="0.01"></div>
+                <div class="form-group"><label>Casa Particular — Empleador</label><input type="number" id="ind-f-afc-casa-emp" step="0.01"></div>
+              </div>
+
+              <div class="form-section">Asignación Familiar</div>
+              <div class="form-grid" style="margin-bottom:10px;">
+                <div class="form-group"><label>Tramo A — Monto</label><input type="number" id="ind-f-af-A-monto"></div>
+                <div class="form-group"><label>Tramo A — Renta hasta</label><input type="number" id="ind-f-af-A-hasta"></div>
+                <div class="form-group"><label>Tramo B — Monto</label><input type="number" id="ind-f-af-B-monto"></div>
+                <div class="form-group"><label>Tramo B — Renta hasta</label><input type="number" id="ind-f-af-B-hasta"></div>
+                <div class="form-group"><label>Tramo C — Monto</label><input type="number" id="ind-f-af-C-monto"></div>
+                <div class="form-group"><label>Tramo C — Renta hasta</label><input type="number" id="ind-f-af-C-hasta"></div>
+                <div class="form-group"><label>Tramo D — Monto</label><input type="number" id="ind-f-af-D-monto" value="0"></div>
+              </div>
+
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <button class="btn btn-primary btn-sm" onclick="guardarIndicadorPeriodo()"><i class="ti ti-check"></i> Guardar período</button>
+                <button class="btn btn-secondary btn-sm" onclick="cancelarFormularioIndicador()">Cancelar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detalle del período seleccionado -->
+          <div id="ind-detalle-cont"></div>
+
+          <!-- Histórico de períodos -->
+          <div class="card" style="margin-top:14px;">
+            <div class="card-title"><i class="ti ti-history"></i> Períodos registrados</div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:600px;">
+                <thead><tr><th>Período</th><th>UF</th><th>UTM</th><th>Estado</th><th></th></tr></thead>
+                <tbody id="tbody-indicadores"><tr><td colspan="5" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /p-remuneraciones -->
+
       <div id="p-asistencia" class="pagina">
         <div class="sec-header">
           <div><div class="sec-title">Control de Asistencia</div><div class="sec-sub">Tareo diario y registro de jornadas</div></div>
@@ -1630,6 +1736,7 @@
   <script src="js/anexos.js"></script>
   <script src="js/asistencia.js"></script>
   <script src="js/configuracion.js"></script>
+  <script src="js/indicadores.js"></script>
   <script src="js/gestion-laboral.js"></script>
   <script src="js/exportar.js"></script>
   <script src="js/ayuda.js"></script>
