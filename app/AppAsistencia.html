@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
   onerror="console.warn('Tabler icons no disponible')">
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"
-  onerror="console.warn('jsQR no disponible — el escaneo por cámara no funcionará')"></script>
+  onerror="console.warn('jsQR no disponible')"></script>
 <style>
   :root{
     --azul:#0f2942; --verde:#10b981; --verde-dark:#059669;
@@ -26,7 +26,7 @@
     color:var(--texto);min-height:100vh;font-size:15px;
     -webkit-user-select:none;user-select:none;
   }
-  input,button,textarea{font-family:inherit;-webkit-user-select:text;user-select:text}
+  input,button,textarea,select{font-family:inherit;-webkit-user-select:text;user-select:text}
   button{cursor:pointer;}
   .btn{
     display:inline-flex;align-items:center;justify-content:center;gap:7px;
@@ -38,6 +38,7 @@
   .btn-secondary{background:#fff;color:var(--texto);border:1px solid var(--borde)}
   .btn-secondary:active{background:var(--gris-bg)}
   .btn-success{background:var(--verde);color:#fff}
+  .btn-danger{background:var(--danger-bg);color:var(--danger);border:1px solid #fca5a5}
   .btn-full{width:100%}
   .card{
     background:#fff;border-radius:var(--radius-lg);padding:16px;
@@ -56,12 +57,8 @@
   ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:2px}
   .fade-in{animation:fadeIn .2s ease}
   @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-  .checkbox-square{
-    width:13px;height:13px;border:1.5px solid #000;display:inline-block;
-    text-align:center;line-height:13px;font-size:10px;
-  }
 
-  /* ---- Pantalla Login ---- */
+  /* Login */
   #pantalla-login{
     min-height:100vh;display:flex;align-items:center;justify-content:center;
     padding:24px;background:linear-gradient(160deg,#0f2027,#1a3a4a,#1e5631);
@@ -71,7 +68,7 @@
     box-shadow:0 20px 60px rgba(0,0,0,0.35);
   }
 
-  /* ---- Header app ---- */
+  /* Header */
   .app-header{
     background:var(--azul);padding:16px 18px;display:flex;
     justify-content:space-between;align-items:center;color:#fff;
@@ -86,7 +83,7 @@
     color:#fff;width:38px;height:38px;cursor:pointer;flex-shrink:0;
   }
 
-  /* ---- Tabs ---- */
+  /* Tabs */
   .tabs{display:flex;background:#fff;border-bottom:1px solid var(--borde);
     position:sticky;top:70px;z-index:49;}
   .tab-btn{
@@ -94,10 +91,9 @@
     font-weight:700;cursor:pointer;border-bottom:3px solid transparent;color:var(--texto2);
   }
   .tab-btn.activo{border-bottom-color:var(--azul);color:var(--azul)}
+  .pantalla-contenido{padding:16px;max-width:520px;margin:0 auto;padding-bottom:80px}
 
-  .pantalla-contenido{padding:16px;max-width:520px;margin:0 auto;padding-bottom:60px}
-
-  /* ---- QR Scanner ---- */
+  /* QR */
   #qr-video-wrap{
     border-radius:14px;overflow:hidden;margin-bottom:12px;background:#000;
     position:relative;aspect-ratio:1/1;
@@ -112,11 +108,13 @@
     box-shadow:0 0 0 2000px rgba(0,0,0,0.35);
   }
 
+  /* KPIs */
   .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
   .kpi-box{background:#fff;border-radius:14px;padding:14px 8px;text-align:center;box-shadow:var(--shadow)}
   .kpi-num{font-size:24px;font-weight:800}
   .kpi-label{font-size:10px;color:var(--texto2);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
 
+  /* Filas trabajador */
   .worker-row{
     background:#fff;border-radius:14px;padding:13px 14px;margin-bottom:8px;
     display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);
@@ -131,10 +129,18 @@
     border-radius:99px;padding:5px 10px;font-size:11px;font-weight:700;
     white-space:nowrap;display:flex;align-items:center;gap:4px;flex-shrink:0;
   }
-
   .result-banner{
     border-radius:14px;padding:16px;font-size:14px;font-weight:700;
     display:flex;align-items:center;gap:10px;margin-bottom:12px;
+  }
+
+  /* Aviso sesión por expirar */
+  #aviso-sesion-app{
+    position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+    background:#1e293b;color:#fff;border-radius:12px;padding:12px 16px;
+    z-index:9000;display:none;align-items:center;gap:12px;
+    box-shadow:0 4px 24px rgba(0,0,0,.3);font-size:13px;
+    border:1px solid rgba(255,255,255,.1);min-width:300px;
   }
 
   .offline-badge{
@@ -147,9 +153,7 @@
 </head>
 <body>
 
-<!-- ══════════════════════════════════════
-     PANTALLA LOGIN
-══════════════════════════════════════ -->
+<!-- LOGIN -->
 <div id="pantalla-login">
   <div class="login-box">
     <div style="text-align:center;margin-bottom:26px;">
@@ -158,7 +162,7 @@
         <i class="ti ti-scan" style="font-size:32px;color:var(--verde);"></i>
       </div>
       <div style="font-size:20px;font-weight:800;">App Asistencia</div>
-      <div style="font-size:12px;color:var(--texto2);margin-top:2px;">Marcación de entrada y salida</div>
+      <div style="font-size:12px;color:var(--texto2);margin-top:2px;">AgroAsistencia Pro · Marcación terreno</div>
     </div>
 
     <div class="form-group" style="margin-bottom:12px;">
@@ -184,15 +188,13 @@
 
     <div id="sin-config-aviso" style="display:none;background:var(--warn-bg);color:#92400E;
       border-radius:10px;padding:12px;font-size:12px;margin-top:14px;text-align:center;line-height:1.5;">
-      ⚠️ No hay datos sincronizados aún.<br>
-      Conecta esta app a Supabase o importa los datos desde el sistema principal.
+      ⚠️ No hay datos disponibles aún.<br>
+      Ingresa primero al sistema principal y registra trabajadores y mandantes.
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
-     APP PRINCIPAL (post-login)
-══════════════════════════════════════ -->
+<!-- APP PRINCIPAL -->
 <div id="app-main" style="display:none;">
 
   <div class="app-header">
@@ -216,13 +218,13 @@
     </button>
   </div>
 
-  <!-- ══ PANTALLA 1: MARCAR ══ -->
+  <!-- PANTALLA MARCAR -->
   <div id="pantalla-marcar" class="pantalla-contenido">
 
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <div>
         <div style="font-size:11px;color:var(--texto3);text-transform:uppercase;font-weight:700;
-          letter-spacing:.3px;">Hora estándar de marcación</div>
+          letter-spacing:.3px;">Hora estándar de entrada</div>
         <div style="font-size:11px;color:var(--texto2);margin-top:2px;">Se aplica a todos los ingresos del turno</div>
       </div>
       <input type="time" id="hora-estandar" value="08:00" style="width:96px;padding:9px;
@@ -261,7 +263,7 @@
 
   </div>
 
-  <!-- ══ PANTALLA 2: GESTIÓN DEL DÍA ══ -->
+  <!-- PANTALLA GESTIÓN -->
   <div id="pantalla-gestion" class="pantalla-contenido" style="display:none;">
 
     <div class="kpi-row">
@@ -272,7 +274,7 @@
 
     <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;">
       <input type="text" id="buscar-trabajador" class="form-input" style="flex:1;min-width:140px;"
-        placeholder="Buscar trabajador o RUT..." oninput="renderGestion()">
+        placeholder="Buscar nombre o RUT..." oninput="renderGestion()">
       <button class="btn btn-secondary" onclick="cierreMasivo()">
         <i class="ti ti-door-exit"></i> Cierre masivo
       </button>
@@ -284,47 +286,60 @@
 
 </div>
 
-<!-- Indicador modo offline -->
+<!-- Aviso sesión por expirar -->
+<div id="aviso-sesion-app">
+  <span style="font-size:20px;">⏱️</span>
+  <div style="flex:1;">
+    <div style="font-weight:600;margin-bottom:2px;">Sesión por expirar</div>
+    <div id="aviso-app-countdown" style="color:#94a3b8;font-size:12px;">en 5:00 minutos</div>
+  </div>
+  <button onclick="renovarSesionApp()" style="background:#16a34a;border:none;color:#fff;
+    border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;font-weight:600;">
+    Continuar
+  </button>
+</div>
+
+<!-- Indicador offline -->
 <div id="offline-badge" class="offline-badge">
-  <i class="ti ti-cloud-off"></i> Trabajando sin conexión — los datos se guardan localmente
+  <i class="ti ti-cloud-off"></i> Sin conexión — datos guardados localmente
 </div>
 
 <script>
-/* ══════════════════════════════════════
-   APP DE ASISTENCIA — Independiente
-   Diseñada para celular. Comparte el modelo
-   de datos de AgroAsistencia Pro (web).
-   Preparada para Supabase: cuando se conecte,
-   reemplazar las funciones marcadas con
-   "SUPABASE-READY" por llamadas reales.
-══════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   APP ASISTENCIA — AgroAsistencia Pro
+   Versión 2.0 — sincronizada con sistema principal
+   Comparte localStorage: trabajadores, empresas,
+   cfg y asistencia_ con el sistema web.
+══════════════════════════════════════════ */
 
-/* ---- Configuración / constantes ---- */
-const SUPERADMIN = { usuario: 'admin', password: 'agro2024', rol: 'superadmin' };
-const LS_CFG       = 'agro_cfg';
-const LS_EMPRESAS  = 'agro_empresas';           // mandantes
-const LS_TRABAJ    = 'agro_trabajadores';
-const LS_ASISTENCIA_PREFIX = 'asistencia_';     // + fecha YYYY-MM-DD
+/* ── CONSTANTES ── */
+const SUPERADMIN_APP = { usuario:'admin', password:'agro2024' };
+const LS_CFG         = 'agro_cfg';
+const LS_EMPRESAS    = 'agro_empresas';
+const LS_TRABAJ      = 'agro_trabajadores';
+const LS_ASIST       = 'asistencia_';
+const SESSION_KEY_APP= 'agro_sesion_app';
+const SESSION_HORAS  = 8;
 
-let cfg = {};
-let empresas = [];       // mandantes
+/* ── ESTADO ── */
+let cfg          = {};
+let empresas     = [];
 let trabajadores = [];
-let sesion = null;       // { rol, mandante_id, usuario }
-let qrStream = null;
-let qrAnimId = null;
-let tabActual = 'marcar';
-let ultimoQrLeido = '';
+let sesion       = null;
+let qrStream     = null;
+let qrAnimId     = null;
+let tabActual    = 'marcar';
+let ultimoQrLeido= '';
 let ultimoQrTime = 0;
-let supabaseClient = null; // se activa cuando se conecte Supabase
+let _timerAvisoApp = null, _timerCierreApp = null;
 
-/* ---- Carga inicial de datos compartidos ---- */
-function cargarDatosCompartidos(){
-  try{ cfg = JSON.parse(localStorage.getItem(LS_CFG)) || {}; } catch{ cfg = {}; }
-  try{ empresas = JSON.parse(localStorage.getItem(LS_EMPRESAS)) || []; } catch{ empresas = []; }
-  try{ trabajadores = JSON.parse(localStorage.getItem(LS_TRABAJ)) || []; } catch{ trabajadores = []; }
+/* ── CARGA DE DATOS COMPARTIDOS ── */
+function cargarDatos(){
+  try{ cfg          = JSON.parse(localStorage.getItem(LS_CFG))      || {}; }catch{ cfg={}; }
+  try{ empresas     = JSON.parse(localStorage.getItem(LS_EMPRESAS)) || {}; }catch{ empresas=[]; }
+  try{ trabajadores = JSON.parse(localStorage.getItem(LS_TRABAJ))   || []; }catch{ trabajadores=[]; }
 }
 
-/* Helper de mandante — espejo del usado en el sistema principal */
 function findMandante(t){
   if(!t) return null;
   const ref = t.mandante_id || t.empresa_rut || t.empresa || '';
@@ -335,94 +350,13 @@ function formatearRut(input){
   let v = input.value.replace(/[^0-9kK]/g,'').toUpperCase();
   if(v.length > 9) v = v.slice(0,9);
   if(v.length > 1){
-    const dv = v.slice(-1);
+    const dv  = v.slice(-1);
     const num = v.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
     input.value = num + '-' + dv;
-  } else {
-    input.value = v;
-  }
+  } else { input.value = v; }
 }
 
-/* ══════════════════════════════════════
-   LOGIN
-══════════════════════════════════════ */
-function initLoginScreen(){
-  cargarDatosCompartidos();
-  const sel = document.getElementById('login-mandante');
-  const activas = empresas.filter(e => e.estado !== 'inactivo');
-
-  sel.innerHTML = activas.length
-    ? '<option value="">— Seleccionar —</option>' +
-      activas.map(e => `<option value="${e.id||e.rut}">${e.nombre}</option>`).join('')
-    : '<option value="">Sin mandantes disponibles</option>';
-
-  document.getElementById('sin-config-aviso').style.display =
-    (!empresas.length && !trabajadores.length) ? 'block' : 'none';
-}
-
-function hacerLogin(){
-  const mandanteId = document.getElementById('login-mandante').value;
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  const err  = document.getElementById('login-error');
-  err.textContent = '';
-
-  if(!mandanteId){ err.textContent = 'Selecciona una empresa mandante'; return; }
-  if(!user || !pass){ err.textContent = 'Ingresa usuario y contraseña'; return; }
-
-  // SUPABASE-READY: cuando se conecte, validar usuario/pass contra la tabla "usuarios" en vez de cfg local
-  let rolValido = null;
-  if(user === SUPERADMIN.usuario && pass === SUPERADMIN.password){
-    rolValido = 'superadmin';
-  } else if(cfg.admin_user && user === cfg.admin_user && pass === cfg.admin_pass){
-    rolValido = 'admin';
-  } else {
-    const op = (cfg.operadores||[]).find(o => o.usuario === user && o.password === pass);
-    if(op) rolValido = 'operador';
-  }
-
-  if(!rolValido){ err.textContent = 'Usuario o contraseña incorrectos'; return; }
-
-  sesion = { rol: rolValido, mandante_id: mandanteId, usuario: user };
-
-  const mandante = empresas.find(e => (e.id||e.rut) === mandanteId);
-  document.getElementById('header-empresa').textContent = mandante?.nombre || cfg.empresa?.razon_social || '—';
-  document.getElementById('header-fecha').textContent = new Date().toLocaleDateString('es-CL',
-    { weekday:'long', day:'numeric', month:'long' });
-
-  document.getElementById('pantalla-login').style.display = 'none';
-  document.getElementById('app-main').style.display = 'block';
-  cambiarTab('marcar');
-}
-
-function cerrarSesionApp(){
-  if(!confirm('¿Cerrar sesión?')) return;
-  detenerCamara();
-  sesion = null;
-  document.getElementById('app-main').style.display = 'none';
-  document.getElementById('pantalla-login').style.display = 'flex';
-  document.getElementById('login-user').value = '';
-  document.getElementById('login-pass').value = '';
-  initLoginScreen();
-}
-
-/* ══════════════════════════════════════
-   TABS
-══════════════════════════════════════ */
-function cambiarTab(tab){
-  tabActual = tab;
-  document.getElementById('tab-marcar').classList.toggle('activo', tab==='marcar');
-  document.getElementById('tab-gestion').classList.toggle('activo', tab==='gestion');
-  document.getElementById('pantalla-marcar').style.display  = tab==='marcar' ? '' : 'none';
-  document.getElementById('pantalla-gestion').style.display = tab==='gestion' ? '' : 'none';
-  if(tab === 'gestion'){ detenerCamara(); renderGestion(); }
-}
-
-/* ══════════════════════════════════════
-   TRABAJADORES DEL MANDANTE ACTIVO
-══════════════════════════════════════ */
 function trabajadoresDelMandante(){
-  if(!sesion) return [];
   return trabajadores.filter(t => {
     if(t.estado !== 'activo') return false;
     const m = findMandante(t);
@@ -430,55 +364,210 @@ function trabajadoresDelMandante(){
   });
 }
 
-/* ══════════════════════════════════════
-   CÁMARA Y LECTURA QR
-══════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   LOGIN
+══════════════════════════════════════════ */
+function initLoginScreen(){
+  cargarDatos();
+
+  const sel    = document.getElementById('login-mandante');
+  const activas = (Array.isArray(empresas) ? empresas : []).filter(e => e.estado !== 'inactivo');
+  sel.innerHTML = activas.length
+    ? '<option value="">— Seleccionar —</option>' +
+      activas.map(e => `<option value="${e.id||e.rut}">${e.nombre}</option>`).join('')
+    : '<option value="">Sin mandantes disponibles</option>';
+
+  document.getElementById('sin-config-aviso').style.display =
+    (!Array.isArray(empresas) || !empresas.length) && !trabajadores.length ? 'block' : 'none';
+
+  // Intentar restaurar sesión
+  if(restaurarSesionApp()) return;
+}
+
+function hacerLogin(){
+  const mandanteId = document.getElementById('login-mandante').value;
+  const user       = document.getElementById('login-user').value.trim().toLowerCase();
+  const pass       = document.getElementById('login-pass').value;
+  const err        = document.getElementById('login-error');
+  err.textContent  = '';
+
+  if(!mandanteId){ err.textContent = 'Selecciona una empresa mandante'; return; }
+  if(!user||!pass){ err.textContent = 'Ingresa usuario y contraseña'; return; }
+
+  let rolValido = null;
+
+  // 1. Superadmin
+  if(user === SUPERADMIN_APP.usuario && pass === SUPERADMIN_APP.password){
+    rolValido = 'superadmin';
+  }
+
+  // 2. Admin — estructura actualizada cfg.usuarios.admin
+  if(!rolValido){
+    const adminUser = (cfg.usuarios?.admin?.usuario || '').toLowerCase();
+    const adminPass = cfg.usuarios?.admin?.password || '';
+    if(adminUser && user === adminUser && pass === adminPass) rolValido = 'admin';
+  }
+
+  // 3. Operadores — estructura actualizada cfg.usuarios.operadores
+  if(!rolValido){
+    const operadores = cfg.usuarios?.operadores || [];
+    const op = operadores.find(o => o.usuario?.toLowerCase() === user && o.password === pass);
+    if(op) rolValido = 'operador';
+  }
+
+  if(!rolValido){
+    err.textContent = 'Usuario o contraseña incorrectos';
+    return;
+  }
+
+  const mandante = (Array.isArray(empresas) ? empresas : []).find(e => (e.id||e.rut) === mandanteId);
+  sesion = { rol: rolValido, mandante_id: mandanteId, usuario: user, nombre_mandante: mandante?.nombre || '' };
+
+  // Persistir sesión con expiración
+  const expira = Date.now() + SESSION_HORAS * 60 * 60 * 1000;
+  localStorage.setItem(SESSION_KEY_APP, JSON.stringify({ ...sesion, expira }));
+
+  _mostrarApp();
+  _iniciarTimerSesionApp(expira);
+}
+
+function _mostrarApp(){
+  const mandante = (Array.isArray(empresas) ? empresas : []).find(e => (e.id||e.rut) === sesion.mandante_id);
+  document.getElementById('header-empresa').textContent = mandante?.nombre || sesion.nombre_mandante || '—';
+  document.getElementById('header-fecha').textContent   = new Date().toLocaleDateString('es-CL',
+    { weekday:'long', day:'numeric', month:'long' });
+  document.getElementById('pantalla-login').style.display = 'none';
+  document.getElementById('app-main').style.display       = 'block';
+  cambiarTab('marcar');
+}
+
+function restaurarSesionApp(){
+  try{
+    const raw = localStorage.getItem(SESSION_KEY_APP);
+    if(!raw) return false;
+    const datos = JSON.parse(raw);
+    if(!datos?.expira || Date.now() > datos.expira){
+      localStorage.removeItem(SESSION_KEY_APP); return false;
+    }
+    sesion = { rol: datos.rol, mandante_id: datos.mandante_id, usuario: datos.usuario, nombre_mandante: datos.nombre_mandante||'' };
+    _mostrarApp();
+    _iniciarTimerSesionApp(datos.expira);
+    return true;
+  } catch { return false; }
+}
+
+function cerrarSesionApp(){
+  if(!confirm('¿Cerrar sesión?')) return;
+  clearTimeout(_timerAvisoApp);
+  clearTimeout(_timerCierreApp);
+  _ocultarAvisoSesionApp();
+  localStorage.removeItem(SESSION_KEY_APP);
+  sesion = null;
+  detenerCamara();
+  document.getElementById('app-main').style.display       = 'none';
+  document.getElementById('pantalla-login').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  initLoginScreen();
+}
+
+/* ── TEMPORIZADOR DE SESIÓN ── */
+function _iniciarTimerSesionApp(expira){
+  clearTimeout(_timerAvisoApp);
+  clearTimeout(_timerCierreApp);
+  const msTotal = expira - Date.now();
+  const msAviso = msTotal - 5 * 60 * 1000;
+  if(msAviso > 0) _timerAvisoApp  = setTimeout(() => _mostrarAvisoSesionApp(expira), msAviso);
+  else _mostrarAvisoSesionApp(expira);
+  _timerCierreApp = setTimeout(() => cerrarSesionApp(), msTotal);
+}
+
+function _mostrarAvisoSesionApp(expira){
+  const aviso = document.getElementById('aviso-sesion-app');
+  if(aviso) aviso.style.display = 'flex';
+  const intervalo = setInterval(() => {
+    const rest = Math.max(0, expira - Date.now());
+    const min  = Math.floor(rest/60000);
+    const seg  = Math.floor((rest%60000)/1000);
+    const cd   = document.getElementById('aviso-app-countdown');
+    if(cd) cd.textContent = `Cierre en ${min}:${String(seg).padStart(2,'0')} min`;
+    if(rest <= 0) clearInterval(intervalo);
+  }, 1000);
+}
+
+function _ocultarAvisoSesionApp(){
+  const aviso = document.getElementById('aviso-sesion-app');
+  if(aviso) aviso.style.display = 'none';
+}
+
+function renovarSesionApp(){
+  if(!sesion) return;
+  const expira = Date.now() + SESSION_HORAS * 60 * 60 * 1000;
+  localStorage.setItem(SESSION_KEY_APP, JSON.stringify({ ...sesion, expira }));
+  _ocultarAvisoSesionApp();
+  _iniciarTimerSesionApp(expira);
+}
+
+/* ══════════════════════════════════════════
+   TABS
+══════════════════════════════════════════ */
+function cambiarTab(tab){
+  tabActual = tab;
+  document.getElementById('tab-marcar').classList.toggle('activo', tab==='marcar');
+  document.getElementById('tab-gestion').classList.toggle('activo', tab==='gestion');
+  document.getElementById('pantalla-marcar').style.display  = tab==='marcar'  ? 'block' : 'none';
+  document.getElementById('pantalla-gestion').style.display = tab==='gestion' ? 'block' : 'none';
+  if(tab==='gestion') renderGestion();
+}
+
+/* ══════════════════════════════════════════
+   CÁMARA QR
+══════════════════════════════════════════ */
 async function toggleCamara(){
   if(qrStream){ detenerCamara(); return; }
+  const btn = document.getElementById('btn-camara');
+  btn.innerHTML = '<i class="ti ti-loader"></i> Iniciando...';
   try{
-    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    qrStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
     const video = document.getElementById('qr-video');
     video.srcObject = qrStream;
     await video.play();
     document.getElementById('qr-video-wrap').style.display = 'block';
     document.getElementById('qr-placeholder').style.display = 'none';
-    document.getElementById('btn-camara').innerHTML = '<i class="ti ti-camera-off"></i> Detener cámara';
-    escanearFrame(video);
-  } catch(err){
-    mostrarResultado('❌ No se pudo acceder a la cámara: ' + err.message, 'error');
+    btn.innerHTML = '<i class="ti ti-camera-off"></i> Detener cámara';
+    escanearQR();
+  } catch(e){
+    btn.innerHTML = '<i class="ti ti-camera"></i> Activar cámara';
+    mostrarResultado('❌ No se pudo acceder a la cámara', 'error');
   }
 }
 
 function detenerCamara(){
-  if(qrAnimId) cancelAnimationFrame(qrAnimId);
-  qrAnimId = null;
   if(qrStream){ qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
-  const wrap = document.getElementById('qr-video-wrap');
-  const ph   = document.getElementById('qr-placeholder');
-  const btn  = document.getElementById('btn-camara');
-  if(wrap) wrap.style.display = 'none';
-  if(ph)   ph.style.display = 'block';
-  if(btn)  btn.innerHTML = '<i class="ti ti-camera"></i> Activar cámara';
+  if(qrAnimId){ cancelAnimationFrame(qrAnimId); qrAnimId = null; }
+  document.getElementById('qr-video-wrap').style.display  = 'none';
+  document.getElementById('qr-placeholder').style.display = 'block';
+  const btn = document.getElementById('btn-camara');
+  if(btn) btn.innerHTML = '<i class="ti ti-camera"></i> Activar cámara';
 }
 
-function escanearFrame(video){
-  if(!qrStream) return;
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
+function escanearQR(){
+  const video    = document.getElementById('qr-video');
+  const canvas   = document.createElement('canvas');
+  const ctx      = canvas.getContext('2d');
   function tick(){
-    if(!qrStream) return;
-    if(video.readyState === video.HAVE_ENOUGH_DATA && typeof jsQR !== 'undefined'){
-      canvas.width = video.videoWidth;
+    if(!qrStream){ return; }
+    if(video.readyState === video.HAVE_ENOUGH_DATA){
+      canvas.width  = video.videoWidth;
       canvas.height = video.videoHeight;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(img.data, img.width, img.height);
-      if(code && code.data){
-        const now = Date.now();
-        if(code.data !== ultimoQrLeido || now - ultimoQrTime > 3000){
+      const img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = typeof jsQR !== 'undefined' ? jsQR(img.data, img.width, img.height) : null;
+      if(code){
+        const ahora = Date.now();
+        if(code.data !== ultimoQrLeido || ahora - ultimoQrTime > 3000){
           ultimoQrLeido = code.data;
-          ultimoQrTime = now;
+          ultimoQrTime  = ahora;
           procesarQrLeido(code.data);
         }
       }
@@ -493,7 +582,7 @@ function procesarQrLeido(data){
   try{
     const url = new URL(data);
     rut = url.searchParams.get('rut') || data;
-  } catch{ /* no es URL, se asume que data ES el rut */ }
+  } catch{ /* no es URL */ }
   registrarMarcacion(decodeURIComponent(rut));
 }
 
@@ -504,16 +593,14 @@ function marcarPorRut(){
   document.getElementById('rut-manual').value = '';
 }
 
-/* ══════════════════════════════════════
-   REGISTRAR MARCACIÓN (entrada/salida)
-   SUPABASE-READY: reemplazar localStorage
-   por insert/update en tabla "asistencia"
-══════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   REGISTRAR MARCACIÓN
+   Formato compatible con asistencia.js del sistema principal
+══════════════════════════════════════════ */
 function registrarMarcacion(rut){
   const rutLimpio = rut.replace(/\./g,'');
   const t = trabajadores.find(x => x.rut === rut || x.rut.replace(/\./g,'') === rutLimpio);
-
-  if(!t){ mostrarResultado(`❌ RUT ${rut} no encontrado`, 'error'); return; }
+  if(!t){ mostrarResultado(`❌ RUT ${rut} no encontrado en el sistema`, 'error'); return; }
 
   const m = findMandante(t);
   if((m?.id || m?.rut) !== sesion.mandante_id){
@@ -521,38 +608,57 @@ function registrarMarcacion(rut){
     return;
   }
 
-  const hoy   = new Date().toISOString().split('T')[0];
-  const clave = LS_ASISTENCIA_PREFIX + hoy;
-  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+  const hoy          = new Date().toISOString().split('T')[0];
+  const clave        = LS_ASIST + hoy;
+  const data         = JSON.parse(localStorage.getItem(clave) || '[]');
   const horaEstandar = document.getElementById('hora-estandar').value || '08:00';
-  const ahoraReal     = new Date().toTimeString().slice(0,5);
-  const idx = data.findIndex(r => r.rut === t.rut);
+  const ahoraReal    = new Date().toTimeString().slice(0,5);
+  const idx          = data.findIndex(r => r.rut === t.rut);
 
   if(idx < 0){
-    // Primera marcación del día = ENTRADA (hora estándar normalizada)
-    data.push({
-      rut: t.rut,
-      hora_entrada: horaEstandar,
-      hora_entrada_real: ahoraReal,
-      hora_salida: null,
+    // ENTRADA — formato exacto de asistencia.js
+    const marcacion = {
+      rut:              t.rut,
+      fecha:            hoy,
+      hora_entrada:     horaEstandar,
+      hora_entrada_real:ahoraReal,
+      hora_salida:      null,
       horas_trabajadas: null,
-      registrado_por: sesion.usuario,
-    });
+      jornada_valor:    null,
+      jornada:          null,
+      registrado_por:   sesion.usuario,
+    };
+    data.push(marcacion);
     localStorage.setItem(clave, JSON.stringify(data));
-    mostrarResultado(`✅ Entrada registrada — ${t.nombre} (${horaEstandar})`, 'exito');
+    mostrarResultado(`✅ Entrada — ${t.nombre} (${horaEstandar})`, 'exito');
+
   } else if(!data[idx].hora_salida){
-    // Segunda marcación = SALIDA
-    const [eh, em] = data[idx].hora_entrada.split(':').map(Number);
-    const [sh, sm] = ahoraReal.split(':').map(Number);
+    // SALIDA — calcula horas igual que asistencia.js
+    const [eh,em] = data[idx].hora_entrada.split(':').map(Number);
+    const [sh,sm] = ahoraReal.split(':').map(Number);
     let horas = (sh*60+sm - (eh*60+em)) / 60;
     if(horas < 0) horas += 24;
-    data[idx].hora_salida = ahoraReal;
-    data[idx].horas_trabajadas = Math.round(horas*10)/10;
+    horas = Math.round(horas * 10) / 10;
+
+    // Calcular jornada igual que calcularJornada() en asistencia.js
+    let jornada = '—', jornada_valor = null;
+    if(horas === 0)      { jornada = 'Ausente';  jornada_valor = 0; }
+    else if(horas <= 5)  { jornada = 'Media';    jornada_valor = 0.5; }
+    else if(horas <= 10) { jornada = 'Completa'; jornada_valor = 1; }
+    else if(horas <= 12) { jornada = 'Extendida';jornada_valor = 1.5; }
+    else                 { jornada = '⚠️ Revisar'; }
+
+    data[idx].hora_salida      = ahoraReal;
+    data[idx].horas_trabajadas = horas;
+    data[idx].jornada          = jornada;
+    data[idx].jornada_valor    = jornada_valor;
+    data[idx].fecha            = hoy;
+
     localStorage.setItem(clave, JSON.stringify(data));
-    mostrarResultado(`✅ Salida registrada — ${t.nombre} (${ahoraReal}, ${data[idx].horas_trabajadas}h)`, 'exito');
+    mostrarResultado(`✅ Salida — ${t.nombre} (${ahoraReal} · ${horas}h · ${jornada})`, 'exito');
+
   } else {
-    // Doble marcación bloqueada
-    mostrarResultado(`⚠️ ${t.nombre} ya completó su jornada hoy (${data[idx].hora_entrada} – ${data[idx].hora_salida})`, 'warn');
+    mostrarResultado(`⚠️ ${t.nombre} ya completó su jornada (${data[idx].hora_entrada} – ${data[idx].hora_salida})`, 'warn');
     return;
   }
 
@@ -562,9 +668,9 @@ function registrarMarcacion(rut){
 function mostrarResultado(msg, tipo){
   const el = document.getElementById('resultado-marcacion');
   const colores = {
-    exito: { bg:'#D1FAE5', txt:'#065F46', icon:'circle-check' },
-    error: { bg:'#FEE2E2', txt:'#991B1B', icon:'circle-x' },
-    warn:  { bg:'#FEF3C7', txt:'#92400E', icon:'alert-triangle' },
+    exito:{ bg:'#D1FAE5', txt:'#065F46', icon:'circle-check' },
+    error:{ bg:'#FEE2E2', txt:'#991B1B', icon:'circle-x' },
+    warn: { bg:'#FEF3C7', txt:'#92400E', icon:'alert-triangle' },
   };
   const c = colores[tipo] || colores.exito;
   el.innerHTML = `<div class="result-banner fade-in" style="background:${c.bg};color:${c.txt};">
@@ -573,19 +679,18 @@ function mostrarResultado(msg, tipo){
   setTimeout(() => { if(el) el.innerHTML = ''; }, 4000);
 }
 
-/* ══════════════════════════════════════
-   PANTALLA 2: GESTIÓN DEL DÍA
-══════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   GESTIÓN DEL DÍA
+══════════════════════════════════════════ */
 function renderGestion(){
-  const hoy   = new Date().toISOString().split('T')[0];
-  const clave = LS_ASISTENCIA_PREFIX + hoy;
-  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+  const hoy    = new Date().toISOString().split('T')[0];
+  const clave  = LS_ASIST + hoy;
+  const data   = JSON.parse(localStorage.getItem(clave) || '[]');
   const buscar = (document.getElementById('buscar-trabajador')?.value || '').toLowerCase().replace(/\./g,'');
 
   const lista = trabajadoresDelMandante().filter(t => {
     if(!buscar) return true;
-    const rutLimp = t.rut.replace(/\./g,'').toLowerCase();
-    return t.nombre.toLowerCase().includes(buscar) || rutLimp.includes(buscar);
+    return t.nombre.toLowerCase().includes(buscar) || t.rut.replace(/\./g,'').toLowerCase().includes(buscar);
   });
 
   let activos = 0, cerrados = 0, marcados = 0;
@@ -605,19 +710,21 @@ function renderGestion(){
   const cont = document.getElementById('lista-gestion');
   if(!filas.length){
     cont.innerHTML = `<div class="card" style="text-align:center;padding:30px;color:var(--texto3);">
-      Sin trabajadores para mostrar</div>`;
+      Sin trabajadores para este mandante</div>`;
     return;
   }
 
   cont.innerHTML = filas.map(({t,r}) => {
-    const estado = !r ? { txt:'Sin marcar', bg:'#F1F5F9', col:'var(--texto3)', icon:'clock' }
-      : !r.hora_salida ? { txt:'Activo', bg:'#D1FAE5', col:'#065F46', icon:'circle-check' }
-      : { txt:'Cerrado', bg:'#F1F5F9', col:'#475569', icon:'door-exit' };
+    const estado = !r
+      ? { txt:'Sin marcar', bg:'#F1F5F9', col:'var(--texto3)', icon:'clock' }
+      : !r.hora_salida
+        ? { txt:'Activo', bg:'#D1FAE5', col:'#065F46', icon:'circle-check' }
+        : { txt:'Cerrado', bg:'#F1F5F9', col:'#475569', icon:'door-exit' };
 
     return `<div class="worker-row">
       <div class="worker-info">
         <div class="worker-name">${t.nombre}</div>
-        <div class="worker-rut">${t.rut}</div>
+        <div class="worker-rut">${t.rut}${r?.jornada ? ' · '+r.jornada : ''}</div>
       </div>
       <div class="worker-time">
         <div class="worker-time-label">Entrada</div>
@@ -625,7 +732,7 @@ function renderGestion(){
       </div>
       <div class="worker-time">
         <div class="worker-time-label">Salida</div>
-        <div class="worker-time-val">${r?.hora_salida || (r ? 'En faena' : '—')}</div>
+        <div class="worker-time-val">${r?.hora_salida || (r ? 'Activo' : '—')}</div>
       </div>
       <span class="status-pill" style="background:${estado.bg};color:${estado.col};">
         <i class="ti ti-${estado.icon}" style="font-size:12px;"></i>
@@ -635,47 +742,54 @@ function renderGestion(){
 }
 
 function cierreMasivo(){
-  const hoy   = new Date().toISOString().split('T')[0];
-  const clave = LS_ASISTENCIA_PREFIX + hoy;
-  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
-  const ahoraReal = new Date().toTimeString().slice(0,5);
+  const hoy          = new Date().toISOString().split('T')[0];
+  const clave        = LS_ASIST + hoy;
+  const data         = JSON.parse(localStorage.getItem(clave) || '[]');
+  const ahoraReal    = new Date().toTimeString().slice(0,5);
   const mandanteRuts = trabajadoresDelMandante().map(t => t.rut);
-  let cerrados = 0;
+  let cerrados       = 0;
 
   data.forEach(r => {
-    if(mandanteRuts.includes(r.rut) && !r.hora_salida){
-      const [eh, em] = r.hora_entrada.split(':').map(Number);
-      const [sh, sm] = ahoraReal.split(':').map(Number);
-      let horas = (sh*60+sm - (eh*60+em)) / 60;
-      if(horas < 0) horas += 24;
-      r.hora_salida = ahoraReal;
-      r.horas_trabajadas = Math.round(horas*10)/10;
-      cerrados++;
-    }
+    if(!mandanteRuts.includes(r.rut) || r.hora_salida) return;
+    const [eh,em] = r.hora_entrada.split(':').map(Number);
+    const [sh,sm] = ahoraReal.split(':').map(Number);
+    let horas = (sh*60+sm - (eh*60+em)) / 60;
+    if(horas < 0) horas += 24;
+    horas = Math.round(horas*10)/10;
+
+    let jornada = '—', jornada_valor = null;
+    if(horas<=5){ jornada='Media'; jornada_valor=0.5; }
+    else if(horas<=10){ jornada='Completa'; jornada_valor=1; }
+    else if(horas<=12){ jornada='Extendida'; jornada_valor=1.5; }
+    else{ jornada='⚠️ Revisar'; }
+
+    r.hora_salida      = ahoraReal;
+    r.horas_trabajadas = horas;
+    r.jornada          = jornada;
+    r.jornada_valor    = jornada_valor;
+    r.fecha            = hoy;
+    cerrados++;
   });
 
   if(!cerrados){ alert('No hay marcaciones activas para cerrar'); return; }
-  if(!confirm(`¿Cerrar la jornada de ${cerrados} trabajador${cerrados>1?'es':''} activos a las ${ahoraReal}?`)) return;
+  if(!confirm(`¿Cerrar jornada de ${cerrados} trabajador${cerrados>1?'es':''} a las ${ahoraReal}?`)) return;
 
   localStorage.setItem(clave, JSON.stringify(data));
   renderGestion();
 }
 
-/* ══════════════════════════════════════
-   INDICADOR OFFLINE
-══════════════════════════════════════ */
-function actualizarIndicadorOffline(){
-  const badge = document.getElementById('offline-badge');
-  badge.style.display = navigator.onLine ? 'none' : 'flex';
+/* ══════════════════════════════════════════
+   OFFLINE
+══════════════════════════════════════════ */
+function actualizarOffline(){
+  document.getElementById('offline-badge').style.display = navigator.onLine ? 'none' : 'flex';
 }
-window.addEventListener('online',  actualizarIndicadorOffline);
-window.addEventListener('offline', actualizarIndicadorOffline);
+window.addEventListener('online',  actualizarOffline);
+window.addEventListener('offline', actualizarOffline);
 
-/* ══════════════════════════════════════
-   INIT
-══════════════════════════════════════ */
+/* ── INIT ── */
 initLoginScreen();
-actualizarIndicadorOffline();
+actualizarOffline();
 </script>
 </body>
 </html>
