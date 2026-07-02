@@ -147,12 +147,22 @@ function renderDashboard(){
   const bMis=document.getElementById('badge-mis-empresas'); if(bMis) bMis.textContent=empresas_propias.length;
   poblarSelectsEmpresaPropia();
   document.getElementById('ultimas-marcaciones').innerHTML='<div style="font-size:13px;color:var(--texto3);text-align:center;padding:20px 0;">Usa el módulo de Asistencia para registrar marcaciones</div>';
+  // Verificar alerta de indicadores
+  if(typeof verificarAlertaIndicadores === 'function') verificarAlertaIndicadores();
+}
+
+function formatearUF(input){
+  // Permite formato 39.485,65 — miles con punto, decimales con coma
+  let val = input.value.replace(/[^0-9,]/g,'');
+  const partes = val.split(',');
+  let entero = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  input.value = partes.length > 1 ? entero + ',' + partes[1].slice(0,2) : entero;
 }
 
 function formatearRUT(input){
   let v = input.value.replace(/[^0-9kK]/g,'').toUpperCase();
 
-  if(v.length > 9) v = v.slice(0,9); // 🔥 límite real
+  if(v.length > 9) v = v.slice(0,9);
 
   if(v.length > 1){
     const dv = v.slice(-1);
