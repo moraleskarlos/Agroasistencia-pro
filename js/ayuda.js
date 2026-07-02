@@ -363,6 +363,68 @@ const AYUDA_CONTENIDO = {
       { p: '¿Puedo registrar horas extra de varios días a la vez?', r: 'Por ahora se registran de a una por fecha. Esto garantiza el cálculo correcto del recargo según si el día es hábil o festivo.' },
       { p: '¿El período se cierra automáticamente?', r: 'No. El sistema es flexible — puedes agregar o modificar registros hasta el momento de generar la liquidación.' }
     ]
+  },
+
+  remuneraciones: {
+    titulo: '💰 Remuneraciones — Indicadores',
+    secciones: [
+      {
+        icono: '🎯',
+        titulo: 'Objetivo',
+        contenido: 'Registrar los indicadores previsionales mensuales publicados por Previred, que son la base legal para calcular todas las cotizaciones y descuentos de las liquidaciones de sueldo.'
+      },
+      {
+        icono: '📅',
+        titulo: '¿Cuándo actualizar?',
+        contenido: 'Previred publica los nuevos indicadores entre el <strong>día 1 y 5 de cada mes</strong>. Debes actualizarlos antes de procesar las liquidaciones del período. El sistema te avisará automáticamente en el Dashboard y aquí cuando falten los indicadores del mes en curso.'
+      },
+      {
+        icono: '🔗',
+        titulo: '¿Dónde obtener los valores?',
+        contenido: 'Usa el botón <strong>"Abrir Previred"</strong> que está en la parte superior de este módulo. Te llevará directo a la página oficial con la tabla de indicadores del mes. Copia cada valor desde ahí al formulario.'
+      },
+      {
+        icono: '📋',
+        titulo: 'Sección A — Valores Generales',
+        contenido: '<ul><li><strong>UF:</strong> usa el valor del último día hábil del mes de remuneración</li><li><strong>UTM:</strong> Unidad Tributaria Mensual — base para calcular el impuesto único</li><li><strong>UTA:</strong> Unidad Tributaria Anual (UTM × 12) — para cálculos anuales de impuesto</li></ul>'
+      },
+      {
+        icono: '📊',
+        titulo: 'Sección B — Topes y Rentas',
+        contenido: '<ul><li><strong>Tope AFP (87,8 UF):</strong> si la renta supera este monto, AFP y SIS se calculan solo hasta el tope</li><li><strong>Tope AFC (131,9 UF):</strong> mismo concepto pero para el Seguro de Cesantía</li><li><strong>Renta mínima:</strong> si el trabajador gana menos, se cotiza igual sobre este mínimo</li></ul>'
+      },
+      {
+        icono: '🏦',
+        titulo: 'Sección C — Tasas AFP',
+        contenido: 'Cada AFP tiene su propia tasa de cargo del trabajador. El cargo del empleador (0,1%) es fijo para todas. El total es la suma de ambos y es lo que se descuenta de la liquidación del trabajador.'
+      },
+      {
+        icono: '🛡️',
+        titulo: 'Sección D — SIS',
+        contenido: 'El Seguro de Invalidez y Sobrevivencia es de cargo exclusivo del empleador. Se calcula sobre la renta imponible con el mismo tope que AFP. No aplica a trabajadores pensionados.'
+      },
+      {
+        icono: '💼',
+        titulo: 'Sección E — AFC (Seguro de Cesantía)',
+        contenido: 'La tasa varía según el tipo de contrato. En contratos a <strong>Plazo Fijo</strong> y <strong>Casa Particular</strong>, solo cotiza el empleador. En <strong>Plazo Indefinido</strong>, cotiza también el trabajador con 0,6%.'
+      },
+      {
+        icono: '👨‍👩‍👧',
+        titulo: 'Sección F — Asignación Familiar',
+        contenido: 'Beneficio para trabajadores con cargas reconocidas por la COMPIN. El tramo depende de la renta bruta: Tramo A el más bajo, Tramo D sin beneficio. El monto se suma al haber del trabajador en la liquidación.'
+      },
+      {
+        icono: '🔗',
+        titulo: 'Flujo relacionado',
+        contenido: 'Indicadores (este módulo) → Cálculo de liquidaciones → Libro de Remuneraciones → Archivo Previred para contador'
+      }
+    ],
+    faq: [
+      { p: '¿Qué pasa si no actualizo los indicadores del mes?', r: 'El sistema no podrá calcular correctamente las liquidaciones del período. Aparecerá una alerta en el Dashboard y en este módulo hasta que los ingreses.' },
+      { p: '¿Puedo modificar los indicadores después de calcular liquidaciones?', r: 'Sí, pero deberás recalcular las liquidaciones que usen esos indicadores, ya que el cambio no se aplica retroactivamente.' },
+      { p: '¿La UF del último día o del primero?', r: 'Usa el valor del último día del mes de remuneración. Por ejemplo, para las remuneraciones de septiembre, usa la UF del 30 de septiembre.' },
+      { p: '¿Dónde obtengo el valor exacto de la UF?', r: 'En Previred directamente (botón "Abrir Previred" en este módulo), o en el sitio del Banco Central de Chile. Previred publica la tabla completa con todos los indicadores del mes.' }
+    ]
   }
 };
 
