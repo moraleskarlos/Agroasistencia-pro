@@ -6,7 +6,6 @@
   <title>AgroAsistencia Pro</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="console.warn('Supabase CDN no disponible')"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" onerror="console.warn('XLSX CDN no disponible'); window.XLSX={utils:{json_to_sheet:()=>({}),book_new:()=>({}),book_append_sheet:()=>{},sheet_to_json:()=>[]},read:()=>({}),writeFile:()=>{}};"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js" onerror="console.warn('pdf.js CDN no disponible — lectura de PDF Previred no funcionará')"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" onerror="console.warn('Tabler icons no disponible')">
   <link rel="stylesheet" href="css/estilos.css">
 </head>
@@ -69,6 +68,13 @@
 
       <!-- DASHBOARD -->
       <div id="p-dashboard" class="pagina activa">
+
+        <!-- Alerta indicadores previsionales -->
+        <div id="dash-alerta-indicadores" style="display:none;background:linear-gradient(135deg,#92400E,#D97706);
+          color:#fff;border-radius:var(--radius);padding:13px 16px;margin-bottom:16px;
+          gap:10px;align-items:center;flex-wrap:wrap;">
+        </div>
+
         <div class="kpi-grid">
           <div class="kpi verde"><div class="kpi-label">Presentes hoy</div><div class="kpi-value" id="kpi-presentes">—</div><div class="kpi-sub" id="kpi-presentes-sub">sin datos</div></div>
           <div class="kpi azul"><div class="kpi-label">Total trabajadores</div><div class="kpi-value" id="kpi-total">0</div><div class="kpi-sub" id="kpi-activos-sub">0 activos</div></div>
@@ -1125,80 +1131,214 @@
           </div>
         </div>
 
-        <!-- Tabs del módulo -->
+        <!-- Tabs -->
         <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--borde);padding-bottom:0;">
           <button id="tab-rem-indicadores" onclick="switchTabRem('rem-indicadores')"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--verde-dark);border-bottom:2px solid var(--verde-dark);margin-bottom:-2px;">
-            📊 Indicadores</button>
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:700;cursor:pointer;color:var(--verde-dark);border-bottom:2px solid var(--verde-dark);margin-bottom:-2px;">
+            📊 Indicadores Previsionales</button>
         </div>
 
         <!-- PANEL INDICADORES -->
         <div id="panel-rem-indicadores">
 
-          <div class="card" style="margin-bottom:14px;">
-            <div class="card-title"><i class="ti ti-file-upload"></i> Subir PDF Previred del mes</div>
-            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-              <div class="form-group" style="flex:0 0 160px;">
-                <label>Período (remuneración)</label>
-                <input type="month" id="ind-periodo-selector" onchange="renderDetalleIndicador(this.value)">
-              </div>
-              <div class="form-group" style="flex:1;min-width:220px;">
-                <label>Archivo PDF Previred</label>
-                <input type="file" id="ind-pdf-input" accept="application/pdf" onchange="procesarPdfPrevired(event)">
-              </div>
-              <button class="btn btn-secondary" onclick="nuevoIndicadorManual()"><i class="ti ti-pencil"></i> Ingresar manual</button>
-            </div>
-            <div id="ind-pdf-status" style="margin-top:8px;font-size:12px;color:var(--texto2);"></div>
+          <!-- Alerta de período pendiente -->
+          <div id="rem-alerta-indicadores" style="display:none;background:#FEF3C7;border:1px solid #FDE68A;
+            border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;gap:10px;align-items:flex-start;">
           </div>
 
-          <!-- Formulario de revisión / edición -->
+          <!-- Aviso permanente + acciones -->
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+              <div>
+                <div class="card-title" style="margin-bottom:6px;"><i class="ti ti-info-circle"></i> Indicadores Previsionales Previred</div>
+                <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 14px;font-size:12px;color:#1E40AF;line-height:1.6;">
+                  ⚠️ <strong>Estos valores cambian mensualmente.</strong> Verifica siempre en Previred antes de guardar.<br>
+                  Publica los indicadores entre el día 1 y 5 de cada mes para el mes en curso.
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
+                <a href="https://www.previred.com/web/previred/indicadores-previsionales"
+                  target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+                  <i class="ti ti-external-link"></i> Abrir Previred
+                </a>
+                <div class="form-group" style="margin:0;">
+                  <label style="font-size:10px;">Período</label>
+                  <input type="month" id="ind-periodo-selector" onchange="renderDetalleIndicador(this.value)"
+                    style="padding:7px 10px;font-size:13px;">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="nuevoIndicadorManual()" style="align-self:flex-end;">
+                  <i class="ti ti-plus"></i> Ingresar / Editar período
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulario ingreso manual -->
           <div id="ind-form-wrap" style="display:none;">
-            <div class="card" style="margin-bottom:14px;">
-              <div class="card-title"><i class="ti ti-clipboard-check"></i> Revisar y confirmar indicadores</div>
-
-              <div id="ind-aviso-pendientes" style="display:none;background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start;">
-                <i class="ti ti-alert-triangle" style="color:#D97706;flex-shrink:0;margin-top:1px;"></i>
-                <span style="font-size:12px;color:#92400E;"></span>
+            <div class="card" style="margin-bottom:14px;border:2px solid var(--verde);">
+              <div class="card-title"><i class="ti ti-pencil"></i> Ingreso de Indicadores Previsionales
+                <span id="ind-form-titulo-periodo" style="font-weight:400;color:var(--texto2);margin-left:8px;"></span>
               </div>
 
-              <div class="form-section">Generales</div>
-              <div class="form-grid" style="margin-bottom:10px;">
-                <div class="form-group"><label>Período (AAAA-MM)</label><input type="text" id="ind-f-periodo" placeholder="2025-09"></div>
-                <div class="form-group"><label>Valor UF ($)</label><input type="number" id="ind-f-uf" step="0.01"></div>
-                <div class="form-group"><label>UTM ($)</label><input type="number" id="ind-f-utm"></div>
-                <div class="form-group"><label>UTA ($)</label><input type="number" id="ind-f-uta"></div>
-                <div class="form-group"><label>Tope imponible AFP ($)</label><input type="number" id="ind-f-tope-afp"></div>
-                <div class="form-group"><label>Tope imponible AFC ($)</label><input type="number" id="ind-f-tope-afc"></div>
-                <div class="form-group"><label>Renta mínima imponible ($)</label><input type="number" id="ind-f-renta-min"></div>
-                <div class="form-group"><label>Tasa SIS (%)</label><input type="number" id="ind-f-sis" step="0.01"></div>
+              <!-- A — Valores Generales -->
+              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+                A — Valores Generales
+              </div>
+              <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
+                Valores base del mes publicados por el INE y el SII. La UF se actualiza diariamente — usa el valor del último día del mes de remuneración.
+              </div>
+              <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                  <label>Valor UF ($)</label>
+                  <input type="text" id="ind-f-uf" placeholder="39.485,65" oninput="formatearUF(this)">
+                </div>
+                <div class="form-group">
+                  <label>UTM ($)</label>
+                  <input type="text" id="ind-f-utm" placeholder="69.265" oninput="formatearMiles(this)">
+                </div>
+                <div class="form-group">
+                  <label>UTA ($)</label>
+                  <input type="text" id="ind-f-uta" placeholder="831.180" oninput="formatearMiles(this)">
+                </div>
+                <div class="form-group">
+                  <label>Período (AAAA-MM)</label>
+                  <input type="text" id="ind-f-periodo" placeholder="2025-09" maxlength="7">
+                </div>
               </div>
 
-              <div class="form-section">Tasas AFP (%)</div>
-              <div id="ind-afp-grid" class="form-grid" style="margin-bottom:10px;"></div>
-
-              <div class="form-section">Seguro de Cesantía (AFC) — % Empleador / Trabajador</div>
-              <div class="form-grid" style="margin-bottom:10px;">
-                <div class="form-group"><label>Plazo Indefinido — Empleador</label><input type="number" id="ind-f-afc-indef-emp" step="0.01"></div>
-                <div class="form-group"><label>Plazo Indefinido — Trabajador</label><input type="number" id="ind-f-afc-indef-trab" step="0.01"></div>
-                <div class="form-group"><label>Plazo Fijo — Empleador</label><input type="number" id="ind-f-afc-fijo-emp" step="0.01"></div>
-                <div class="form-group"><label>Indefinido 11+ años — Empleador</label><input type="number" id="ind-f-afc-11-emp" step="0.01"></div>
-                <div class="form-group"><label>Casa Particular — Empleador</label><input type="number" id="ind-f-afc-casa-emp" step="0.01"></div>
+              <!-- B — Topes y Rentas -->
+              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+                B — Topes y Rentas Imponibles
+              </div>
+              <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
+                El tope imponible limita la base de cálculo de AFP y AFC. La renta mínima es el piso para cotizaciones de trabajadores dependientes.
+              </div>
+              <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                  <label>Tope imponible AFP — 87,8 UF ($)</label>
+                  <input type="text" id="ind-f-tope-afp" placeholder="3.466.840" oninput="formatearMiles(this)">
+                </div>
+                <div class="form-group">
+                  <label>Tope imponible AFC — 131,9 UF ($)</label>
+                  <input type="text" id="ind-f-tope-afc" placeholder="5.208.157" oninput="formatearMiles(this)">
+                </div>
+                <div class="form-group">
+                  <label>Renta mínima — Dependientes ($)</label>
+                  <input type="text" id="ind-f-renta-min" placeholder="529.000" oninput="formatearMiles(this)">
+                </div>
+                <div class="form-group">
+                  <label>Renta mínima — Menores 18 / Mayores 65 ($)</label>
+                  <input type="text" id="ind-f-renta-menor18" placeholder="394.622" oninput="formatearMiles(this)">
+                </div>
+                <div class="form-group">
+                  <label>Renta mínima — Casa Particular ($)</label>
+                  <input type="text" id="ind-f-renta-casa" placeholder="529.000" oninput="formatearMiles(this)">
+                </div>
               </div>
 
-              <div class="form-section">Asignación Familiar</div>
-              <div class="form-grid" style="margin-bottom:10px;">
-                <div class="form-group"><label>Tramo A — Monto</label><input type="number" id="ind-f-af-A-monto"></div>
-                <div class="form-group"><label>Tramo A — Renta hasta</label><input type="number" id="ind-f-af-A-hasta"></div>
-                <div class="form-group"><label>Tramo B — Monto</label><input type="number" id="ind-f-af-B-monto"></div>
-                <div class="form-group"><label>Tramo B — Renta hasta</label><input type="number" id="ind-f-af-B-hasta"></div>
-                <div class="form-group"><label>Tramo C — Monto</label><input type="number" id="ind-f-af-C-monto"></div>
-                <div class="form-group"><label>Tramo C — Renta hasta</label><input type="number" id="ind-f-af-C-hasta"></div>
-                <div class="form-group"><label>Tramo D — Monto</label><input type="number" id="ind-f-af-D-monto" value="0"></div>
+              <!-- C — Tasas AFP -->
+              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+                C — Tasas de Cotización AFP (%)
+              </div>
+              <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
+                Cargo del trabajador varía por AFP. El cargo del empleador (0,1%) es fijo para todas. El total es la suma de ambos.
+              </div>
+              <div style="overflow-x:auto;margin-bottom:16px;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:500px;">
+                  <thead>
+                    <tr style="background:var(--gris-bg);">
+                      <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;">AFP</th>
+                      <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;">Trabajador %</th>
+                      <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;">Empleador %</th>
+                      <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;">Total %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom:1px solid var(--borde);"><td style="padding:8px 10px;font-weight:600;">Capital</td><td style="padding:6px;"><input type="text" id="ind-f-afp-capital-trab" placeholder="11,44" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-capital-emp" placeholder="0,10" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-capital-tot" placeholder="11,54" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td></tr>
+                    <tr style="border-bottom:1px solid var(--borde);"><td style="padding:8px 10px;font-weight:600;">Cuprum</td><td style="padding:6px;"><input type="text" id="ind-f-afp-cuprum-trab" placeholder="11,44" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-cuprum-emp" placeholder="0,10" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-cuprum-tot" placeholder="11,54" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td></tr>
+                    <tr style="border-bottom:1px solid var(--borde);"><td style="padding:8px 10px;font-weight:600;">Habitat</td><td style="padding:6px;"><input type="text" id="ind-f-afp-habitat-trab" placeholder="11,27" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-habitat-emp" placeholder="0,10" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-habitat-tot" placeholder="11,37" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td></tr>
+                    <tr style="border-bottom:1px solid var(--borde);"><td style="padding:8px 10px;font-weight:600;">PlanVital</td><td style="padding:6px;"><input type="text" id="ind-f-afp-planvital-trab" placeholder="11,16" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-planvital-emp" placeholder="0,10" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-planvital-tot" placeholder="11,26" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td></tr>
+                    <tr style="border-bottom:1px solid var(--borde);"><td style="padding:8px 10px;font-weight:600;">Provida</td><td style="padding:6px;"><input type="text" id="ind-f-afp-provida-trab" placeholder="11,45" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-provida-emp" placeholder="0,10" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-provida-tot" placeholder="11,55" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td></tr>
+                    <tr style="border-bottom:1px solid var(--borde);"><td style="padding:8px 10px;font-weight:600;">Modelo</td><td style="padding:6px;"><input type="text" id="ind-f-afp-modelo-trab" placeholder="10,58" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-modelo-emp" placeholder="0,10" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-modelo-tot" placeholder="10,68" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td></tr>
+                    <tr><td style="padding:8px 10px;font-weight:600;">Uno</td><td style="padding:6px;"><input type="text" id="ind-f-afp-uno-trab" placeholder="10,49" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-uno-emp" placeholder="0,10" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td><td style="padding:6px;"><input type="text" id="ind-f-afp-uno-tot" placeholder="10,59" oninput="formatearDecimal(this)" style="width:90px;text-align:center;"></td></tr>
+                  </tbody>
+                </table>
               </div>
 
-              <div style="display:flex;gap:8px;margin-top:8px;">
-                <button class="btn btn-primary btn-sm" onclick="guardarIndicadorPeriodo()"><i class="ti ti-check"></i> Guardar período</button>
-                <button class="btn btn-secondary btn-sm" onclick="cancelarFormularioIndicador()">Cancelar</button>
+              <!-- D — SIS -->
+              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+                D — Seguro de Invalidez y Sobrevivencia (SIS)
+              </div>
+              <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
+                De cargo exclusivo del empleador. Se aplica sobre la renta imponible con tope AFP. No aplica a trabajadores pensionados.
+              </div>
+              <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                  <label>Tasa SIS — Empleador (%)</label>
+                  <input type="text" id="ind-f-sis" placeholder="1,88" oninput="formatearDecimal(this)">
+                </div>
+              </div>
+
+              <!-- E — AFC -->
+              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+                E — Seguro de Cesantía AFC (%)
+              </div>
+              <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
+                La tasa varía según el tipo de contrato. Para contratos a Plazo Fijo, Casa Particular e Indefinido 11+ años, el trabajador no cotiza.
+              </div>
+              <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                  <label>Plazo Indefinido — Empleador (%)</label>
+                  <input type="text" id="ind-f-afc-indef-emp" placeholder="2,4" oninput="formatearDecimal(this)">
+                </div>
+                <div class="form-group">
+                  <label>Plazo Indefinido — Trabajador (%)</label>
+                  <input type="text" id="ind-f-afc-indef-trab" placeholder="0,6" oninput="formatearDecimal(this)">
+                </div>
+                <div class="form-group">
+                  <label>Plazo Fijo — Empleador (%)</label>
+                  <input type="text" id="ind-f-afc-fijo-emp" placeholder="3,0" oninput="formatearDecimal(this)">
+                </div>
+                <div class="form-group">
+                  <label>Indefinido 11+ años — Empleador (%)</label>
+                  <input type="text" id="ind-f-afc-11-emp" placeholder="0,8" oninput="formatearDecimal(this)">
+                </div>
+                <div class="form-group">
+                  <label>Casa Particular — Empleador (%)</label>
+                  <input type="text" id="ind-f-afc-casa-emp" placeholder="3,0" oninput="formatearDecimal(this)">
+                </div>
+              </div>
+
+              <!-- F — Asignación Familiar -->
+              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+                F — Asignación Familiar
+              </div>
+              <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
+                Beneficio para trabajadores con cargas familiares reconocidas. El tramo depende de la renta del trabajador. Tramo D no tiene monto ($0).
+              </div>
+              <div style="overflow-x:auto;margin-bottom:16px;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:400px;">
+                  <thead>
+                    <tr style="background:var(--gris-bg);">
+                      <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;">Tramo</th>
+                      <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;">Monto por carga ($)</th>
+                      <th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;">Renta hasta ($)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom:1px solid var(--borde);"><td style="padding:8px 10px;font-weight:600;">A</td><td style="padding:6px;"><input type="text" id="ind-f-af-A-monto" placeholder="22.007" oninput="formatearMiles(this)" style="width:130px;text-align:right;"></td><td style="padding:6px;"><input type="text" id="ind-f-af-A-hasta" placeholder="620.251" oninput="formatearMiles(this)" style="width:130px;text-align:right;"></td></tr>
+                    <tr style="border-bottom:1px solid var(--borde);"><td style="padding:8px 10px;font-weight:600;">B</td><td style="padding:6px;"><input type="text" id="ind-f-af-B-monto" placeholder="13.505" oninput="formatearMiles(this)" style="width:130px;text-align:right;"></td><td style="padding:6px;"><input type="text" id="ind-f-af-B-hasta" placeholder="905.941" oninput="formatearMiles(this)" style="width:130px;text-align:right;"></td></tr>
+                    <tr style="border-bottom:1px solid var(--borde);"><td style="padding:8px 10px;font-weight:600;">C</td><td style="padding:6px;"><input type="text" id="ind-f-af-C-monto" placeholder="4.267" oninput="formatearMiles(this)" style="width:130px;text-align:right;"></td><td style="padding:6px;"><input type="text" id="ind-f-af-C-hasta" placeholder="1.412.957" oninput="formatearMiles(this)" style="width:130px;text-align:right;"></td></tr>
+                    <tr><td style="padding:8px 10px;font-weight:600;">D</td><td style="padding:6px;"><input type="text" id="ind-f-af-D-monto" value="0" disabled style="width:130px;text-align:right;background:var(--gris-bg);"></td><td style="padding:8px 10px;font-size:12px;color:var(--texto3);">Sin tope — renta sobre tramo C</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--borde);">
+                <button class="btn btn-primary" onclick="guardarIndicadorPeriodo()">
+                  <i class="ti ti-check"></i> Guardar indicadores
+                </button>
+                <button class="btn btn-secondary" onclick="cancelarFormularioIndicador()">Cancelar</button>
               </div>
             </div>
           </div>
@@ -1206,18 +1346,20 @@
           <!-- Detalle del período seleccionado -->
           <div id="ind-detalle-cont"></div>
 
-          <!-- Histórico de períodos -->
+          <!-- Histórico -->
           <div class="card" style="margin-top:14px;">
             <div class="card-title"><i class="ti ti-history"></i> Períodos registrados</div>
             <div class="tabla-wrap">
               <table class="tabla" style="min-width:600px;">
-                <thead><tr><th>Período</th><th>UF</th><th>UTM</th><th>Estado</th><th></th></tr></thead>
-                <tbody id="tbody-indicadores"><tr><td colspan="5" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+                <thead><tr><th>Período</th><th>UF</th><th>UTM</th><th>Tope AFP</th><th>Acciones</th></tr></thead>
+                <tbody id="tbody-indicadores">
+                  <tr><td colspan="5" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr>
+                </tbody>
               </table>
             </div>
           </div>
 
-        </div>
+        </div><!-- /panel-rem-indicadores -->
 
       </div><!-- /p-remuneraciones -->
 
