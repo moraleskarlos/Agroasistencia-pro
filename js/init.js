@@ -4,6 +4,7 @@ try {
   cargarLocal();
   cargarGestionLaboral();
   cargarIndicadores();
+  cargarLiquidaciones();
   migrarIDs();
   iniciarSupabase();
   poblarSelects();
