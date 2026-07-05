@@ -36,12 +36,12 @@ function initLiquidaciones(){
 }
 
 function _poblarSelectsLiquidacion(){
-  const selMandante = document.getElementById('liq-filtro-mandante');
-  if(selMandante){
-    const val = selMandante.value;
-    selMandante.innerHTML = '<option value="">Todos los mandantes</option>'
-      + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
-    if(val) selMandante.value = val;
+  const selEmpresa = document.getElementById('liq-filtro-mandante');
+  if(selEmpresa){
+    const val = selEmpresa.value;
+    selEmpresa.innerHTML = '<option value="">Todas las empresas</option>'
+      + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
+    if(val) selEmpresa.value = val;
   }
 }
 
@@ -176,7 +176,10 @@ function renderListaLiquidaciones(){
   let lista = liquidaciones_guardadas.filter(l => !periodo || l.periodo === periodo);
   if(mandante){
     const ruts = trabajadores
-      .filter(t => findMandante(t)?.id === mandante)
+      .filter(t => {
+        const c = contratos.find(x => x.trabajador_rut === t.rut);
+        return c?.empresa_propia_id === mandante;
+      })
       .map(t => t.rut);
     lista = lista.filter(l => ruts.includes(l.rut));
   }
