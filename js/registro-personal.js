@@ -36,7 +36,16 @@ function cargarEnFormulario(t){
   if(cont) cont.value = cfg.empresa?.razon_social || '';
   // Mandante
   const selEmp = document.getElementById('m-empresa');
-  if(selEmp){ selEmp.value = t.empresa_rut||''; onCambioMandanteRegistro(t.faena_obra); }  document.getElementById('btn-guardar-txt').textContent='Actualizar trabajador';
+  if(selEmp){ selEmp.value = t.empresa_rut||''; onCambioMandanteRegistro(t.faena_obra); }
+  // Campos migratorios
+  const selTipoDoc = document.getElementById('m-tipo-doc-mig');
+  if(selTipoDoc) selTipoDoc.value = t.tipo_doc_migratorio || '';
+  const numDoc = document.getElementById('m-num-doc-mig');
+  if(numDoc) numDoc.value = t.num_doc_migratorio || '';
+  const fechaVenc = document.getElementById('m-fecha-venc-mig');
+  if(fechaVenc) fechaVenc.value = t.fecha_venc_migratorio || '';
+  mostrarCamposMigratorios();
+  document.getElementById('btn-guardar-txt').textContent='Actualizar trabajador';
   evaluarCampos();
 }
 
@@ -108,7 +117,11 @@ async function guardarTrabajador(e){
     faena_obra:        document.getElementById('m-faena')?.value || '',
     funcion_cargo:     cargo || '',
     fecha_ingreso:     document.getElementById('m-fecha-ingreso')?.value || null,
-    estado:            'activo'
+    estado:            'activo',
+    // Campos migratorios
+    tipo_doc_migratorio:   document.getElementById('m-tipo-doc-mig')?.value || null,
+    num_doc_migratorio:    document.getElementById('m-num-doc-mig')?.value.trim() || null,
+    fecha_venc_migratorio: document.getElementById('m-fecha-venc-mig')?.value || null,
   };
   if(!supabaseClient){
     const idx=trabajadores.findIndex(t=>t.rut===datos.rut);
@@ -276,4 +289,38 @@ function onCambioMandanteRegistro(faenaPreseleccionada){
   }
 
   if(faenaPreseleccionada) selFaena.value=faenaPreseleccionada;
+}
+
+/* ── CAMPOS MIGRATORIOS ─────────────────────────────────── */
+function mostrarCamposMigratorios(){
+  const nac    = document.getElementById('m-nacionalidad')?.value || '';
+  const bloque = document.getElementById('bloque-migratorio');
+  if(!bloque) return;
+  const esExtranjero = nac && nac !== 'Chileno' && nac !== '';
+  bloque.style.display = esExtranjero ? 'block' : 'none';
+  if(!esExtranjero){
+    // Limpiar campos si vuelve a Chileno
+    const sel = document.getElementById('m-tipo-doc-mig');
+    const num = document.getElementById('m-num-doc-mig');
+    const fec = document.getElementById('m-fecha-venc-mig');
+    if(sel) sel.value = '';
+    if(num) num.value = '';
+    if(fec) fec.value = '';
+  }
+  onCambioTipoDocMig();
+}
+
+function onCambioTipoDocMig(){
+  const tipo  = document.getElementById('m-tipo-doc-mig')?.value || '';
+  const grupo = document.getElementById('grupo-fecha-venc-mig');
+  const nota  = document.getElementById('nota-res-definitiva');
+  const lbl   = document.getElementById('lbl-fecha-venc-mig');
+  if(!grupo) return;
+  grupo.style.display = tipo ? 'block' : 'none';
+  if(nota) nota.style.display = tipo === 'Residencia Definitiva' ? 'block' : 'none';
+  if(lbl){
+    lbl.textContent = tipo === 'Residencia Definitiva'
+      ? 'Vencimiento cédula de identidad *'
+      : 'Fecha de vencimiento *';
+  }
 }
