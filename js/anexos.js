@@ -92,6 +92,10 @@ function guardarAnexo(){
     ciudad:         document.getElementById('anexo-ciudad')?.value.trim() || '',
     observaciones:  document.getElementById('anexo-observaciones')?.value.trim() || '',
     fecha_creacion: new Date().toISOString(),
+    // Campo numérico para cambio_remuneracion — usado por variables.js
+    nuevo_sueldo:   tipo === 'cambio_remuneracion'
+      ? (parseFloat(document.getElementById('anx-nuevo-sueldo')?.value || 0) || null)
+      : null,
   };
 
   anexos.push(nuevoAnexo);
