@@ -83,39 +83,29 @@ function limpiarFormulario(){
 
 function evaluarCampos(){
 
-  // ✅ Nacionalidad
+  // ✅ Nacionalidad — campo "otro"
   const nacOtro = document.getElementById('nac-otro');
   const nacSelect = document.getElementById('m-nacionalidad');
-
   if(nacOtro && nacSelect){
-    nacOtro.style.display =
-      nacSelect.value === 'otro'
-      ? 'block'
-      : 'none';
+    nacOtro.style.display = nacSelect.value === 'otro' ? 'block' : 'none';
   }
 
-  // ✅ Cargo (aunque ahora no lo uses, queda seguro)
+  // ✅ Bloque migratorio — siempre sincronizado con nacionalidad
+  mostrarCamposMigratorios();
+
+  // ✅ Cargo
   const cargoOtro = document.getElementById('cargo-otro');
   const cargoSelect = document.getElementById('m-cargo');
-
   if(cargoOtro && cargoSelect){
-    cargoOtro.style.display =
-      cargoSelect.value === 'otro'
-      ? 'block'
-      : 'none';
+    cargoOtro.style.display = cargoSelect.value === 'otro' ? 'block' : 'none';
   }
 
   // ✅ ISAPRE
   const isapreGrupo = document.getElementById('isapre-grupo');
   const saludSelect = document.getElementById('m-salud');
-
   if(isapreGrupo && saludSelect){
-    isapreGrupo.style.display =
-      saludSelect.value === 'Isapre'
-      ? 'block'
-      : 'none';
+    isapreGrupo.style.display = saludSelect.value === 'Isapre' ? 'block' : 'none';
   }
-
 }
 
 async function guardarTrabajador(e){
@@ -323,15 +313,6 @@ function mostrarCamposMigratorios(){
   if(!bloque) return;
   const esExtranjero = nac && nac !== 'Chileno' && nac !== '';
   bloque.style.display = esExtranjero ? 'block' : 'none';
-  if(!esExtranjero){
-    // Limpiar campos si vuelve a Chileno
-    const sel = document.getElementById('m-tipo-doc-mig');
-    const num = document.getElementById('m-num-doc-mig');
-    const fec = document.getElementById('m-fecha-venc-mig');
-    if(sel) sel.value = '';
-    if(num) num.value = '';
-    if(fec) fec.value = '';
-  }
   onCambioTipoDocMig();
 }
 
