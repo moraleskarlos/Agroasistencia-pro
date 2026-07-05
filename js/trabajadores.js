@@ -161,3 +161,94 @@ function limpiarFiltroFecha(){
   const el = document.getElementById('filtro-fecha-ingreso');
   if(el){ el.value = ''; cargarTrabajadores(); }
 }
+
+/* ── MÓDULO EXTRANJEROS ─────────────────────────────────── */
+function actualizarBadgeExtranjeros(extranjeros){
+  const badge = document.getElementById('badge-extranjeros-urgente');
+  if(!badge) return;
+  const urgentes = extranjeros.filter(t => {
+    const semaforo = _calcularSemaforo(t.fecha_venc_migratorio);
+    return semaforo === 'rojo' || semaforo === 'negro';
+  });
+  badge.style.display = urgentes.length ? 'inline' : 'none';
+  badge.textContent   = urgentes.length;
+}
+
+function switchTabTrabajadores(tab){
+  ['lista','extranjeros'].forEach(t => {
+    const btn   = document.getElementById(`tab-${t}-trab`);
+    const panel = document.getElementById(`sub-tab-${t}-trab`);
+    const activo = t === tab;
+    if(btn){
+      btn.style.color            = activo ? 'var(--verde-dark)' : 'var(--texto2)';
+      btn.style.borderBottomColor= activo ? 'var(--verde-dark)' : 'transparent';
+      btn.style.fontWeight       = activo ? '700' : '600';
+    }
+    if(panel) panel.style.display = activo ? 'block' : 'none';
+  });
+  if(tab === 'extranjeros') renderTablaExtranjeros();
+}
+
+function renderTablaExtranjeros(){
+  const buscar = (document.getElementById('buscar-extranjero')?.value || '').toLowerCase();
+  const tbody  = document.getElementById('tbody-extranjeros');
+  if(!tbody) return;
+
+  const extranjeros = trabajadores.filter(t => {
+    const esExtranjero = t.nacionalidad && t.nacionalidad !== 'Chileno';
+    if(!esExtranjero) return false;
+    if(!buscar) return true;
+    return t.nombre?.toLowerCase().includes(buscar) ||
+           t.rut?.toLowerCase().replace(/\./g,'').includes(buscar.replace(/\./g,''));
+  });
+
+  if(!extranjeros.length){
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">
+      Sin trabajadores extranjeros registrados</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = extranjeros.map(t => {
+    const semaforo = _calcularSemaforo(t.fecha_venc_migratorio);
+    const badge    = _badgeSemaforo(semaforo, t.fecha_venc_migratorio);
+    const mandante = findMandante(t);
+    return `<tr>
+      <td style="font-size:13px;font-weight:500;">${t.nombre}</td>
+      <td style="font-size:12px;font-family:monospace;">${t.rut}</td>
+      <td style="font-size:12px;">${t.nacionalidad}</td>
+      <td style="font-size:12px;">${t.tipo_doc_migratorio || '—'}</td>
+      <td style="font-size:12px;">${t.num_doc_migratorio || '—'}</td>
+      <td style="font-size:12px;">${t.fecha_venc_migratorio
+        ? new Date(t.fecha_venc_migratorio+'T12:00:00').toLocaleDateString('es-CL')
+        : '—'}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function _calcularSemaforo(fechaVenc){
+  if(!fechaVenc) return 'gris';
+  const hoy      = new Date();
+  const venc     = new Date(fechaVenc+'T12:00:00');
+  const diasRest = Math.floor((venc - hoy) / (1000*60*60*24));
+  if(diasRest < 0)   return 'negro';   // vencido
+  if(diasRest <= 30) return 'rojo';    // urgente
+  if(diasRest <= 90) return 'amarillo';// iniciar trámite
+  return 'verde';                      // vigente
+}
+
+function _badgeSemaforo(semaforo, fechaVenc){
+  const hoy      = new Date();
+  const venc     = fechaVenc ? new Date(fechaVenc+'T12:00:00') : null;
+  const diasRest = venc ? Math.floor((venc - hoy) / (1000*60*60*24)) : null;
+
+  const map = {
+    verde:    ['🟢', 'badge-verde',    'Vigente'],
+    amarillo: ['🟡', 'badge-amarillo', `Vence en ${diasRest} días`],
+    rojo:     ['🔴', 'badge-rojo',     `⚠️ ${diasRest} días`],
+    negro:    ['⚫', 'badge-rojo',     'Vencido'],
+    gris:     ['⚪', 'badge-gris',     'Sin fecha'],
+  };
+  const [icono, cls, texto] = map[semaforo] || map.gris;
+  return `<span class="badge ${cls}">${icono} ${texto}</span>`;
+}
