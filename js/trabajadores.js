@@ -209,19 +209,27 @@ function renderTablaExtranjeros(){
   }
 
   tbody.innerHTML = extranjeros.map(t => {
-    const semaforo = _calcularSemaforo(t.fecha_venc_migratorio);
-    const badge    = _badgeSemaforo(semaforo, t.fecha_venc_migratorio);
-    const mandante = findMandante(t);
+    const semaforo  = _calcularSemaforo(t.fecha_venc_migratorio);
+    const badge     = _badgeSemaforo(semaforo, t.fecha_venc_migratorio);
+    const venc      = t.fecha_venc_migratorio
+      ? new Date(t.fecha_venc_migratorio+'T12:00:00')
+      : null;
+    const diasRest  = venc
+      ? Math.floor((venc - new Date()) / (1000*60*60*24))
+      : null;
+    const diasTxt   = diasRest !== null
+      ? (diasRest < 0 ? `Vencido hace ${Math.abs(diasRest)} días` : `${diasRest} días`)
+      : '—';
+    const fechaTxt  = venc ? venc.toLocaleDateString('es-CL') : '—';
+
     return `<tr>
-      <td style="font-size:13px;font-weight:500;">${t.nombre}</td>
       <td style="font-size:12px;font-family:monospace;">${t.rut}</td>
+      <td style="font-size:13px;font-weight:500;">${t.nombre}</td>
       <td style="font-size:12px;">${t.nacionalidad}</td>
       <td style="font-size:12px;">${t.tipo_doc_migratorio || '—'}</td>
-      <td style="font-size:12px;">${t.num_doc_migratorio || '—'}</td>
-      <td style="font-size:12px;">${t.fecha_venc_migratorio
-        ? new Date(t.fecha_venc_migratorio+'T12:00:00').toLocaleDateString('es-CL')
-        : '—'}</td>
-      <td>${badge}</td>
+      <td style="font-size:12px;">${fechaTxt}</td>
+      <td style="font-size:12px;">${diasTxt}</td>
+      <td style="text-align:center;">${badge}</td>
     </tr>`;
   }).join('');
 }
