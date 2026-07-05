@@ -19,7 +19,25 @@ function cargarEnFormulario(t){
   set('m-afp',           t.afiliacion_afp);
   set('m-salud',         t.sistema_salud);
   set('m-fecha-ingreso', t.fecha_ingreso);
-  // Cargo: si no coincide con ninguna opción predefinida, usar modo "Otro"
+
+  // Nacionalidad — verificar si es una opción del select o valor libre
+  const nacSelect = document.getElementById('m-nacionalidad');
+  if(nacSelect){
+    const opciones = [...nacSelect.options].map(o => o.value);
+    if(t.nacionalidad && opciones.includes(t.nacionalidad)){
+      nacSelect.value = t.nacionalidad;
+      // Limpiar campo "otro"
+      const otroCampo = document.getElementById('m-otra-nac');
+      if(otroCampo) otroCampo.value = '';
+    } else if(t.nacionalidad){
+      // Nacionalidad no está en las opciones — usar "otro"
+      nacSelect.value = 'otro';
+      const otroCampo = document.getElementById('m-otra-nac');
+      if(otroCampo) otroCampo.value = t.nacionalidad;
+    }
+  }
+
+  // Cargo
   const cargoSel = document.getElementById('m-cargo');
   if(cargoSel){
     const opciones = [...cargoSel.options].map(o => o.value);
@@ -31,22 +49,29 @@ function cargarEnFormulario(t){
       cargoSel.value = t.funcion_cargo || '';
     }
   }
+
   // Empresa contratista (solo lectura)
   const cont = document.getElementById('m-empresa-contratista');
   if(cont) cont.value = cfg.empresa?.razon_social || '';
+
   // Mandante
   const selEmp = document.getElementById('m-empresa');
-  if(selEmp){ selEmp.value = t.empresa_rut||''; onCambioMandanteRegistro(t.faena_obra); }
-  // Campos migratorios
+  if(selEmp){ selEmp.value = t.mandante_id || t.empresa_rut || ''; onCambioMandanteRegistro(t.faena_obra); }
+
+  // Campos migratorios — cargar ANTES de llamar mostrarCamposMigratorios
   const selTipoDoc = document.getElementById('m-tipo-doc-mig');
   if(selTipoDoc) selTipoDoc.value = t.tipo_doc_migratorio || '';
   const numDoc = document.getElementById('m-num-doc-mig');
   if(numDoc) numDoc.value = t.num_doc_migratorio || '';
   const fechaVenc = document.getElementById('m-fecha-venc-mig');
   if(fechaVenc) fechaVenc.value = t.fecha_venc_migratorio || '';
-  mostrarCamposMigratorios();
-  document.getElementById('btn-guardar-txt').textContent='Actualizar trabajador';
+
+  // Disparar manualmente las funciones de visibilidad
   evaluarCampos();
+  mostrarCamposMigratorios(); // muestra/oculta bloque migratorio según nacionalidad
+  onCambioTipoDocMig();       // muestra/oculta fecha de vencimiento según tipo doc
+
+  document.getElementById('btn-guardar-txt').textContent = 'Actualizar trabajador';
 }
 
 function limpiarFormulario(){
