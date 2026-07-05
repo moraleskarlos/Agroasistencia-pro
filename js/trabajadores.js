@@ -175,14 +175,14 @@ function actualizarBadgeExtranjeros(extranjeros){
 }
 
 function switchTabTrabajadores(tab){
-  ['lista','extranjeros'].forEach(t => {
+  // Tabs: 'todos' y 'extranjeros'
+  ['todos','extranjeros'].forEach(t => {
     const btn   = document.getElementById(`tab-${t}-trab`);
     const panel = document.getElementById(`sub-tab-${t}-trab`);
     const activo = t === tab;
     if(btn){
-      btn.style.color            = activo ? 'var(--verde-dark)' : 'var(--texto2)';
-      btn.style.borderBottomColor= activo ? 'var(--verde-dark)' : 'transparent';
-      btn.style.fontWeight       = activo ? '700' : '600';
+      btn.style.background = activo ? 'var(--azul)' : 'var(--gris-bg)';
+      btn.style.color      = activo ? '#fff' : 'var(--texto2)';
     }
     if(panel) panel.style.display = activo ? 'block' : 'none';
   });
