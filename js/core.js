@@ -97,7 +97,7 @@ function irA(idPagina, botonEl) {
     // 3. Inicializar módulo en siguiente tick para no bloquear el render visual
     setTimeout(() => {
       if(idPagina === 'gestion-laboral' || idPagina === 'p-gestion-laboral'){ initGestionLaboral(); }
-      if(idPagina === 'remuneraciones' || idPagina === 'p-remuneraciones'){ initIndicadores(); }
+      if(idPagina === 'remuneraciones' || idPagina === 'p-remuneraciones'){ initIndicadores(); initLiquidaciones(); }
       if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
       if(idPagina === 'p-perfil-trabajador'){ /* contenido se carga desde verPerfilTrabajador */ }
       if(idPagina === 'contratistas' || idPagina === 'p-contratistas'){ switchTabEmpresas(tabEmpresasActivo||'mis-empresas'); }
@@ -312,6 +312,16 @@ function poblarSelects(){
   const bMis=document.getElementById('badge-mis-empresas'); if(bMis) bMis.textContent=empresas_propias.length;
   poblarSelectsEmpresaPropia();
   document.getElementById('badge-trabajadores').textContent=trabajadores.length;
+
+  // Selector trabajador en liquidaciones
+  const selLiqTrab = document.getElementById('liq-sel-trabajador');
+  if(selLiqTrab){
+    const val = selLiqTrab.value;
+    selLiqTrab.innerHTML = '<option value="">— Seleccionar —</option>'
+      + trabajadores.filter(t=>t.estado==='activo')
+        .map(t=>`<option value="${t.rut}">${t.nombre} · ${t.rut}</option>`).join('');
+    if(val) selLiqTrab.value = val;
+  }
 }
 
 function actualizarUI(){
