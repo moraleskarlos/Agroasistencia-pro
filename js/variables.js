@@ -20,8 +20,14 @@ function construirVariablesRemuneracion(rut, periodo){
   const contrato = _getContratoVigente(rut, periodo);
   if(!contrato) return { error: `Sin contrato vigente para ${rut} en período ${periodo}` };
 
-  const sueldo_base = parseFloat(contrato.sueldo_monto) || 0;
-  if(sueldo_base <= 0) return { error: `Sueldo base inválido en contrato de ${rut}` };
+  // ── 2. Sueldo base — contrato o último anexo de remuneración ──
+  const sueldoInfo = _getSueldoBase(rut, periodo);
+  if(!sueldoInfo) return { error: `Sin sueldo base definido para ${rut}` };
+
+  const sueldo_base = sueldoInfo.monto;
+  const sueldo_fuente = sueldoInfo.fuente;
+
+  if(sueldo_base <= 0) return { error: `Sueldo base inválido para ${rut} — revisa el contrato o anexo` };
 
   // ── 2. Tipo de contrato → tasa AFC ──────────────────
   const tipo_contrato = _normalizarTipoContrato(contrato.tipo_contrato || contrato.tipo);
@@ -88,6 +94,7 @@ function construirVariablesRemuneracion(rut, periodo){
 
     // Sueldo base
     sueldo_base,
+    sueldo_fuente,         // 'Contrato' o 'Anexo cambio remuneración...'
     valor_dia,             // sueldo_base / 30
 
     // Asistencia
@@ -123,6 +130,40 @@ function construirVariablesRemuneracion(rut, periodo){
 /* ════════════════════════════════════════════════════════
    FUNCIONES AUXILIARES
    ════════════════════════════════════════════════════════ */
+
+/* ── Sueldo base: contrato vigente + último anexo cambio_remuneracion ── */
+function _getSueldoBase(rut, periodo){
+  const contrato = _getContratoVigente(rut, periodo);
+  if(!contrato) return null;
+
+  const sueldoContrato = parseFloat(contrato.sueldo_monto) || 0;
+
+  // Buscar último anexo de cambio_remuneracion vigente para el período
+  const [anio, mes] = periodo.split('-').map(Number);
+  const fechaPeriodo = new Date(anio, mes-1, 1);
+
+  const anexoRem = (anexos || [])
+    .filter(a =>
+      (a.trabajador_rut === rut) &&
+      a.tipo === 'cambio_remuneracion' &&
+      a.nuevo_sueldo > 0 &&
+      new Date(a.fecha_vigencia) <= fechaPeriodo
+    )
+    .sort((a,b) => new Date(b.fecha_vigencia) - new Date(a.fecha_vigencia))[0];
+
+  // El anexo más reciente vigente prevalece sobre el contrato
+  if(anexoRem?.nuevo_sueldo){
+    return {
+      monto:  anexoRem.nuevo_sueldo,
+      fuente: `Anexo cambio remuneración vigente desde ${new Date(anexoRem.fecha_vigencia).toLocaleDateString('es-CL')}`,
+    };
+  }
+
+  return {
+    monto:  sueldoContrato,
+    fuente: 'Contrato de trabajo',
+  };
+}
 
 /* ── Contrato vigente para el período ──────────────────── */
 function _getContratoVigente(rut, periodo){
