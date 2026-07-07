@@ -97,7 +97,7 @@ function irA(idPagina, botonEl) {
     // 3. Inicializar módulo en siguiente tick para no bloquear el render visual
     setTimeout(() => {
       if(idPagina === 'gestion-laboral' || idPagina === 'p-gestion-laboral'){ initGestionLaboral(); }
-      if(idPagina === 'remuneraciones' || idPagina === 'p-remuneraciones'){ initIndicadores(); initLiquidaciones(); }
+      if(idPagina === 'remuneraciones' || idPagina === 'p-remuneraciones'){ initIndicadores(); initLiquidaciones(); initLibro(); }
       if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
       if(idPagina === 'p-perfil-trabajador'){ /* contenido se carga desde verPerfilTrabajador */ }
       if(idPagina === 'contratistas' || idPagina === 'p-contratistas'){ switchTabEmpresas(tabEmpresasActivo||'mis-empresas'); }
