@@ -22,20 +22,23 @@ function initLibro(){
 }
 
 function _poblarFiltroMandanteLibro(){
-  const sel = document.getElementById('libro-filtro-mandante');
+  const sel = document.getElementById('libro-filtro-empresa');
   if(!sel) return;
   const val = sel.value;
-  sel.innerHTML = '<option value="">Todos los mandantes</option>'
-    + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+  sel.innerHTML = '<option value="">Todas las empresas</option>'
+    + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
   if(val) sel.value = val;
 }
 
 /* ── OBTENER LIQUIDACIONES DEL PERÍODO ──────────────────── */
-function _getLiquidacionesPeriodo(periodo, mandanteId){
+function _getLiquidacionesPeriodo(periodo, empresaId){
   let lista = liquidaciones_guardadas.filter(l => l.periodo === periodo);
-  if(mandanteId){
+  if(empresaId){
     const ruts = trabajadores
-      .filter(t => findMandante(t)?.id === mandanteId)
+      .filter(t => {
+        const c = contratos.find(x => x.trabajador_rut === t.rut);
+        return c?.empresa_propia_id === empresaId;
+      })
       .map(t => t.rut);
     lista = lista.filter(l => ruts.includes(l.rut));
   }
@@ -44,11 +47,11 @@ function _getLiquidacionesPeriodo(periodo, mandanteId){
 
 /* ── RENDER PRINCIPAL ───────────────────────────────────── */
 function renderLibro(){
-  const periodo  = document.getElementById('libro-periodo-selector')?.value || '';
-  const mandante = document.getElementById('libro-filtro-mandante')?.value  || '';
-  const vista    = document.getElementById('libro-vista')?.value || 'dt';
+  const periodo = document.getElementById('libro-periodo-selector')?.value || '';
+  const empresa = document.getElementById('libro-filtro-empresa')?.value  || '';
+  const vista   = document.getElementById('libro-vista')?.value || 'dt';
 
-  const lista = _getLiquidacionesPeriodo(periodo, mandante);
+  const lista = _getLiquidacionesPeriodo(periodo, empresa);
   const cont  = document.getElementById('libro-contenido');
   if(!cont) return;
 
@@ -392,8 +395,8 @@ function _renderResumenContador(lista, periodo){
 /* ── IMPRIMIR ────────────────────────────────────────────── */
 function imprimirLibroDT(){
   const periodo = document.getElementById('libro-periodo-selector')?.value || '';
-  const mandante= document.getElementById('libro-filtro-mandante')?.value  || '';
-  const lista   = _getLiquidacionesPeriodo(periodo, mandante);
+  const empresa = document.getElementById('libro-filtro-empresa')?.value  || '';
+  const lista   = _getLiquidacionesPeriodo(periodo, empresa);
   if(!lista.length){ toast('⚠️ Sin liquidaciones para imprimir','error'); return; }
 
   const win = window.open('','_blank','width=1100,height=700');
@@ -419,8 +422,8 @@ function imprimirLibroDT(){
 
 function imprimirResumenContador(){
   const periodo = document.getElementById('libro-periodo-selector')?.value || '';
-  const mandante= document.getElementById('libro-filtro-mandante')?.value  || '';
-  const lista   = _getLiquidacionesPeriodo(periodo, mandante);
+  const empresa = document.getElementById('libro-filtro-empresa')?.value  || '';
+  const lista   = _getLiquidacionesPeriodo(periodo, empresa);
   if(!lista.length){ toast('⚠️ Sin liquidaciones para imprimir','error'); return; }
 
   const win = window.open('','_blank','width=900,height:700');
@@ -446,8 +449,8 @@ function imprimirResumenContador(){
 /* ── EXPORTAR EXCEL ─────────────────────────────────────── */
 function exportarLibroExcel(){
   const periodo = document.getElementById('libro-periodo-selector')?.value || '';
-  const mandante= document.getElementById('libro-filtro-mandante')?.value  || '';
-  const lista   = _getLiquidacionesPeriodo(periodo, mandante);
+  const empresa = document.getElementById('libro-filtro-empresa')?.value  || '';
+  const lista   = _getLiquidacionesPeriodo(periodo, empresa);
   if(!lista.length){ toast('⚠️ Sin datos para exportar','error'); return; }
 
   const rows = lista.map((l,i) => ({
@@ -485,8 +488,8 @@ function exportarLibroExcel(){
 
 function exportarResumenExcel(){
   const periodo = document.getElementById('libro-periodo-selector')?.value || '';
-  const mandante= document.getElementById('libro-filtro-mandante')?.value  || '';
-  const lista   = _getLiquidacionesPeriodo(periodo, mandante);
+  const empresa = document.getElementById('libro-filtro-empresa')?.value  || '';
+  const lista   = _getLiquidacionesPeriodo(periodo, empresa);
   if(!lista.length){ toast('⚠️ Sin datos para exportar','error'); return; }
 
   const wb = XLSX.utils.book_new();
