@@ -1139,6 +1139,9 @@
           <button id="tab-rem-liquidaciones" onclick="switchTabRem('rem-liquidaciones')"
             style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;">
             📄 Liquidaciones</button>
+          <button id="tab-rem-libro" onclick="switchTabRem('rem-libro')"
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;">
+            📒 Libro de Remuneraciones</button>
         </div>
 
         <!-- PANEL INDICADORES -->
@@ -1434,6 +1437,52 @@
           </div>
 
         </div><!-- /panel-rem-liquidaciones -->
+
+        <!-- PANEL LIBRO DE REMUNERACIONES -->
+        <div id="panel-rem-libro" style="display:none;">
+
+          <!-- KPIs -->
+          <div class="g4" style="margin-bottom:16px;">
+            <div class="kpi azul"><div class="kpi-label">Trabajadores</div><div class="kpi-value" id="libro-kpi-trab">0</div><div class="kpi-sub">en el libro</div></div>
+            <div class="kpi verde"><div class="kpi-label">Total haberes</div><div class="kpi-value" id="libro-kpi-haberes" style="font-size:18px;">—</div><div class="kpi-sub">período</div></div>
+            <div class="kpi rojo"><div class="kpi-label">Total prev.</div><div class="kpi-value" id="libro-kpi-prev" style="font-size:18px;">—</div><div class="kpi-sub">cotizaciones</div></div>
+            <div class="kpi amarillo"><div class="kpi-label">Total líquido</div><div class="kpi-value" id="libro-kpi-liquido" style="font-size:18px;">—</div><div class="kpi-sub">a pagar</div></div>
+          </div>
+
+          <!-- Controles -->
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+              <div class="form-group" style="margin:0;">
+                <label>Período</label>
+                <input type="month" id="libro-periodo-selector" onchange="renderLibro()" style="padding:7px 10px;font-size:13px;">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>Mandante</label>
+                <select id="libro-filtro-mandante" onchange="renderLibro()" style="padding:7px 10px;font-size:13px;">
+                  <option value="">Todos los mandantes</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>Vista</label>
+                <select id="libro-vista" onchange="renderLibro()" style="padding:7px 10px;font-size:13px;">
+                  <option value="dt">Formato DT (Art. 62 CT)</option>
+                  <option value="contador">Resumen Contador</option>
+                </select>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="renderLibro()" style="align-self:flex-end;">
+                <i class="ti ti-refresh"></i> Actualizar
+              </button>
+            </div>
+          </div>
+
+          <!-- Contenido dinámico -->
+          <div id="libro-contenido">
+            <div class="card" style="text-align:center;padding:40px;color:var(--texto3);">
+              Selecciona un período para generar el libro
+            </div>
+          </div>
+
+        </div><!-- /panel-rem-libro -->
 
         <!-- MODAL LIQUIDACIÓN -->
         <div id="liq-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
@@ -1968,6 +2017,7 @@
   <script src="js/variables.js"></script>
   <script src="js/calculo.js"></script>
   <script src="js/liquidaciones.js"></script>
+  <script src="js/libro.js"></script>
   <script src="js/indicadores.js"></script>
   <script src="js/gestion-laboral.js"></script>
   <script src="js/exportar.js"></script>
