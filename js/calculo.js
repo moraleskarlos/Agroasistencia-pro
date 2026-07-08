@@ -83,6 +83,10 @@ function calcularLiquidacion(vars, periodo){
     total_haberes_imponibles: vars.total_imponible,
     total_haberes_no_imponibles: vars.total_no_imponible,
     total_haberes:            vars.total_haberes,
+    dias_a_descontar:         vars.dias_a_descontar,
+    dias_permiso_sin_goce:    vars.dias_permiso_sin_goce,
+    dias_trabajados:          vars.dias_trabajados,
+    sistema_salud:            vars.sistema_salud,
 
     // Bases de cálculo
     base_afp,
