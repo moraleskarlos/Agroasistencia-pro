@@ -149,7 +149,7 @@ function imprimirQRSeleccionados(){
   });
 
   setTimeout(() => {
-    const empPrincipal = cfg.empresa?.razon_social || 'AgroAsistencia Pro';
+    const empPrincipal = cfg.empresa?.razon_social || 'AgroContratista';
     const cards   = seleccionados.map(cb => {
       const url = cb.dataset.url ||
         `${window.location.origin}${window.location.pathname}?rut=${encodeURIComponent(cb.dataset.rut)}`;
