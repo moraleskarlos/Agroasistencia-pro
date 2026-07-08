@@ -50,9 +50,9 @@ function cargarEnFormulario(t){
     }
   }
 
-  // Empresa contratista (solo lectura)
+  // Empresa contratista (empresa propia empleadora)
   const cont = document.getElementById('m-empresa-contratista');
-  if(cont) cont.value = cfg.empresa?.razon_social || '';
+  if(cont) cont.value = t.empresa_propia_id || '';
 
   // Mandante
   const selEmp = document.getElementById('m-empresa');
@@ -126,6 +126,7 @@ async function guardarTrabajador(e){
     domicilio:         document.getElementById('m-domicilio').value.trim(),
     afiliacion_afp:    document.getElementById('m-afp').value,
     sistema_salud:     document.getElementById('m-salud').value,
+    empresa_propia_id: document.getElementById('m-empresa-contratista')?.value || '',
     empresa_rut:       document.getElementById('m-empresa')?.value || '',
     empresa:           document.getElementById('m-empresa')?.value || '',
     mandante_id:       document.getElementById('m-empresa')?.value || '',
