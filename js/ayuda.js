@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════
    AYUDA.JS — Panel de ayuda contextual por módulo
-   AgroAsistencia Pro · Versión 1.0
+   AgroContratista · Versión 1.0
    ════════════════════════════════════════════════════════ */
 
 /* ── 1. CONTENIDO DE AYUDA POR MÓDULO ─────────────────── */
