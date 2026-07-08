@@ -183,7 +183,8 @@ function formatearRutBuscador(input){
 }
 
 function formatearRutInput(input){
-  let val = input.value.replace(/[^0-9kK]/g,'');
+  let val = input.value.replace(/[^0-9kK]/g,'').toUpperCase();
+  if(val.length > 9) val = val.slice(0,9);
   if(val.length > 1){
     const cuerpo = val.slice(0,-1).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
     val = cuerpo + '-' + val.slice(-1).toUpperCase();
