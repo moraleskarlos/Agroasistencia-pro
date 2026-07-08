@@ -2193,5 +2193,42 @@
     }
   </script>
 
+  <!-- MODAL ASIGNACIÓN MASIVA (Empresa / Mandante / Cargo) -->
+  <div id="modal-asignacion-masiva" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:14px;padding:24px;width:560px;max-width:92vw;max-height:86vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:16px;font-weight:700;">Asignar empresa y mandante</div>
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalAsignacionMasiva()"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="am-contador" style="font-size:12px;color:var(--texto3);margin-bottom:16px;"></div>
+
+      <div class="form-grid" style="margin-bottom:14px;">
+        <div class="form-group">
+          <label>Empresa Contratista</label>
+          <select id="am-empresa-propia"></select>
+        </div>
+        <div class="form-group">
+          <label>Mandante</label>
+          <select id="am-mandante"></select>
+        </div>
+        <div class="form-group">
+          <label>Cargo</label>
+          <input type="text" id="am-cargo" placeholder="Ej: Cosechero">
+        </div>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:4px;border-bottom:2px solid var(--borde);padding-bottom:8px;">
+        <input type="checkbox" id="am-check-todos" checked onchange="toggleSeleccionarTodosMasivo()" style="width:auto;">
+        Seleccionar todos
+      </label>
+      <div id="am-lista-trabajadores" style="max-height:220px;overflow-y:auto;margin-bottom:16px;"></div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalAsignacionMasiva()">Cerrar</button>
+        <button class="btn btn-primary btn-sm" onclick="aplicarAsignacionMasiva()"><i class="ti ti-check"></i> Aplicar a seleccionados</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
