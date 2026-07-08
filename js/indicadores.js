@@ -1,7 +1,7 @@
 /* ════════════════════════════════════════════════════════
    INDICADORES.JS — Indicadores previsionales mensuales
    Ingreso 100% manual, organizado por secciones A–F
-   AgroAsistencia Pro · Versión 2.0
+   AgroContratista · Versión 2.0
    ════════════════════════════════════════════════════════ */
 
 /* ── TABS DEL MÓDULO REMUNERACIONES ────────────────────── */
