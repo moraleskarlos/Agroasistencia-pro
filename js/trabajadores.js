@@ -65,7 +65,8 @@ function cargarTrabajadores(){
     const mandanteNom  = mandante ? mandante.nombre : '—';
     const faenaNom     = t.faena_obra || '—';
     const cargoNom     = t.funcion_cargo || '—';
-    const empPrincipal = cfg.empresa?.razon_social || '—';
+    const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
+    const empPrincipal = empEmpleadora?.razon_social || empEmpleadora?.nombre || '—';
     const activo       = t.estado !== 'inactivo';
 
     const contrato = (contratos || []).find(c => c.trabajador_id === t.id || c.trabajador_rut === t.rut);
