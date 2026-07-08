@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════
    EXPORTAR.JS — Todas las funciones de exportación Excel
-   AgroAsistencia Pro · Versión 1.0
+   AgroContratista · Versión 1.0
    ════════════════════════════════════════════════════════ */
 
 /* ── 1. NÓMINA DE TRABAJADORES ─────────────────────────── */
