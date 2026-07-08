@@ -14,7 +14,7 @@
     /* SIDEBAR */
     .sidebar{width:var(--sb-width);background:var(--azul);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto}
     .sb-logo{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
-    .sb-logo-icon{width:34px;height:34px;background:var(--verde);border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+    .sb-logo-icon{width:40px;height:40px;background:transparent;border-radius:0;display:flex;align-items:center;justify-content:center;margin-bottom:9px}
     .sb-logo-icon i{font-size:18px;color:#fff}
     .sb-logo-title{font-size:14px;font-weight:600;color:#fff}
     .sb-logo-sub{font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px}
