@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════
    GESTION-LABORAL.JS — Novedades, Haberes, Descuentos, Jornada
-   AgroAsistencia Pro · Versión 1.0
+   AgroContratista · Versión 1.0
    ════════════════════════════════════════════════════════ */
 
 const LOCAL_NOV  = 'agro_novedades';
