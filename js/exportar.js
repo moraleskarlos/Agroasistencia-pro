@@ -66,12 +66,16 @@ function descargarPlantilla(){
     'Correo':            'juan.perez@gmail.com',
     'AFP':               'Habitat',
     'Salud':             'Fonasa',
-    'Fecha Ingreso':     '2026-01-10'
+    'Fecha Ingreso':     '2026-01-10',
+    'Tipo Doc. Migratorio':  '',
+    'N° Doc. Migratorio':    '',
+    'Fecha Venc. Documento': '',
   }];
   const ws1 = XLSX.utils.json_to_sheet(ejemplo);
   ws1['!cols'] = [
     {wch:14},{wch:24},{wch:12},{wch:16},{wch:12},
-    {wch:28},{wch:26},{wch:10},{wch:10},{wch:14}
+    {wch:28},{wch:26},{wch:10},{wch:10},{wch:14},
+    {wch:22},{wch:16},{wch:18}
   ];
   XLSX.utils.book_append_sheet(wb, ws1, '1. Datos');
 
@@ -87,6 +91,9 @@ function descargarPlantilla(){
     { Campo:'AFP',              'Formato / Valores aceptados':'Habitat · Provida · Capital · Cuprum · Planvital · Modelo · Uno · No cotiza',                           Obligatorio:'Sí',  Ejemplo:'Habitat' },
     { Campo:'Salud',            'Formato / Valores aceptados':'Fonasa · Isapre Banmédica · Isapre Cruz Blanca · Isapre Colmena · Isapre Consalud · Isapre Esencial',  Obligatorio:'Sí',  Ejemplo:'Fonasa' },
     { Campo:'Fecha Ingreso',    'Formato / Valores aceptados':'AAAA-MM-DD',                                                                                            Obligatorio:'No',  Ejemplo:'2026-01-10' },
+    { Campo:'Tipo Doc. Migratorio',  'Formato / Valores aceptados':'Residencia Temporal · Visa Temporaria / Sujeta a Contrato · Visa de Temporada · Residencia Definitiva · Visa de Estudiante · Otro', Obligatorio:'Solo si no es chileno', Ejemplo:'Visa Temporaria / Sujeta a Contrato' },
+    { Campo:'N° Doc. Migratorio',    'Formato / Valores aceptados':'Texto libre',                                                                                      Obligatorio:'Solo si no es chileno', Ejemplo:'123456789' },
+    { Campo:'Fecha Venc. Documento', 'Formato / Valores aceptados':'AAAA-MM-DD',                                                                                       Obligatorio:'Solo si no es chileno', Ejemplo:'2026-12-31' },
   ];
   const ws2 = XLSX.utils.json_to_sheet(dict);
   ws2['!cols'] = [{wch:16},{wch:70},{wch:12},{wch:26}];
