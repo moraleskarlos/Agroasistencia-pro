@@ -204,27 +204,43 @@ function procesarExcel(event){
 
       datosExcel = [];
       let errores = [];
+      let advertencias = [];
 
       rows.forEach((row, i) => {
         const fila   = i + 2;
         const rut    = (row['RUT'] || row['Rut'] || row['rut'] || '').toString().trim();
         const nombre = (row['Nombre'] || row['NOMBRE'] || '').toString().trim();
 
-        if(!rut || !nombre){ errores.push(`Fila ${fila}: RUT o Nombre vac\u00edo`); return; }
-        if(!validarRUT(rut)){ errores.push(`Fila ${fila}: RUT "${rut}" inv\u00e1lido`); return; }
+        if(!rut || !nombre){ errores.push(`Fila ${fila}: RUT o Nombre vacío`); return; }
+        if(!validarRUT(rut)){ errores.push(`Fila ${fila}: RUT "${rut}" inválido`); return; }
+
+        const nacionalidad = normalizar(row['Nacionalidad'] || row['NACIONALIDAD'], mapNac);
+        const tipo_doc_migratorio   = (row['Tipo Doc. Migratorio']  || row['tipo_doc_migratorio']  || '').toString().trim();
+        const num_doc_migratorio    = (row['N° Doc. Migratorio']    || row['num_doc_migratorio']   || '').toString().trim();
+        const fecha_venc_migratorio = fmtFecha(row['Fecha Venc. Documento'] || row['fecha_venc_migratorio']);
+
+        if(nacionalidad && nacionalidad !== 'Chileno' && !fecha_venc_migratorio){
+          advertencias.push(`Fila ${fila} (${nombre}): extranjero sin fecha de vencimiento de documento — el semáforo de vencimiento no funcionará hasta completarlo`);
+        }
 
         const trabajador = {
           id:                Date.now().toString() + i,
           rut, nombre,
-          nacionalidad:      normalizar(row['Nacionalidad']    || row['NACIONALIDAD'],   mapNac),
+          nacionalidad,
           fecha_nacimiento:  fmtFecha(row['Fecha Nacimiento']  || row['fecha_nacimiento']),
           estado_civil:      normalizar(row['Estado Civil']    || row['estado_civil'],   mapCivil),
           domicilio:         (row['Domicilio']  || '').toString().trim(),
           correo_electronico:(row['Correo']     || row['correo_electronico'] || '').toString().trim(),
           afiliacion_afp:    normalizar(row['AFP']  || row['afp'],   mapAfp),
           sistema_salud:     normalizar(row['Salud']|| row['salud'], mapSalud),
+          tipo_doc_migratorio:   tipo_doc_migratorio || null,
+          num_doc_migratorio:    num_doc_migratorio || null,
+          fecha_venc_migratorio: fecha_venc_migratorio || null,
+          empresa_propia_id: '',
+          mandante_id:       '',
           empresa_rut:       '',
           empresa:           '',
+          funcion_cargo:     (row['Cargo'] || row['cargo'] || '').toString().trim(),
           fecha_ingreso:     fmtFecha(row['Fecha Ingreso'] || row['fecha_ingreso']),
           estado:            'activo'
         };
@@ -246,9 +262,11 @@ function procesarExcel(event){
 
       let countMsg = `${datosExcel.length} trabajador${datosExcel.length!==1?'es':''} listo${datosExcel.length!==1?'s':''} para importar`;
       if(errores.length) countMsg += ` \u00b7 \u26a0\ufe0f ${errores.length} fila${errores.length!==1?'s':''} con error (omitida${errores.length!==1?'s':''})`;
+      if(advertencias.length) countMsg += ` \u00b7 \u26a0\ufe0f ${advertencias.length} aviso${advertencias.length!==1?'s':''} (revisar consola)`;
       document.getElementById('preview-count').textContent = countMsg;
       document.getElementById('seccion-preview').style.display = 'block';
       if(errores.length) console.warn('Errores importaci\u00f3n:', errores);
+      if(advertencias.length) console.warn('Avisos importaci\u00f3n:', advertencias);
 
     } catch(err){
       toast('\u274c Error al leer el archivo Excel','error');
@@ -262,10 +280,12 @@ function subirMasivo(){
   if(!datosExcel.length){ toast('\u26a0\ufe0f No hay datos para importar','error'); return; }
 
   let importados = 0;
+  const rutsImportados = [];
   datosExcel.forEach(trabajador => {
     const existe = trabajadores.findIndex(t => t.rut === trabajador.rut);
     if(existe >= 0) trabajadores[existe] = {...trabajadores[existe], ...trabajador};
     else trabajadores.push(trabajador);
+    rutsImportados.push(trabajador.rut);
     importados++;
   });
 
@@ -276,6 +296,8 @@ function subirMasivo(){
   datosExcel = [];
   document.getElementById('seccion-preview').style.display = 'none';
   document.getElementById('archivo-excel').value = '';
+
+  abrirModalAsignacionMasiva(rutsImportados);
 }
 
 function cancelarMasivo(){
@@ -330,4 +352,86 @@ function onCambioTipoDocMig(){
       ? 'Vencimiento cédula de identidad *'
       : 'Fecha de vencimiento *';
   }
+}
+
+/* ════════════════════════════════════════════════════════
+   MODAL DE ASIGNACIÓN MASIVA — Empresa / Mandante / Cargo
+   Se abre automáticamente después de una carga masiva por Excel
+   ════════════════════════════════════════════════════════ */
+let _ruts_asignacion_masiva = [];
+
+function abrirModalAsignacionMasiva(ruts){
+  _ruts_asignacion_masiva = ruts;
+  const modal = document.getElementById('modal-asignacion-masiva');
+  if(!modal) return;
+
+  const selEP  = document.getElementById('am-empresa-propia');
+  const selMan = document.getElementById('am-mandante');
+  if(selEP)  selEP.innerHTML  = '<option value="">— Sin cambio —</option>' + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
+  if(selMan) selMan.innerHTML = '<option value="">— Sin cambio —</option>' + (empresas||[]).map(e => `<option value="${e.id||e.rut}">${e.nombre}</option>`).join('');
+  const cargo = document.getElementById('am-cargo');
+  if(cargo) cargo.value = '';
+
+  const lista = document.getElementById('am-lista-trabajadores');
+  if(lista){
+    lista.innerHTML = ruts.map(rut => {
+      const t = trabajadores.find(x => x.rut === rut);
+      return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--borde);">
+        <input type="checkbox" class="am-check-trab" value="${rut}" checked style="width:auto;">
+        ${t?.nombre || rut} · <span style="color:var(--texto3);font-size:12px;">${rut}</span>
+      </label>`;
+    }).join('');
+  }
+  const chkTodos = document.getElementById('am-check-todos');
+  if(chkTodos) chkTodos.checked = true;
+
+  const contador = document.getElementById('am-contador');
+  if(contador) contador.textContent = `${ruts.length} trabajador${ruts.length!==1?'es':''} recién importado${ruts.length!==1?'s':''}`;
+
+  modal.style.display = 'flex';
+}
+
+function toggleSeleccionarTodosMasivo(){
+  const todos = document.getElementById('am-check-todos')?.checked;
+  document.querySelectorAll('.am-check-trab').forEach(chk => chk.checked = todos);
+}
+
+function aplicarAsignacionMasiva(){
+  const epId    = document.getElementById('am-empresa-propia')?.value || '';
+  const manId   = document.getElementById('am-mandante')?.value || '';
+  const cargo   = document.getElementById('am-cargo')?.value.trim() || '';
+
+  const seleccionados = Array.from(document.querySelectorAll('.am-check-trab:checked')).map(chk => chk.value);
+  if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
+  if(!epId && !manId && !cargo){ toast('⚠️ Elige empresa, mandante o cargo para aplicar', 'error'); return; }
+
+  let aplicados = 0;
+  seleccionados.forEach(rut => {
+    const t = trabajadores.find(x => x.rut === rut);
+    if(!t) return;
+    if(epId)  t.empresa_propia_id = epId;
+    if(manId){ t.mandante_id = manId; t.empresa_rut = manId; t.empresa = manId; }
+    if(cargo) t.funcion_cargo = cargo;
+    aplicados++;
+  });
+
+  guardarLocal();
+  toast(`✅ Empresa/mandante asignados a ${aplicados} trabajador${aplicados!==1?'es':''}`, 'exito');
+
+  // Sacar de la lista a los ya aplicados, dejar el modal abierto por si quedan grupos distintos
+  _ruts_asignacion_masiva = _ruts_asignacion_masiva.filter(r => !seleccionados.includes(r));
+  if(_ruts_asignacion_masiva.length){
+    abrirModalAsignacionMasiva(_ruts_asignacion_masiva);
+  } else {
+    cerrarModalAsignacionMasiva();
+  }
+
+  if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
+  if(typeof renderContratistas === 'function') renderContratistas();
+}
+
+function cerrarModalAsignacionMasiva(){
+  const modal = document.getElementById('modal-asignacion-masiva');
+  if(modal) modal.style.display = 'none';
+  _ruts_asignacion_masiva = [];
 }
