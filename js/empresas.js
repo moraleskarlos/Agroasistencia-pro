@@ -112,9 +112,9 @@ function renderContratistas(){
     <div style="background:var(--blanco);border:1px solid var(--borde);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);overflow:hidden;">
     ${empresas.map((e,i)=>{
       const[bg,fg]=colors[i%colors.length];
-      const empId=e.rut;
-      const total=trabajadores.filter(t=>(t.empresa||t.empresa_rut)===empId).length;
-      const act=trabajadores.filter(t=>(t.empresa||t.empresa_rut)===empId&&t.estado==='activo').length;
+      const empId=e.id||e.rut;
+      const total=trabajadores.filter(t=>(t.mandante_id||t.empresa_rut||t.empresa)===empId).length;
+      const act=trabajadores.filter(t=>(t.mandante_id||t.empresa_rut||t.empresa)===empId&&t.estado==='activo').length;
       const inact=total-act;
       const pct=total?Math.round(act/total*100):0;
       const venc=estadoVencimiento(e.vigencia_contrato);
