@@ -2210,7 +2210,11 @@
         </div>
         <div class="form-group">
           <label>Mandante</label>
-          <select id="am-mandante"></select>
+          <select id="am-mandante" onchange="onCambioMandanteAsignacionMasiva()"></select>
+        </div>
+        <div class="form-group">
+          <label>Faena</label>
+          <select id="am-faena"><option value="">— Selecciona primero un mandante —</option></select>
         </div>
         <div class="form-group">
           <label>Cargo</label>
