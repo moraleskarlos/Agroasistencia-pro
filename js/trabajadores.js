@@ -103,6 +103,10 @@ function cargarTrabajadores(){
             <i class="ti ti-edit"></i>
           </button>
           <button class="btn btn-secondary btn-sm"
+            onclick="verPerfilTrabajador('${t.rut}')" title="Carpeta laboral">
+            <i class="ti ti-folder"></i>
+          </button>
+          <button class="btn btn-secondary btn-sm"
             onclick="irAContrato('${t.rut}')" title="Ver contrato">
             <i class="ti ti-file-text"></i>
           </button>
@@ -260,4 +264,146 @@ function _badgeSemaforo(semaforo, fechaVenc){
   };
   const [icono, cls, texto] = map[semaforo] || map.gris;
   return `<span class="badge ${cls}">${icono} ${texto}</span>`;
+}
+
+/* ════════════════════════════════════════════════════════
+   PERFIL DE TRABAJADOR — Datos Personales + Carpeta Laboral
+   ════════════════════════════════════════════════════════ */
+let _perfil_rut_actual = null;
+
+const _TIPO_DOC_CARPETA = {
+  contrato:       { icono:'📄', label:'Contrato' },
+  anexo:          { icono:'📎', label:'Anexo' },
+  liquidacion:    { icono:'💰', label:'Liquidación' },
+  finiquito:      { icono:'📝', label:'Finiquito' },
+  epp_riohs_irl:  { icono:'⚠️', label:'RIOHS / IRL' },
+  carta:          { icono:'✉️', label:'Carta' },
+  otro:           { icono:'📁', label:'Otro' },
+};
+
+function verPerfilTrabajador(rut){
+  const t = trabajadores.find(x => x.rut === rut);
+  if(!t){ toast('⚠️ Trabajador no encontrado', 'error'); return; }
+
+  _perfil_rut_actual = rut;
+  irA('perfil-trabajador');
+
+  const ini = (t.nombre||'??').split(' ').filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();
+  const header = document.getElementById('perfil-header');
+  if(header){
+    header.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#DBEAFE;color:#1D4ED8;
+          display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;">${ini}</div>
+        <div>
+          <div class="sec-title" style="margin-bottom:2px;">${t.nombre}</div>
+          <div class="sec-sub" style="display:flex;gap:8px;align-items:center;">
+            <span style="font-family:monospace;">${t.rut}</span>
+            <span class="badge ${t.estado==='activo'?'badge-verde':'badge-gris'}">${t.estado==='activo'?'Activo':'Inactivo'}</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  _renderDatosPersonalesPerfil(t);
+  _renderCarpetaTrabajador(rut);
+  switchTabPerfil('datos');
+}
+
+function switchTabPerfil(tab){
+  const tabs  = { datos:'tab-perfil-datos', carpeta:'tab-perfil-carpeta' };
+  const subs  = { datos:'sub-perfil-datos', carpeta:'sub-perfil-carpeta' };
+
+  Object.keys(tabs).forEach(key => {
+    const btn = document.getElementById(tabs[key]);
+    const sub = document.getElementById(subs[key]);
+    if(!btn || !sub) return;
+    const activo = key === tab;
+    sub.style.display = activo ? 'block' : 'none';
+    btn.style.color = activo ? 'var(--azul)' : 'var(--texto2)';
+    btn.style.borderBottom = activo ? '2px solid var(--azul)' : '2px solid transparent';
+  });
+
+  if(tab === 'carpeta' && _perfil_rut_actual) _renderCarpetaTrabajador(_perfil_rut_actual);
+}
+
+function _renderDatosPersonalesPerfil(t){
+  const cont = document.getElementById('perfil-datos-resumen');
+  if(!cont) return;
+
+  const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
+  const mandante = findMandante(t);
+
+  const fila = (label, valor) => `
+    <div style="padding:8px 0;border-bottom:1px solid var(--borde);display:flex;justify-content:space-between;gap:12px;">
+      <span style="font-size:12px;color:var(--texto3);">${label}</span>
+      <span style="font-size:13px;font-weight:500;text-align:right;">${valor || '—'}</span>
+    </div>`;
+
+  let migratorioHTML = '';
+  if(t.nacionalidad && t.nacionalidad !== 'Chileno'){
+    const semaforo = _calcularSemaforo(t.fecha_venc_migratorio);
+    migratorioHTML = `
+      <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+        <i class="ti ti-id"></i> Situación migratoria
+      </div>
+      ${fila('Tipo de documento', t.tipo_doc_migratorio)}
+      ${fila('N° documento', t.num_doc_migratorio)}
+      ${fila('Vencimiento', t.fecha_venc_migratorio ? fmtFecha(t.fecha_venc_migratorio) : null)}
+      <div style="padding:8px 0;">${_badgeSemaforo(semaforo, t.fecha_venc_migratorio)}</div>`;
+  }
+
+  cont.innerHTML = `
+    <div class="card-title" style="font-size:13px;margin-bottom:4px;">
+      <i class="ti ti-user"></i> Datos personales
+    </div>
+    ${fila('Nacionalidad', t.nacionalidad)}
+    ${fila('Fecha de nacimiento', t.fecha_nacimiento ? fmtFecha(t.fecha_nacimiento) : null)}
+    ${fila('Estado civil', t.estado_civil)}
+    ${fila('Domicilio', t.domicilio)}
+    ${fila('Correo', t.correo_electronico)}
+
+    <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+      <i class="ti ti-heart-plus"></i> Previsión
+    </div>
+    ${fila('AFP', t.afiliacion_afp)}
+    ${fila('Sistema de salud', t.sistema_salud)}
+
+    <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+      <i class="ti ti-building"></i> Relación laboral
+    </div>
+    ${fila('Empresa contratista', empEmpleadora?.razon_social || empEmpleadora?.nombre)}
+    ${fila('Mandante', mandante?.nombre)}
+    ${fila('Faena', t.faena_obra)}
+    ${fila('Cargo', t.funcion_cargo)}
+    ${fila('Fecha de ingreso', t.fecha_ingreso ? fmtFecha(t.fecha_ingreso) : null)}
+
+    ${migratorioHTML}`;
+}
+
+function _renderCarpetaTrabajador(rut){
+  const tbody = document.getElementById('tbody-carpeta');
+  if(!tbody) return;
+
+  const docs = (carpeta || [])
+    .filter(d => d.trabajador_rut === rut)
+    .sort((a,b) => new Date(b.fecha_generacion) - new Date(a.fecha_generacion));
+
+  if(!docs.length){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--texto3);">
+      Sin documentos registrados</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = docs.map(d => {
+    const tipoInfo = _TIPO_DOC_CARPETA[d.tipo] || _TIPO_DOC_CARPETA.otro;
+    return `<tr>
+      <td style="font-size:13px;white-space:nowrap;">${tipoInfo.icono} ${tipoInfo.label}</td>
+      <td style="font-size:12px;color:var(--texto2);">${d.descripcion || '—'}</td>
+      <td style="font-size:12px;font-family:monospace;">${d.folio || '—'}</td>
+      <td style="font-size:12px;">${d.fecha_firma ? fmtFecha(d.fecha_firma) : '—'}</td>
+      <td style="font-size:12px;color:var(--texto3);">${fmtFecha(d.fecha_generacion)}</td>
+      <td style="font-size:12px;color:var(--texto3);">${d.generado_por || '—'}</td>
+    </tr>`;
+  }).join('');
 }
