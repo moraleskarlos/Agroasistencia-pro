@@ -421,6 +421,8 @@ function abrirModalAsignacionMasiva(ruts){
   const selMan = document.getElementById('am-mandante');
   if(selEP)  selEP.innerHTML  = '<option value="">— Sin cambio —</option>' + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
   if(selMan) selMan.innerHTML = '<option value="">— Sin cambio —</option>' + (empresas||[]).map(e => `<option value="${e.id||e.rut}">${e.nombre}</option>`).join('');
+  const selFaena = document.getElementById('am-faena');
+  if(selFaena) selFaena.innerHTML = '<option value="">— Selecciona primero un mandante —</option>';
   const cargo = document.getElementById('am-cargo');
   if(cargo) cargo.value = '';
 
@@ -443,6 +445,24 @@ function abrirModalAsignacionMasiva(ruts){
   modal.style.display = 'flex';
 }
 
+function onCambioMandanteAsignacionMasiva(){
+  const manId    = document.getElementById('am-mandante')?.value || '';
+  const selFaena = document.getElementById('am-faena');
+  if(!selFaena) return;
+
+  const mandante   = empresas.find(e => e.id === manId || e.rut === manId);
+  const listFaenas = (mandante?.faenas || []);
+
+  if(!manId){
+    selFaena.innerHTML = '<option value="">— Selecciona primero un mandante —</option>';
+  } else if(listFaenas.length){
+    selFaena.innerHTML = '<option value="">— Sin cambio —</option>'
+      + listFaenas.map(f => `<option value="${f.nombre||f}">${f.nombre||f}</option>`).join('');
+  } else {
+    selFaena.innerHTML = '<option value="">Sin faenas registradas (se agregan desde Mandantes)</option>';
+  }
+}
+
 function toggleSeleccionarTodosMasivo(){
   const todos = document.getElementById('am-check-todos')?.checked;
   document.querySelectorAll('.am-check-trab').forEach(chk => chk.checked = todos);
@@ -451,11 +471,12 @@ function toggleSeleccionarTodosMasivo(){
 function aplicarAsignacionMasiva(){
   const epId    = document.getElementById('am-empresa-propia')?.value || '';
   const manId   = document.getElementById('am-mandante')?.value || '';
+  const faena   = document.getElementById('am-faena')?.value || '';
   const cargo   = document.getElementById('am-cargo')?.value.trim() || '';
 
   const seleccionados = Array.from(document.querySelectorAll('.am-check-trab:checked')).map(chk => chk.value);
   if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
-  if(!epId && !manId && !cargo){ toast('⚠️ Elige empresa, mandante o cargo para aplicar', 'error'); return; }
+  if(!epId && !manId && !faena && !cargo){ toast('⚠️ Elige empresa, mandante, faena o cargo para aplicar', 'error'); return; }
 
   let aplicados = 0;
   seleccionados.forEach(rut => {
@@ -463,6 +484,7 @@ function aplicarAsignacionMasiva(){
     if(!t) return;
     if(epId)  t.empresa_propia_id = epId;
     if(manId){ t.mandante_id = manId; t.empresa_rut = manId; t.empresa = manId; }
+    if(faena) t.faena_obra = faena;
     if(cargo) t.funcion_cargo = cargo;
     aplicados++;
   });
