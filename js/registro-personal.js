@@ -170,21 +170,6 @@ async function guardarTrabajador(e){
   }catch(err){toast(`❌ Error: ${err.message}`,'error')}
 }
 
-/* Normaliza un valor de Excel contra un diccionario de valores válidos
-   (case/acentos-insensible). Si no hay match, devuelve el valor original
-   recortado en vez de perderlo silenciosamente. */
-function normalizar(valor, mapa){
-  const v = (valor || '').toString().trim();
-  if(!v) return '';
-  const key = v.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // quita tildes
-  for(const k in mapa){
-    const kNorm = k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    if(kNorm === key) return mapa[k];
-  }
-  return v;
-}
-
 function procesarExcel(event){
   const file = event.target.files[0];
   if(!file) return;
@@ -226,8 +211,14 @@ function procesarExcel(event){
         const rut    = (row['RUT'] || row['Rut'] || row['rut'] || '').toString().trim();
         const nombre = (row['Nombre'] || row['NOMBRE'] || '').toString().trim();
 
-        if(!rut || !nombre){ errores.push(`Fila ${fila}: RUT o Nombre vacío`); return; }
-        if(!validarRUT(rut)){ errores.push(`Fila ${fila}: RUT "${rut}" inválido`); return; }
+        if(!rut || !nombre){
+          errores.push({ fila, nombre: nombre||'(sin nombre)', mensaje:`Falta ${!rut&&!nombre?'RUT y Nombre':!rut?'el RUT':'el Nombre'}`, correccion:'Completa ambas columnas — son obligatorias para poder crear el registro.' });
+          return;
+        }
+        if(!validarRUT(rut)){
+          errores.push({ fila, nombre, mensaje:`RUT "${rut}" inválido`, correccion:'Revisa el dígito verificador (después del guion). Ej: 12.345.678-5.' });
+          return;
+        }
 
         const nacionalidad = normalizar(row['Nacionalidad'] || row['NACIONALIDAD'], mapNac);
         const tipo_doc_migratorio   = (row['Tipo Doc. Migratorio']  || row['tipo_doc_migratorio']  || '').toString().trim();
@@ -235,7 +226,7 @@ function procesarExcel(event){
         const fecha_venc_migratorio = fmtFecha(row['Fecha Venc. Documento'] || row['fecha_venc_migratorio']);
 
         if(nacionalidad && nacionalidad !== 'Chileno' && !fecha_venc_migratorio){
-          advertencias.push(`Fila ${fila} (${nombre}): extranjero sin fecha de vencimiento de documento — el semáforo de vencimiento no funcionará hasta completarlo`);
+          advertencias.push({ fila, nombre, mensaje:'Trabajador extranjero sin fecha de vencimiento de documento', correccion:'Agrega la fecha en la columna "Fecha Venc. Documento" — mientras falte, el semáforo de vencimiento no mostrará alertas para esta persona.' });
         }
 
         const trabajador = {
@@ -265,23 +256,33 @@ function procesarExcel(event){
 
       if(!datosExcel.length){
         toast('\u274c Ning\u00fan registro v\u00e1lido para importar','error');
-        if(errores.length) console.warn('Errores importaci\u00f3n:', errores);
+        _renderAvisosImportacion(errores, advertencias);
         event.target.value = '';
         return;
       }
 
       const thead = document.querySelector('#tabla-excel thead');
       const tbody = document.querySelector('#tabla-excel tbody');
-      thead.innerHTML = '<tr><th>RUT</th><th>Nombre</th><th>Nacionalidad</th><th>AFP</th><th>Salud</th></tr>';
-      tbody.innerHTML = datosExcel.map(t => `<tr><td>${t.rut}</td><td>${t.nombre}</td><td>${t.nacionalidad}</td><td>${t.afiliacion_afp}</td><td>${t.sistema_salud}</td></tr>`).join('');
+      thead.innerHTML = `<tr>
+        <th>RUT</th><th>Nombre</th><th>Nacionalidad</th><th>F. Nacimiento</th><th>Estado Civil</th>
+        <th>Domicilio</th><th>Correo</th><th>AFP</th><th>Salud</th><th>F. Ingreso</th><th>Cargo</th>
+        <th>Tipo Doc. Mig.</th><th>N° Doc. Mig.</th><th>Venc. Doc. Mig.</th>
+      </tr>`;
+      tbody.innerHTML = datosExcel.map(t => `<tr>
+        <td>${t.rut}</td><td>${t.nombre}</td><td>${t.nacionalidad||'—'}</td>
+        <td>${t.fecha_nacimiento||'—'}</td><td>${t.estado_civil||'—'}</td>
+        <td>${t.domicilio||'—'}</td><td>${t.correo_electronico||'—'}</td>
+        <td>${t.afiliacion_afp||'—'}</td><td>${t.sistema_salud||'—'}</td>
+        <td>${t.fecha_ingreso||'—'}</td><td>${t.funcion_cargo||'—'}</td>
+        <td>${t.tipo_doc_migratorio||'—'}</td><td>${t.num_doc_migratorio||'—'}</td><td>${t.fecha_venc_migratorio||'—'}</td>
+      </tr>`).join('');
 
       let countMsg = `${datosExcel.length} trabajador${datosExcel.length!==1?'es':''} listo${datosExcel.length!==1?'s':''} para importar`;
-      if(errores.length) countMsg += ` \u00b7 \u26a0\ufe0f ${errores.length} fila${errores.length!==1?'s':''} con error (omitida${errores.length!==1?'s':''})`;
-      if(advertencias.length) countMsg += ` \u00b7 \u26a0\ufe0f ${advertencias.length} aviso${advertencias.length!==1?'s':''} (revisar consola)`;
+      if(errores.length) countMsg += ` \u00b7 ${errores.length} fila${errores.length!==1?'s':''} con error (omitida${errores.length!==1?'s':''})`;
+      if(advertencias.length) countMsg += ` \u00b7 ${advertencias.length} aviso${advertencias.length!==1?'s':''}`;
       document.getElementById('preview-count').textContent = countMsg;
       document.getElementById('seccion-preview').style.display = 'block';
-      if(errores.length) console.warn('Errores importaci\u00f3n:', errores);
-      if(advertencias.length) console.warn('Avisos importaci\u00f3n:', advertencias);
+      _renderAvisosImportacion(errores, advertencias);
 
     } catch(err){
       toast('\u274c Error al leer el archivo Excel','error');
@@ -289,6 +290,38 @@ function procesarExcel(event){
     }
   };
   reader.readAsBinaryString(file);
+}
+
+function _renderAvisosImportacion(errores, advertencias){
+  const cont = document.getElementById('preview-avisos');
+  if(!cont) return;
+
+  if(!errores.length && !advertencias.length){ cont.innerHTML = ''; return; }
+
+  let html = '';
+  if(errores.length){
+    html += `<div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;padding:10px 14px;margin-bottom:8px;">
+      <div style="font-size:13px;font-weight:700;color:#991B1B;margin-bottom:6px;">
+        <i class="ti ti-alert-triangle"></i> ${errores.length} fila${errores.length!==1?'s':''} con error — no se importar${errores.length!==1?'án':'á'}
+      </div>
+      ${errores.map(e => `<div style="font-size:12px;color:#7F1D1D;padding:4px 0;border-top:1px solid #FECACA;">
+        <strong>Fila ${e.fila}${e.nombre?` (${e.nombre})`:''}:</strong> ${e.mensaje}<br>
+        <span style="color:#B91C1C;">→ ${e.correccion}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+  if(advertencias.length){
+    html += `<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;">
+      <div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:6px;">
+        <i class="ti ti-info-circle"></i> ${advertencias.length} aviso${advertencias.length!==1?'s':''} — se importar${advertencias.length!==1?'án':'á'} igual, pero revisa esto
+      </div>
+      ${advertencias.map(a => `<div style="font-size:12px;color:#78350F;padding:4px 0;border-top:1px solid #FDE68A;">
+        <strong>Fila ${a.fila}${a.nombre?` (${a.nombre})`:''}:</strong> ${a.mensaje}<br>
+        <span style="color:#92400E;">→ ${a.correccion}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+  cont.innerHTML = html;
 }
 
 function subirMasivo(){
@@ -311,6 +344,8 @@ function subirMasivo(){
   datosExcel = [];
   document.getElementById('seccion-preview').style.display = 'none';
   document.getElementById('archivo-excel').value = '';
+  const avisos = document.getElementById('preview-avisos');
+  if(avisos) avisos.innerHTML = '';
 
   abrirModalAsignacionMasiva(rutsImportados);
 }
@@ -319,6 +354,8 @@ function cancelarMasivo(){
   datosExcel = [];
   document.getElementById('seccion-preview').style.display = 'none';
   document.getElementById('archivo-excel').value = '';
+  const avisos = document.getElementById('preview-avisos');
+  if(avisos) avisos.innerHTML = '';
 }
 
 
