@@ -170,6 +170,21 @@ async function guardarTrabajador(e){
   }catch(err){toast(`❌ Error: ${err.message}`,'error')}
 }
 
+/* Normaliza un valor de Excel contra un diccionario de valores válidos
+   (case/acentos-insensible). Si no hay match, devuelve el valor original
+   recortado en vez de perderlo silenciosamente. */
+function normalizar(valor, mapa){
+  const v = (valor || '').toString().trim();
+  if(!v) return '';
+  const key = v.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // quita tildes
+  for(const k in mapa){
+    const kNorm = k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(kNorm === key) return mapa[k];
+  }
+  return v;
+}
+
 function procesarExcel(event){
   const file = event.target.files[0];
   if(!file) return;
