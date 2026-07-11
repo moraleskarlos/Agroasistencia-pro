@@ -277,7 +277,10 @@ function toggleFormNovedad(){
   }
 }
 
+let _guardandoGL = false;
+
 function guardarNovedad(){
+  if(_guardandoGL) return; // evita duplicar por doble clic
   const rut      = document.getElementById('gl-nov-trabajador')?.value;
   const tipo     = document.getElementById('gl-nov-tipo')?.value;
   const inicio   = document.getElementById('gl-nov-fecha-inicio')?.value;
@@ -285,6 +288,15 @@ function guardarNovedad(){
   const obs      = document.getElementById('gl-nov-obs')?.value||'';
 
   if(!rut || !tipo || !inicio){ toast('⚠️ Completa trabajador, tipo y fecha inicio','error'); return; }
+
+  // Red de seguridad adicional: bloquea un duplicado exacto aunque el clic
+  // haya llegado a pasar el bloqueo de arriba (ej. recarga a medio camino)
+  const yaExiste = novedades.some(n =>
+    n.trabajador_rut === rut && n.tipo === tipo &&
+    n.fecha_inicio === inicio && n.fecha_fin === (fin || inicio));
+  if(yaExiste){ toast('⚠️ Ya existe una novedad idéntica registrada','error'); return; }
+
+  _guardandoGL = true;
 
   const dias = fin ? _calcDias(inicio, fin) : 1;
   const nov  = {
@@ -314,6 +326,7 @@ function guardarNovedad(){
   document.getElementById('gl-nov-form-wrap').style.display = 'none';
   renderNovedades();
   _renderKPIsGL();
+  _guardandoGL = false;
 }
 
 function aprobarNovedad(id){
@@ -389,6 +402,7 @@ function toggleFormHaber(){
 }
 
 function guardarHaber(){
+  if(_guardandoGL) return;
   const rut   = document.getElementById('gl-hab-trabajador')?.value;
   const tipo  = document.getElementById('gl-hab-tipo')?.value;
   const monto = document.getElementById('gl-hab-monto')?.value;
@@ -396,6 +410,13 @@ function guardarHaber(){
   const obs   = document.getElementById('gl-hab-obs')?.value||'';
 
   if(!rut||!tipo||!monto){ toast('⚠️ Completa trabajador, tipo y monto','error'); return; }
+
+  const yaExiste = haberes_variables.some(h =>
+    h.trabajador_rut === rut && h.tipo === tipo &&
+    h.monto === parseFloat(monto) && h.fecha === (fecha||''));
+  if(yaExiste){ toast('⚠️ Ya existe un haber idéntico registrado','error'); return; }
+
+  _guardandoGL = true;
 
   const h = {
     id:             Date.now().toString(),
@@ -411,6 +432,7 @@ function guardarHaber(){
   document.getElementById('gl-hab-form-wrap').style.display='none';
   renderHaberes();
   _renderKPIsGL();
+  _guardandoGL = false;
 }
 
 function eliminarHaber(id){
@@ -474,6 +496,7 @@ function toggleFormDescuento(){
 }
 
 function guardarDescuento(){
+  if(_guardandoGL) return;
   const rut    = document.getElementById('gl-des-trabajador')?.value;
   const tipo   = document.getElementById('gl-des-tipo')?.value;
   const monto  = document.getElementById('gl-des-monto')?.value;
@@ -482,10 +505,18 @@ function guardarDescuento(){
 
   if(!rut||!tipo||!monto){ toast('⚠️ Completa trabajador, tipo y monto','error'); return; }
 
+  const periodoActual = _getPeriodo();
+  const yaExiste = descuentos.some(d =>
+    d.trabajador_rut === rut && d.tipo === tipo &&
+    d.monto === parseFloat(monto) && d.periodo === periodoActual);
+  if(yaExiste){ toast('⚠️ Ya existe un descuento idéntico registrado este período','error'); return; }
+
+  _guardandoGL = true;
+
   const d = {
     id:              Date.now().toString(),
     trabajador_rut:  rut,
-    periodo:         _getPeriodo(),
+    periodo:         periodoActual,
     tipo, monto: parseFloat(monto),
     monto_total:     parseFloat(monto) * parseInt(cuotas),
     monto_pagado:    parseFloat(monto),
@@ -501,6 +532,7 @@ function guardarDescuento(){
   document.getElementById('gl-des-form-wrap').style.display='none';
   renderDescuentos();
   _renderKPIsGL();
+  _guardandoGL = false;
 }
 
 function eliminarDescuento(id){
