@@ -561,7 +561,7 @@
         </div>
         <div style="display:flex;gap:8px;" id="contratos-header-btns">
           <button class="btn btn-secondary" onclick="verListaContratos()"><i class="ti ti-list"></i> Ver todos</button>
-          <button class="btn btn-primary" onclick="generarPDFContrato()"><i class="ti ti-file-type-pdf"></i> Generar PDF</button>
+          <button class="btn btn-primary" id="btn-generar-pdf-header" onclick="generarPDFContrato()"><i class="ti ti-file-type-pdf"></i> Generar PDF</button>
         </div>
       </div>
 
@@ -581,20 +581,52 @@
           <span id="badge-tab-anexos" style="background:var(--gris-bg);color:var(--texto2);border-radius:99px;
             padding:1px 7px;font-size:11px;margin-left:6px;">0</span>
         </button>
+        <button id="tab-epp" onclick="switchTabContratos('epp')"
+          style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
+          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+          <i class="ti ti-shield-check"></i> EPP / IRL
+        </button>
       </div>
 
       <!-- SUBMÓDULO CONTRATOS -->
       <div id="sub-tab-contratos">
+
+      <div style="display:flex;gap:4px;margin-bottom:14px;">
+        <button id="btn-modo-individual" class="btn btn-primary btn-sm" onclick="cambiarModoContrato('individual')">
+          <i class="ti ti-user"></i> Individual
+        </button>
+        <button id="btn-modo-masivo" class="btn btn-secondary btn-sm" onclick="cambiarModoContrato('masivo')">
+          <i class="ti ti-users"></i> Masivo
+        </button>
+      </div>
+
       <div class="card" style="margin-bottom:14px;">
         <div class="g2">
           <div class="f-group"><label class="form-label">Tipo de contrato</label><select class="f-input" id="c-tipo" onchange="cambiarTipoContrato()"><option value="temporada">Contrato de temporada</option><option value="indefinido">Contrato indefinido</option><option value="plazo_fijo">Contrato a plazo fijo</option></select></div>
           <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="precargarContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
-          <div class="f-group"><label class="form-label">Seleccionar trabajador</label><select class="f-input" id="c-trabajador" onchange="precargarContrato()"><option value="">— Seleccionar trabajador —</option></select></div>
+          <div class="f-group" id="campo-c-trabajador-individual"><label class="form-label">Seleccionar trabajador</label><select class="f-input" id="c-trabajador" onchange="precargarContrato()"><option value="">— Seleccionar trabajador —</option></select></div>
         </div>
       </div>
-      <div class="g2" style="align-items:start;">
+
+      <!-- SELECCIÓN MASIVA DE TRABAJADORES -->
+      <div id="bloque-contrato-masivo" class="card" style="display:none;margin-bottom:14px;">
+        <div class="card-title"><i class="ti ti-users"></i> Selección de trabajadores</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+          <input type="text" id="cm-buscar" oninput="renderListaContratoMasivo()" placeholder="Buscar por RUT o nombre" style="flex:1;min-width:200px;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;cursor:pointer;">
+            <input type="checkbox" id="cm-mostrar-con-contrato" onchange="renderListaContratoMasivo()" style="width:auto;">
+            Mostrar también con contrato vigente
+          </label>
+          <button class="btn btn-secondary btn-sm" onclick="_cmSeleccionarTodos(true)">Todos</button>
+          <button class="btn btn-secondary btn-sm" onclick="_cmSeleccionarTodos(false)">Ninguno</button>
+        </div>
+        <div id="cm-lista-trabajadores" style="max-height:260px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
+        <div id="cm-contador" style="font-size:12px;color:var(--texto3);margin-top:8px;"></div>
+      </div>
+
+      <div class="g2" id="g2-contrato-cols" style="align-items:start;">
         <div style="display:flex;flex-direction:column;gap:12px;">
-          <div class="card">
+          <div class="card" id="bloque-precargados-individual">
             <div class="card-title"><i class="ti ti-lock"></i> Datos precargados <span style="background:var(--gris-bg);color:var(--texto3);font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">solo lectura</span></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
               <div class="f-group"><label class="form-label">RUT trabajador</label><input class="f-input" id="cp-rut" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
@@ -630,7 +662,7 @@
             <div class="form-section"><i class="ti ti-building-factory"></i> Faena</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div class="f-group">
-  <label class="form-label">Función / cargo *</label>
+  <label class="form-label" id="lbl-c-cargo">Función / cargo *</label>
   <input class="f-input" id="c-cargo" readonly
          style="background:var(--gris-bg);color:var(--texto2);"
          placeholder="Se carga al seleccionar trabajador"
@@ -643,7 +675,7 @@
             </div>
               <div class="form-section"><i class="ti ti-clock"></i> Jornada</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-              <div class="f-group"><label class="form-label">Horas semanales (auto)</label><input class="f-input" id="c-horas" placeholder="45" type="number" readonly style="background:var(--gris-bg);"></div>
+              <div class="f-group"><label class="form-label" id="lbl-c-horas">Horas semanales (auto)</label><input class="f-input" id="c-horas" placeholder="45" type="number" readonly style="background:var(--gris-bg);"></div>
               <div class="f-group"><label class="form-label">Colación</label><input class="f-input" id="c-colacion" placeholder="30 minutos" oninput="onJornadaChange();actualizarPrevia()"></div>
             </div>
             <div id="jornada-dias" style="border:1px solid var(--borde);border-radius:var(--radius);overflow:hidden;"></div>
@@ -661,8 +693,12 @@
               <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="ben-transporte" onchange="actualizarPrevia()" style="accent-color:var(--verde);"> Transporte</label>
               <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;"><input type="checkbox" id="ben-luz" onchange="actualizarPrevia()" style="accent-color:var(--verde);"> Luz</label>
             </div>
-            <div style="display:flex;gap:8px;">
+            <div style="display:flex;gap:8px;" id="botones-contrato-individual">
               <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="guardarContrato()"><i class="ti ti-device-floppy"></i> Guardar contrato</button>
+              <button class="btn btn-secondary" onclick="limpiarContrato()"><i class="ti ti-refresh"></i> Limpiar</button>
+            </div>
+            <div style="display:none;gap:8px;" id="botones-contrato-masivo">
+              <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="previsualizarContratosMasivo()"><i class="ti ti-eye"></i> Vista previa</button>
               <button class="btn btn-secondary" onclick="limpiarContrato()"><i class="ti ti-refresh"></i> Limpiar</button>
             </div>
           </div>
@@ -671,7 +707,7 @@
           <div class="card" style="position:sticky;top:14px;">
             <div class="card-title"><i class="ti ti-eye"></i> Vista previa</div>
             <div id="contrato-preview"><div style="text-align:center;padding:20px;color:var(--texto3);font-size:13px;">Selecciona un trabajador para ver la vista previa</div></div>
-            <div style="margin-top:12px;"><button class="btn btn-primary btn-full" onclick="generarPDFContrato()"><i class="ti ti-file-type-pdf"></i> Ver documento completo</button></div>
+            <div style="margin-top:12px;" id="btn-ver-doc-individual"><button class="btn btn-primary btn-full" onclick="generarPDFContrato()"><i class="ti ti-file-type-pdf"></i> Ver documento completo</button></div>
           </div>
         </div>
       </div>
@@ -780,6 +816,46 @@
 
         </div>
       </div><!-- /sub-tab-anexos -->
+
+      <!-- SUBMÓDULO EPP / IRL -->
+      <div id="sub-tab-epp" style="display:none;">
+
+        <div style="display:flex;gap:4px;margin-bottom:14px;">
+          <button id="btn-epp-modo-individual" class="btn btn-primary btn-sm" onclick="cambiarModoEpp('individual')">
+            <i class="ti ti-user"></i> Individual
+          </button>
+          <button id="btn-epp-modo-masivo" class="btn btn-secondary btn-sm" onclick="cambiarModoEpp('masivo')">
+            <i class="ti ti-users"></i> Masivo
+          </button>
+        </div>
+
+        <!-- INDIVIDUAL -->
+        <div id="bloque-epp-individual" class="card" style="margin-bottom:14px;">
+          <div class="f-group" style="margin-bottom:14px;">
+            <label class="form-label">Trabajador</label>
+            <select class="f-input" id="epp-sel-trabajador" onchange="cargarEppTrabajador()">
+              <option value="">— Seleccionar trabajador —</option>
+            </select>
+          </div>
+          <div id="epp-form-individual" style="display:none;"></div>
+        </div>
+
+        <!-- MASIVO -->
+        <div id="bloque-epp-masivo" class="card" style="display:none;margin-bottom:14px;">
+          <div class="card-title"><i class="ti ti-users"></i> Selección de trabajadores</div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+            <input type="text" id="epp-cm-buscar" oninput="renderListaEppMasivo()" placeholder="Buscar por RUT o nombre" style="flex:1;min-width:200px;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
+            <button class="btn btn-secondary btn-sm" onclick="_eppCmSeleccionarTodos(true)">Todos</button>
+            <button class="btn btn-secondary btn-sm" onclick="_eppCmSeleccionarTodos(false)">Ninguno</button>
+          </div>
+          <div id="epp-cm-lista" style="max-height:220px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;margin-bottom:14px;"></div>
+          <div id="epp-cm-contador" style="font-size:12px;color:var(--texto3);margin-bottom:14px;"></div>
+
+          <div id="epp-form-masivo"></div>
+        </div>
+
+      </div><!-- /sub-tab-epp -->
+
 
     </div>
 
@@ -2245,6 +2321,26 @@
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secondary btn-sm" onclick="cerrarModalAsignacionMasiva()">Cerrar</button>
         <button class="btn btn-primary btn-sm" onclick="aplicarAsignacionMasiva()"><i class="ti ti-check"></i> Aplicar a seleccionados</button>
+      </div>
+    </div>
+  </div>
+  <!-- MODAL VISTA PREVIA CONTRATOS MASIVOS -->
+  <div id="modal-preview-contrato-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:14px;padding:24px;width:720px;max-width:94vw;max-height:86vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:16px;font-weight:700;">Vista previa — Contratos masivos</div>
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalPreviewMasivo()"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="pcm-contador" style="font-size:12px;color:var(--texto3);margin-bottom:14px;"></div>
+      <div class="tabla-wrap">
+        <table class="tabla">
+          <thead><tr><th>Trabajador</th><th>RUT</th><th>Cargo</th><th>Faena</th><th>Sueldo</th><th>Término</th></tr></thead>
+          <tbody id="pcm-tbody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalPreviewMasivo()">Volver a editar</button>
+        <button class="btn btn-primary btn-sm" onclick="generarContratosMasivo()"><i class="ti ti-file-check"></i> Confirmar y generar</button>
       </div>
     </div>
   </div>
