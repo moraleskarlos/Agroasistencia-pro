@@ -109,6 +109,7 @@ function irA(idPagina, botonEl) {
         initContratos(rut);
       }
       if(idPagina === 'dashboard'    || idPagina === 'p-dashboard'){    renderDashboard(); }
+      if(idPagina === 'alertas'      || idPagina === 'p-alertas'){      initAlertas(); }
       if(idPagina === 'config'       || idPagina === 'p-config'){       cargarFormConfig(); }
     }, 0);
 
