@@ -87,6 +87,7 @@ function onLoginExitoso(){
   renderDashboard();
   _iniciarTemporizadorSesion(expira);
   toast(`✅ Bienvenido, ${sesionActiva.nombre}`, 'exito');
+  if(typeof mostrarBienvenidaAlertas === 'function') setTimeout(mostrarBienvenidaAlertas, 400);
 }
 
 /* ── CERRAR SESIÓN ── */
@@ -126,6 +127,7 @@ function restaurarSesion(){
     actualizarUI();
     renderDashboard();
     _iniciarTemporizadorSesion(datos.expira);
+    if(typeof mostrarBienvenidaAlertas === 'function') setTimeout(mostrarBienvenidaAlertas, 400);
     return true;
   } catch {
     return false;
