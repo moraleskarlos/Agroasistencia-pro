@@ -115,6 +115,11 @@ function cargarTrabajadores(){
             title="${activo ? 'Dar de baja' : 'Reactivar'}">
             <i class="ti ti-${activo ? 'user-minus' : 'user-check'}"></i>
           </button>
+          ${!_tieneMovimientosTrabajador(t.rut) ? `
+          <button class="btn btn-danger btn-sm"
+            onclick="eliminarTrabajadorDefinitivo('${t.rut}')" title="Eliminar definitivamente (sin movimientos registrados)">
+            <i class="ti ti-trash"></i>
+          </button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -135,6 +140,49 @@ function editarTrabajador(rut){
     if(btn) btn.textContent = 'Actualizar trabajador';
     toast('✅ Datos cargados para editar', 'exito');
   }, 150);
+}
+
+/* Un trabajador solo se puede eliminar de verdad si nunca tuvo movimientos reales:
+   ni contrato/anexo/liquidación/finiquito/novedad (todo eso queda en carpeta[]),
+   ni haberes/descuentos/jornada especial, ni asistencia marcada. */
+function _tieneMovimientosTrabajador(rut){
+  if(typeof cargarGestionLaboral === 'function') cargarGestionLaboral();
+
+  const enCarpeta = (carpeta || []).some(d => d.trabajador_rut === rut);
+  if(enCarpeta) return true;
+
+  const enHaberes    = (typeof haberes_variables !== 'undefined' ? haberes_variables : []).some(h => h.trabajador_rut === rut);
+  const enDescuentos = (typeof descuentos !== 'undefined' ? descuentos : []).some(d => d.trabajador_rut === rut);
+  const enJornada    = (typeof jornada_especial !== 'undefined' ? jornada_especial : []).some(j => j.trabajador_rut === rut);
+  if(enHaberes || enDescuentos || enJornada) return true;
+
+  // Asistencia marcada (no queda registrada en carpeta, hay que revisar localStorage directo)
+  for(let i = 0; i < localStorage.length; i++){
+    const key = localStorage.key(i);
+    if(!key || !key.startsWith('asistencia_')) continue;
+    let data;
+    try{ data = JSON.parse(localStorage.getItem(key)) || []; } catch { continue; }
+    if(data.some(m => m.rut === rut)) return true;
+  }
+
+  return false;
+}
+
+function eliminarTrabajadorDefinitivo(rut){
+  const t = trabajadores.find(x => x.rut === rut);
+  if(!t) return;
+
+  if(_tieneMovimientosTrabajador(rut)){
+    toast('⚠️ No se puede eliminar: ya tiene movimientos registrados (usa Dar de baja)', 'error');
+    return;
+  }
+
+  if(!confirm(`¿Eliminar definitivamente a ${t.nombre}?\n\nEsta acción no se puede deshacer. Se usa solo cuando el trabajador nunca llegó a tener movimientos reales en el sistema (ej: se arrepintió antes de ingresar).`)) return;
+
+  trabajadores = trabajadores.filter(x => x.rut !== rut);
+  guardarLocal();
+  toast(`🗑️ ${t.nombre} eliminado del sistema`, 'exito');
+  cargarTrabajadores();
 }
 
 async function cambiarEstado(rut, nuevoEstado){
@@ -378,7 +426,19 @@ function _renderDatosPersonalesPerfil(t){
     ${fila('Cargo', t.funcion_cargo)}
     ${fila('Fecha de ingreso', t.fecha_ingreso ? fmtFecha(t.fecha_ingreso) : null)}
 
-    ${migratorioHTML}`;
+    ${migratorioHTML}
+
+    <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+      <i class="ti ti-shield-check"></i> EPP entregados
+    </div>
+    ${fila('Elementos entregados', (t.epp_entregados&&t.epp_entregados.length) ? t.epp_entregados.join(', ') + (t.epp_entregados.includes('Otro')&&t.epp_otro?` (${t.epp_otro})`:'') : null)}
+    ${fila('Fecha de entrega', t.epp_fecha_entrega ? fmtFecha(t.epp_fecha_entrega) : null)}
+
+    <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+      <i class="ti ti-notebook"></i> RIOHS / IRL
+    </div>
+    ${fila('Fecha de inducción', t.irl_fecha_induccion ? fmtFecha(t.irl_fecha_induccion) : null)}
+    <div style="padding:8px 0;">${t.irl_declarado ? '<span class="badge badge-verde">✅ Declarado recibido</span>' : '<span class="badge badge-gris">Pendiente</span>'}</div>`;
 }
 
 function _renderCarpetaTrabajador(rut){
