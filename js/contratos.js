@@ -389,7 +389,7 @@ function cambiarTipoContrato(){
   actualizarPrevia();
 }
 
-function generarPDFContrato(){
+function generarPDFContrato(soloContenido){
   const id = document.getElementById('c-trabajador')?.value;
   if(!id){ toast('⚠️ Selecciona un trabajador primero','error'); return; }
 
@@ -679,8 +679,7 @@ function generarPDFContrato(){
     return c.esUltima ? `<div class="firma-cierre">\n${bloque}` : bloque;
   }).join('\n');
 
-  const win = window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html lang="es"><head>
+  const htmlCompleto = `<!DOCTYPE html><html lang="es"><head>
   <meta charset="UTF-8">
   <title>Contrato — ${t?.nombre}</title>
   <style>
@@ -748,7 +747,7 @@ function generarPDFContrato(){
     Cerrar
   </button>
   <span style="font-size:12px;color:#666;margin-left:8px;">
-    💡 Marca los EPP e IRL antes de imprimir
+    💡 EPP e inducción IRL se cargan desde la ficha del trabajador
   </span>
 </div>
 
@@ -816,12 +815,11 @@ ${clausulasHTML}
   de mis funciones:</p>
 
   <div class="check-row" style="margin:16px 0;">
-    <span class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> Legionario</span>
-    <span class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> Guantes</span>
-    <span class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> Lentes</span>
-    <span class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> Chaleco</span>
-    <span class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> Bloqueador</span>
-    <span class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> Otro: _______________</span>
+    ${['Legionario','Guantes','Lentes','Chaleco','Bloqueador'].map(item => {
+      const marcado = (t?.epp_entregados||[]).includes(item);
+      return `<span class="check-item"><span class="checkbox${marcado?' checked':''}">${marcado?'✓':''}</span> ${item}</span>`;
+    }).join('\n    ')}
+    <span class="check-item"><span class="checkbox${(t?.epp_entregados||[]).includes('Otro')?' checked':''}">${(t?.epp_entregados||[]).includes('Otro')?'✓':''}</span> Otro: ${t?.epp_otro || '_______________'}</span>
   </div>
 
   <p>Declaro que los elementos entregados se encuentran en buen estado y cumplen con la
@@ -834,7 +832,7 @@ ${clausulasHTML}
     <div class="firma-linea"></div>
     <p><strong>Nombre:</strong> ${t?.nombre || '______________'}</p>
     <p><strong>RUT:</strong> ${t?.rut || '___________'}</p>
-    <p><strong>Fecha:</strong> ${fmtCorta(t?.fecha_ingreso)}</p>
+    <p><strong>Fecha:</strong> ${fmtCorta(t?.epp_fecha_entrega || t?.fecha_ingreso)}</p>
   </div>
 </div>
 
@@ -845,7 +843,7 @@ ${clausulasHTML}
   <div class="doc-folio">${folioLinea}</div>
   <div class="doc-titulo" style="margin-bottom:14px;">Constancia de Entrega de Reglamento Interno de Orden, Higiene y Seguridad</div>
 
-  <p style="margin-bottom:10px;">Con fecha <strong>${fmtCorta(t?.fecha_ingreso)}</strong>, la empresa
+  <p style="margin-bottom:10px;">Con fecha <strong>${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</strong>, la empresa
   <strong>${emp.razon_social || '______________'}</strong>,
   RUT <strong>${emp.rut || '___________'}</strong>,
   representada por don(ña) <strong>${emp.representante || '______________'}</strong>,
@@ -884,7 +882,7 @@ ${clausulasHTML}
       <div class="firma-linea"></div>
       <div class="firma-nombre">${emp.representante || '______________'}</div>
       <div class="firma-rol">Entrega efectuada por</div>
-      <div class="firma-rol">Fecha: ${fmtCorta(t?.fecha_ingreso)}</div>
+      <div class="firma-rol">Fecha: ${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</div>
     </div>
   </div>
 </div>
@@ -920,19 +918,21 @@ ${clausulasHTML}
     <tr><td>RUT</td><td>${t?.rut || '—'}</td></tr>
     <tr><td>Empresa</td><td>${emp.razon_social || '—'}</td></tr>
     <tr><td>Faena</td><td>${datos.nombre_faena || '—'}</td></tr>
-    <tr><td>Fecha</td><td>${fmtCorta(t?.fecha_ingreso)}</td></tr>
+    <tr><td>Fecha</td><td>${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</td></tr>
   </table>
 
   <p style="margin-top:16px;"><strong>3. Identificación del Relator(a)</strong></p>
   <table>
     <tr><td>Nombre del relator(a)</td><td>${emp.representante || '—'}</td></tr>
     <tr><td>Empresa</td><td>${emp.razon_social || '—'}</td></tr>
-    <tr><td>Fecha de inducción</td><td>${fmtCorta(t?.fecha_ingreso)}</td></tr>
+    <tr><td>Fecha de inducción</td><td>${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</td></tr>
     <tr><td>Hora inicio</td><td>&nbsp;</td></tr>
     <tr><td>Hora término</td><td>&nbsp;</td></tr>
   </table>
 
-  <p style="margin-top:16px;"><strong>4. Declaración de Recepción de IRL</strong></p>
+  <p style="margin-top:16px;"><strong>4. Declaración de Recepción de IRL</strong>
+    ${t?.irl_declarado ? ' <span style="color:#0a7a35;">✅ Declarado recibido por el trabajador(a) en su ficha</span>' : ''}
+  </p>
   <p>Declaro haber recibido información clara y suficiente sobre los riesgos laborales
   asociados a mis funciones, así como respecto de las medidas preventivas y procedimientos
   de trabajo seguro, antes del inicio de mis labores.</p>
@@ -951,16 +951,15 @@ ${clausulasHTML}
       <div class="firma-nombre">${t?.nombre || '______________'}</div>
       <div class="firma-rol">Firma Trabajador(a)</div>
       <div class="firma-rol">RUT: ${t?.rut || '___________'}</div>
-      <div class="firma-rol">Fecha: ${fmtCorta(t?.fecha_ingreso)}</div>
+      <div class="firma-rol">Fecha: ${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</div>
     </div>
   </div>
 </div>
 
 </div>
-</body></html>`);
-  win.document.close();
+</body></html>`;
 
-  // Registrar en Carpeta Laboral
+  // Registrar en Carpeta Laboral (aplica tanto en modo individual como masivo)
   const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[tipo] || tipo;
   registrarDocumentoCarpeta({
     trabajador_id:  id,
@@ -971,28 +970,45 @@ ${clausulasHTML}
     fecha_firma:    datos.fecha_firma || '',
     descripcion:    `Contrato ${tipoTxt} — ${datos.nombre_faena || ''} — ${datos.temporada || ''}`.trim().replace(/—\s*$/, ''),
   });
+
+  if(soloContenido){
+    // Extrae solo el contenido interno (sin <head>/<style>, sin botones de impresión)
+    // para poder concatenar varios contratos en un solo documento de impresión masiva.
+    let contenido = htmlCompleto.split('<div class="doc-wrap">')[1] || '';
+    contenido = contenido.split('</body></html>')[0];
+    contenido = contenido.replace(/<div class="no-print"[\s\S]*?<\/div>\s*\n/, '');
+    return contenido;
+  }
+
+  const win = window.open('','_blank');
+  win.document.write(htmlCompleto);
+  win.document.close();
 }
 
 function switchTabContratos(tab){
   tabContratosActivo = tab;
-  const tabC   = document.getElementById('tab-contratos');
-  const tabA   = document.getElementById('tab-anexos');
-  const subC   = document.getElementById('sub-tab-contratos');
-  const subA   = document.getElementById('sub-tab-anexos');
-  const hdrBtns= document.getElementById('contratos-header-btns');
+  const tabs = { contratos:'tab-contratos', anexos:'tab-anexos', epp:'tab-epp' };
+  const subs = { contratos:'sub-tab-contratos', anexos:'sub-tab-anexos', epp:'sub-tab-epp' };
+  const hdrBtns = document.getElementById('contratos-header-btns');
 
-  if(tab === 'contratos'){
-    tabC.style.borderBottomColor = 'var(--azul)'; tabC.style.color = 'var(--azul)';
-    tabA.style.borderBottomColor = 'transparent'; tabA.style.color = 'var(--texto2)';
-    subC.style.display = ''; subA.style.display = 'none';
-    if(hdrBtns) hdrBtns.style.display = 'flex';
-  } else {
-    tabA.style.borderBottomColor = 'var(--azul)'; tabA.style.color = 'var(--azul)';
-    tabC.style.borderBottomColor = 'transparent'; tabC.style.color = 'var(--texto2)';
-    subA.style.display = ''; subC.style.display = 'none';
-    if(hdrBtns) hdrBtns.style.display = 'none';
+  Object.keys(tabs).forEach(key => {
+    const btn = document.getElementById(tabs[key]);
+    const sub = document.getElementById(subs[key]);
+    if(!btn || !sub) return;
+    const activo = key === tab;
+    btn.style.borderBottomColor = activo ? 'var(--azul)' : 'transparent';
+    btn.style.color = activo ? 'var(--azul)' : 'var(--texto2)';
+    sub.style.display = activo ? '' : 'none';
+  });
+
+  if(hdrBtns) hdrBtns.style.display = (tab === 'contratos') ? 'flex' : 'none';
+
+  if(tab === 'anexos'){
     poblarSelectAnexoTrabajador();
     actualizarBadgesContratos();
+  }
+  if(tab === 'epp'){
+    initEppTab();
   }
 }
 
@@ -1060,4 +1076,418 @@ function renderListaContratos(){
       </button>
     </div>`;
   }).join('');
+}
+
+/* ════════════════════════════════════════════════════════
+   CONTRATOS MASIVOS
+   ════════════════════════════════════════════════════════ */
+let _modoContratoActual = 'individual';
+
+function cambiarModoContrato(modo){
+  _modoContratoActual = modo;
+  const esMasivo = modo === 'masivo';
+
+  document.getElementById('btn-modo-individual').className = esMasivo ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm';
+  document.getElementById('btn-modo-masivo').className     = esMasivo ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+
+  document.getElementById('campo-c-trabajador-individual').style.display = esMasivo ? 'none' : '';
+  document.getElementById('bloque-contrato-masivo').style.display       = esMasivo ? 'block' : 'none';
+  document.getElementById('bloque-precargados-individual').style.display= esMasivo ? 'none' : '';
+  document.getElementById('g2-contrato-cols').style.gridTemplateColumns = esMasivo ? '1fr' : '1fr 1fr';
+
+  document.getElementById('botones-contrato-individual').style.display = esMasivo ? 'none' : 'flex';
+  document.getElementById('botones-contrato-masivo').style.display     = esMasivo ? 'flex' : 'none';
+
+  const btnHeader = document.getElementById('btn-generar-pdf-header');
+  if(btnHeader) btnHeader.style.display = esMasivo ? 'none' : '';
+  const btnVerDoc = document.getElementById('btn-ver-doc-individual');
+  if(btnVerDoc) btnVerDoc.style.display = esMasivo ? 'none' : '';
+
+  // Cargo y horas pasan a ser editables (son compartidos para todo el grupo)
+  const cCargo = document.getElementById('c-cargo');
+  const cHoras = document.getElementById('c-horas');
+  const lblCargo = document.getElementById('lbl-c-cargo');
+  const lblHoras = document.getElementById('lbl-c-horas');
+  if(cCargo){
+    cCargo.readOnly = !esMasivo;
+    cCargo.style.background = esMasivo ? '' : 'var(--gris-bg)';
+    cCargo.placeholder = esMasivo ? 'Ej: Cosechero' : 'Se carga al seleccionar trabajador';
+  }
+  if(cHoras){
+    cHoras.readOnly = !esMasivo;
+    cHoras.style.background = esMasivo ? '' : 'var(--gris-bg)';
+  }
+  if(lblCargo) lblCargo.textContent = esMasivo ? 'Función / cargo (para todo el grupo) *' : 'Función / cargo *';
+  if(lblHoras) lblHoras.textContent = esMasivo ? 'Horas semanales' : 'Horas semanales (auto)';
+
+  document.getElementById('c-trabajador').value = '';
+
+  if(esMasivo) renderListaContratoMasivo();
+}
+
+/* Un trabajador tiene contrato vigente si existe un documento tipo 'contrato' en su carpeta laboral */
+function _tieneContratoVigente(rut){
+  return (carpeta || []).some(d => d.trabajador_rut === rut && d.tipo === 'contrato');
+}
+
+function renderListaContratoMasivo(){
+  const buscar     = (document.getElementById('cm-buscar')?.value || '').toLowerCase().trim();
+  const mostrarTodos = document.getElementById('cm-mostrar-con-contrato')?.checked;
+  const cont = document.getElementById('cm-lista-trabajadores');
+  if(!cont) return;
+
+  let lista = trabajadores.filter(t => t.estado === 'activo');
+  if(!mostrarTodos) lista = lista.filter(t => !_tieneContratoVigente(t.rut));
+  if(buscar) lista = lista.filter(t => t.rut?.toLowerCase().includes(buscar) || t.nombre?.toLowerCase().includes(buscar));
+
+  const contador = document.getElementById('cm-contador');
+  if(!lista.length){
+    cont.innerHTML = `<div style="padding:20px;text-align:center;color:var(--texto3);font-size:13px;">
+      ${mostrarTodos ? 'Sin trabajadores para mostrar' : 'Todos los trabajadores activos ya tienen contrato — activa "Mostrar también con contrato vigente" para recontratarlos'}
+    </div>`;
+    if(contador) contador.textContent = '';
+    return;
+  }
+
+  cont.innerHTML = lista.map(t => {
+    const yaContrato = _tieneContratoVigente(t.rut);
+    return `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;border-bottom:1px solid var(--borde);cursor:pointer;">
+      <input type="checkbox" class="cm-check-trab" value="${t.id}" data-rut="${t.rut}" onchange="_cmActualizarContador()" style="width:auto;">
+      <span style="flex:1;">${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
+      ${yaContrato ? '<span class="badge badge-amarillo" style="font-size:10px;">Ya tiene contrato</span>' : ''}
+    </label>`;
+  }).join('');
+
+  _cmActualizarContador();
+}
+
+function _cmActualizarContador(){
+  const n = document.querySelectorAll('.cm-check-trab:checked').length;
+  const contador = document.getElementById('cm-contador');
+  if(contador) contador.textContent = n ? `${n} trabajador${n!==1?'es':''} seleccionado${n!==1?'s':''}` : '';
+}
+
+function _cmSeleccionarTodos(val){
+  document.querySelectorAll('.cm-check-trab').forEach(c => c.checked = val);
+  _cmActualizarContador();
+}
+
+/* ── VISTA PREVIA ────────────────────────────────────────── */
+function previsualizarContratosMasivo(){
+  const epId = document.getElementById('c-empresa-propia')?.value;
+  if(!epId){ toast('⚠️ Selecciona la empresa empleadora', 'error'); return; }
+
+  const cargo = document.getElementById('c-cargo').value.trim();
+  if(!cargo){ toast('⚠️ Ingresa la función/cargo', 'error'); return; }
+  const faena = document.getElementById('c-faena').value.trim();
+  if(!faena){ toast('⚠️ Ingresa el nombre de la faena', 'error'); return; }
+  const termino = document.getElementById('c-fecha-termino').value;
+  if(!termino){ toast('⚠️ Ingresa la fecha de término', 'error'); return; }
+
+  const seleccionados = Array.from(document.querySelectorAll('.cm-check-trab:checked'));
+  if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
+
+  const sueldo = document.getElementById('c-sueldo').value;
+  const sueldoFmt = sueldo ? '$' + parseInt(sueldo).toLocaleString('es-CL') : '—';
+
+  const tbody = document.getElementById('pcm-tbody');
+  tbody.innerHTML = seleccionados.map(chk => {
+    const t = trabajadores.find(x => x.id === chk.value);
+    return `<tr>
+      <td style="font-size:13px;">${t?.nombre||'—'}</td>
+      <td style="font-size:12px;font-family:monospace;">${t?.rut||'—'}</td>
+      <td style="font-size:12px;">${cargo}</td>
+      <td style="font-size:12px;">${faena}</td>
+      <td style="font-size:12px;">${sueldoFmt}</td>
+      <td style="font-size:12px;">${fmtFecha(termino)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pcm-contador').textContent = `${seleccionados.length} contrato${seleccionados.length!==1?'s':''} se van a generar con estos datos compartidos`;
+  document.getElementById('modal-preview-contrato-masivo').style.display = 'flex';
+}
+
+function cerrarModalPreviewMasivo(){
+  document.getElementById('modal-preview-contrato-masivo').style.display = 'none';
+}
+
+/* ── GENERACIÓN ──────────────────────────────────────────── */
+function generarContratosMasivo(){
+  const seleccionados = Array.from(document.querySelectorAll('.cm-check-trab:checked')).map(c => c.value);
+  if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
+
+  cargarContratos();
+  const selTrabajador = document.getElementById('c-trabajador');
+  const contenidos = [];
+  let generados = 0;
+
+  seleccionados.forEach(idTrab => {
+    selTrabajador.value = idTrab;
+
+    const datos = obtenerDatosFormulario();
+    const existe = contratos.findIndex(c => c.trabajador_id === idTrab);
+    if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
+    else contratos.push({id: Date.now().toString() + '_' + idTrab, ...datos});
+
+    const contenidoHTML = generarPDFContrato(true);
+    if(contenidoHTML) contenidos.push(contenidoHTML);
+    generados++;
+  });
+
+  guardarContratos();
+  selTrabajador.value = '';
+
+  const b = document.getElementById('badge-contratos');
+  if(b) b.textContent = contratos.length;
+
+  cerrarModalPreviewMasivo();
+  toast(`✅ ${generados} contrato${generados!==1?'s':''} generado${generados!==1?'s':''}`, 'exito');
+
+  _abrirVentanaContratosMasivo(contenidos);
+  renderListaContratoMasivo();
+}
+
+/* ── VENTANA DE IMPRESIÓN COMBINADA ──────────────────────── */
+function _abrirVentanaContratosMasivo(contenidos){
+  if(!contenidos.length) return;
+
+  const cuerpo = contenidos
+    .map((c, i) => i === 0 ? c : `<div class="salto"></div>${c}`)
+    .join('\n');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html lang="es"><head>
+  <meta charset="UTF-8">
+  <title>Contratos masivos (${contenidos.length})</title>
+  <style>
+    :root{ --verde-doc:#0F4C3A; }
+    @page{ size:letter; margin:2.2cm 2.4cm; }
+    *{ box-sizing:border-box; }
+    body{ font-family:'Times New Roman',serif; font-size:11pt; line-height:1.75;
+      margin:0; padding:0; color:#1a1a1a; }
+    .doc-wrap{ max-width:76ch; margin:0 auto; }
+    h1{ font-size:13pt; text-align:center; text-transform:uppercase;
+      letter-spacing:1.2px; margin:0 0 4px; font-weight:bold; }
+    h2{ font-size:11pt; text-align:center; text-transform:uppercase;
+      letter-spacing:0.5px; margin:0 0 16px; font-weight:normal; color:#555; }
+    p{ text-align:justify; margin:0 0 9px; orphans:3; widows:3; }
+    .clausula{ margin-bottom:18px; }
+    .clausula-head{ display:flex; align-items:center; gap:8px; margin-bottom:6px;
+      page-break-after:avoid; break-after:avoid; }
+    .clausula-badge{ font-family:Arial,Helvetica,sans-serif; background:var(--verde-doc);
+      color:#fff; font-size:8pt; font-weight:bold; width:18px; height:18px; border-radius:4px;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .clausula-tit{ font-family:Arial,Helvetica,sans-serif; font-size:10.5pt; font-weight:700;
+      color:var(--verde-doc); letter-spacing:-0.01em; }
+    ul, ol{ margin:6px 0 10px 20px; }
+    ul li, ol li{ margin-bottom:5px; page-break-inside:avoid; break-inside:avoid; }
+    .firma-grid{ display:grid; grid-template-columns:1fr 1fr; gap:50px; margin-top:28px; break-inside:avoid; page-break-inside:avoid; }
+    .firma-cierre{ page-break-inside:avoid; break-inside:avoid; }
+    .firma-box{ text-align:center; }
+    .firma-linea{ border-top:1px solid #000; padding-top:6px; margin-top:28px; }
+    .firma-nombre{ font-weight:bold; font-size:10pt; }
+    .firma-rol{ font-size:9pt; color:#444; margin-top:1px; }
+    .separador{ border:none; border-top:2px solid #000; margin:36px 0; }
+    .salto{ break-before:page; page-break-before:always; margin-top:0; padding-top:0; }
+    .doc-folio{ font-family:Arial,Helvetica,sans-serif; font-size:6.5pt; color:#aaa;
+      text-align:center; margin-bottom:8px; letter-spacing:0.2px; text-transform:uppercase; }
+    .doc-titulo{ font-size:12.5pt; font-weight:bold; text-align:center;
+      text-transform:uppercase; letter-spacing:0.8px; margin-bottom:14px; color:var(--verde-doc); }
+    .doc-subtitulo{ font-size:10pt; text-align:center; margin-bottom:18px; color:#555; }
+    table{ width:100%; border-collapse:collapse; margin:10px 0; break-inside:avoid; page-break-inside:avoid; }
+    table td{ padding:6px 10px; border:1px solid #ccc; font-size:10pt; vertical-align:top; }
+    table td:first-child{ font-weight:bold; width:45%; background:#f7f7f7; }
+    .check-row{ display:flex; gap:12px; flex-wrap:wrap; margin:8px 0; }
+    .check-item{ display:flex; align-items:center; gap:6px; font-size:10pt; }
+    .checkbox{ width:13px; height:13px; border:1.5px solid #000;
+      display:inline-block; text-align:center; line-height:13px; font-size:10px;
+      cursor:pointer; flex-shrink:0; }
+    .checkbox.checked{ background:#000; color:#fff; }
+    .firma-simple{ margin-top:36px; }
+    .firma-simple .firma-linea{ width:60%; margin:45px auto 6px; }
+    .firma-simple p{ text-align:center; font-size:10pt; }
+    .observ-linea{ border-bottom:1px solid #000; margin:8px 0; height:22px; }
+    .no-print{ margin-bottom:24px; }
+    @media print{ .no-print{display:none !important;} }
+  </style>
+</head><body>
+<div class="no-print" style="display:flex;gap:10px;align-items:center;padding:16px;">
+  <button onclick="window.print()" style="padding:10px 24px;background:#0f2942;color:#fff;
+    border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">
+    🖨️ Imprimir / Guardar PDF (${contenidos.length} contratos)
+  </button>
+  <button onclick="window.close()" style="padding:10px 16px;background:#f1f5f9;
+    border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:13px;">
+    Cerrar
+  </button>
+</div>
+<div class="doc-wrap">
+${cuerpo}
+</div>
+</body></html>`);
+  win.document.close();
+}
+
+/* ════════════════════════════════════════════════════════
+   EPP / RIOHS / IRL — pestaña dentro de Contratos
+   ════════════════════════════════════════════════════════ */
+const EPP_ITEMS = ['Legionario','Guantes','Lentes','Chaleco','Bloqueador'];
+let _modoEppActual = 'individual';
+
+function initEppTab(){
+  cambiarModoEpp(_modoEppActual);
+  _poblarSelectEppTrabajador();
+  renderListaEppMasivo();
+}
+
+function _poblarSelectEppTrabajador(){
+  const sel = document.getElementById('epp-sel-trabajador');
+  if(!sel) return;
+  const val = sel.value;
+  sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>' +
+    trabajadores.map(t => `<option value="${t.rut}">${t.nombre} — ${t.rut}</option>`).join('');
+  if(val) sel.value = val;
+}
+
+function cambiarModoEpp(modo){
+  _modoEppActual = modo;
+  const esMasivo = modo === 'masivo';
+  document.getElementById('btn-epp-modo-individual').className = esMasivo ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm';
+  document.getElementById('btn-epp-modo-masivo').className     = esMasivo ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+  document.getElementById('bloque-epp-individual').style.display = esMasivo ? 'none' : '';
+  document.getElementById('bloque-epp-masivo').style.display     = esMasivo ? '' : 'none';
+}
+
+/* Plantilla compartida del formulario de EPP/IRL (usa un prefijo de ids para no chocar entre individual/masivo) */
+function _htmlFormularioEpp(prefix, datos){
+  datos = datos || {};
+  const entregados = datos.epp_entregados || [];
+  return `
+    <div class="form-section"><i class="ti ti-shield-check"></i> Elementos de Protección Personal (EPP)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;">
+      ${EPP_ITEMS.map(item => `
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" class="${prefix}-epp-check" value="${item}" ${entregados.includes(item)?'checked':''} style="accent-color:var(--verde);"> ${item}
+        </label>`).join('')}
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="${prefix}-epp-check-otro" class="${prefix}-epp-check" value="Otro" ${entregados.includes('Otro')?'checked':''}
+          onchange="document.getElementById('${prefix}-epp-otro-detalle').style.display=this.checked?'inline-block':'none';" style="accent-color:var(--verde);"> Otro:
+      </label>
+      <input type="text" id="${prefix}-epp-otro-detalle" placeholder="Especificar" value="${datos.epp_otro||''}"
+        style="display:${entregados.includes('Otro')?'inline-block':'none'};max-width:160px;padding:5px 8px;font-size:12px;border:1px solid var(--borde);border-radius:6px;">
+    </div>
+    <div class="form-grid" style="margin-bottom:12px;">
+      <div class="form-group">
+        <label>Fecha de entrega EPP</label>
+        <input type="date" id="${prefix}-epp-fecha-entrega" value="${datos.epp_fecha_entrega||''}">
+      </div>
+    </div>
+
+    <div class="form-section"><i class="ti ti-notebook"></i> RIOHS / Inducción (IRL)</div>
+    <div class="form-grid" style="margin-bottom:14px;">
+      <div class="form-group">
+        <label>Fecha de inducción</label>
+        <input type="date" id="${prefix}-irl-fecha-induccion" value="${datos.irl_fecha_induccion||''}">
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:22px;">
+        <input type="checkbox" id="${prefix}-irl-declarado" ${datos.irl_declarado?'checked':''} style="width:auto;">
+        <label style="margin:0;">Declara haber recibido RIOHS/IRL</label>
+      </div>
+    </div>`;
+}
+
+function _leerFormularioEpp(prefix){
+  return {
+    epp_entregados:       Array.from(document.querySelectorAll(`.${prefix}-epp-check:checked`)).map(c => c.value),
+    epp_otro:             document.getElementById(`${prefix}-epp-otro-detalle`)?.value.trim() || '',
+    epp_fecha_entrega:    document.getElementById(`${prefix}-epp-fecha-entrega`)?.value || null,
+    irl_fecha_induccion:  document.getElementById(`${prefix}-irl-fecha-induccion`)?.value || null,
+    irl_declarado:        document.getElementById(`${prefix}-irl-declarado`)?.checked || false,
+  };
+}
+
+/* ── INDIVIDUAL ──────────────────────────────────────────── */
+function cargarEppTrabajador(){
+  const rut = document.getElementById('epp-sel-trabajador')?.value;
+  const cont = document.getElementById('epp-form-individual');
+  if(!cont) return;
+  if(!rut){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
+
+  const t = trabajadores.find(x => x.rut === rut);
+  cont.style.display = 'block';
+  cont.innerHTML = _htmlFormularioEpp('eppi', t) + `
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="guardarEppIndividual()">
+      <i class="ti ti-device-floppy"></i> Guardar EPP / IRL
+    </button>`;
+}
+
+function guardarEppIndividual(){
+  const rut = document.getElementById('epp-sel-trabajador')?.value;
+  if(!rut){ toast('⚠️ Selecciona un trabajador', 'error'); return; }
+  const t = trabajadores.find(x => x.rut === rut);
+  if(!t){ toast('⚠️ Trabajador no encontrado', 'error'); return; }
+
+  Object.assign(t, _leerFormularioEpp('eppi'));
+  guardarLocal();
+  toast(`✅ EPP / IRL guardado para ${t.nombre}`, 'exito');
+}
+
+/* ── MASIVO ──────────────────────────────────────────────── */
+function renderListaEppMasivo(){
+  const buscar = (document.getElementById('epp-cm-buscar')?.value || '').toLowerCase().trim();
+  const cont = document.getElementById('epp-cm-lista');
+  if(!cont) return;
+
+  let lista = trabajadores.filter(t => t.estado === 'activo');
+  if(buscar) lista = lista.filter(t => t.rut?.toLowerCase().includes(buscar) || t.nombre?.toLowerCase().includes(buscar));
+
+  if(!lista.length){
+    cont.innerHTML = `<div style="padding:20px;text-align:center;color:var(--texto3);font-size:13px;">Sin trabajadores para mostrar</div>`;
+    return;
+  }
+
+  cont.innerHTML = lista.map(t => `
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;border-bottom:1px solid var(--borde);cursor:pointer;">
+      <input type="checkbox" class="epp-cm-check-trab" value="${t.rut}" onchange="_eppCmActualizarContador()" style="width:auto;">
+      <span>${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
+    </label>`).join('');
+
+  // Mostrar el formulario compartido debajo de la lista (una sola vez)
+  const contForm = document.getElementById('epp-form-masivo');
+  if(contForm && !contForm.innerHTML){
+    contForm.innerHTML = _htmlFormularioEpp('eppm', {}) + `
+      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="guardarEppMasivo()">
+        <i class="ti ti-device-floppy"></i> Aplicar a seleccionados
+      </button>`;
+  }
+
+  _eppCmActualizarContador();
+}
+
+function _eppCmActualizarContador(){
+  const n = document.querySelectorAll('.epp-cm-check-trab:checked').length;
+  const contador = document.getElementById('epp-cm-contador');
+  if(contador) contador.textContent = n ? `${n} trabajador${n!==1?'es':''} seleccionado${n!==1?'s':''}` : '';
+}
+
+function _eppCmSeleccionarTodos(val){
+  document.querySelectorAll('.epp-cm-check-trab').forEach(c => c.checked = val);
+  _eppCmActualizarContador();
+}
+
+function guardarEppMasivo(){
+  const seleccionados = Array.from(document.querySelectorAll('.epp-cm-check-trab:checked')).map(c => c.value);
+  if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
+
+  const datos = _leerFormularioEpp('eppm');
+  let aplicados = 0;
+  seleccionados.forEach(rut => {
+    const t = trabajadores.find(x => x.rut === rut);
+    if(!t) return;
+    Object.assign(t, datos);
+    aplicados++;
+  });
+
+  guardarLocal();
+  toast(`✅ EPP / IRL aplicado a ${aplicados} trabajador${aplicados!==1?'es':''}`, 'exito');
 }
