@@ -103,10 +103,15 @@ function poblarSelectTrabajadoresContrato(){
 
 function precargarContrato(){
   const id = document.getElementById('c-trabajador').value;
-  if(!id){ limpiarPreview(); return; }
+  const eppCont = document.getElementById('epp-en-contrato');
+  if(!id){ limpiarPreview(); if(eppCont) eppCont.innerHTML = ''; return; }
 
   const t = trabajadores.find(x => x.rut === id || x.id === id);
   if(!t) return;
+
+  if(eppCont && _modoContratoActual !== 'masivo'){
+    eppCont.innerHTML = _htmlFormularioEpp('cepp', t);
+  }
 
   // Precargar datos bloqueados — trabajador
   document.getElementById('cp-rut').value           = t.rut || '';
@@ -252,6 +257,11 @@ function guardarContrato(){
 
   guardarContratos();
   contratoEditandoId = null;
+
+  // Guardar EPP/IRL en la misma acción (evita un segundo viaje a la pestaña EPP/IRL)
+  const t = trabajadores.find(x => x.rut === id || x.id === id);
+  if(t) Object.assign(t, _leerFormularioEpp('cepp'));
+  guardarLocal();
 
   const b = document.getElementById('badge-contratos');
   if(b) b.textContent = contratos.length;
@@ -1122,6 +1132,11 @@ function cambiarModoContrato(modo){
 
   document.getElementById('c-trabajador').value = '';
 
+  const eppCont = document.getElementById('epp-en-contrato');
+  if(eppCont){
+    eppCont.innerHTML = esMasivo ? _htmlFormularioEpp('cepp', {}) : '';
+  }
+
   if(esMasivo) renderListaContratoMasivo();
 }
 
@@ -1219,6 +1234,7 @@ function generarContratosMasivo(){
   cargarContratos();
   const selTrabajador = document.getElementById('c-trabajador');
   const contenidos = [];
+  const datosEppCompartido = _leerFormularioEpp('cepp');
   let generados = 0;
 
   seleccionados.forEach(idTrab => {
@@ -1229,12 +1245,17 @@ function generarContratosMasivo(){
     if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
     else contratos.push({id: Date.now().toString() + '_' + idTrab, ...datos});
 
+    // Aplicar EPP/IRL compartido al trabajador (mismo dato para todo el grupo)
+    const t = trabajadores.find(x => x.id === idTrab);
+    if(t) Object.assign(t, datosEppCompartido);
+
     const contenidoHTML = generarPDFContrato(true);
     if(contenidoHTML) contenidos.push(contenidoHTML);
     generados++;
   });
 
   guardarContratos();
+  guardarLocal();
   selTrabajador.value = '';
 
   const b = document.getElementById('badge-contratos');
