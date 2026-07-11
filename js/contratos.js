@@ -1227,9 +1227,13 @@ function cerrarModalPreviewMasivo(){
 }
 
 /* ── GENERACIÓN ──────────────────────────────────────────── */
+let _generandoContratosMasivo = false;
+
 function generarContratosMasivo(){
+  if(_generandoContratosMasivo) return;
   const seleccionados = Array.from(document.querySelectorAll('.cm-check-trab:checked')).map(c => c.value);
   if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
+  _generandoContratosMasivo = true;
 
   cargarContratos();
   const selTrabajador = document.getElementById('c-trabajador');
@@ -1266,6 +1270,7 @@ function generarContratosMasivo(){
 
   _abrirVentanaContratosMasivo(contenidos);
   renderListaContratoMasivo();
+  _generandoContratosMasivo = false;
 }
 
 /* ── VENTANA DE IMPRESIÓN COMBINADA ──────────────────────── */
