@@ -199,6 +199,27 @@ function nuevoIndicadorManual(){
   document.getElementById('ind-form-wrap').scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
+function copiarIndicadorMesAnterior(){
+  const periodoDestino = document.getElementById('ind-f-periodo')?.value || document.getElementById('ind-periodo-selector')?.value;
+  if(!periodoDestino || !/^\d{4}-\d{2}$/.test(periodoDestino)){
+    toast('⚠️ Define primero el período de destino (AAAA-MM)', 'error');
+    return;
+  }
+
+  const [anio, mes] = periodoDestino.split('-').map(Number);
+  const fechaAnt = new Date(anio, mes - 2, 1); // mes-2 porque mes ya viene en base 1
+  const periodoAnterior = `${fechaAnt.getFullYear()}-${String(fechaAnt.getMonth()+1).padStart(2,'0')}`;
+
+  const indAnterior = getIndicadoresPorPeriodo(periodoAnterior);
+  if(!indAnterior){
+    toast(`⚠️ No hay indicadores guardados de ${getNombreMes(periodoAnterior)} para copiar`, 'error');
+    return;
+  }
+
+  _llenarFormulario({ ...indAnterior, periodo: periodoDestino });
+  toast(`✅ Copiado desde ${getNombreMes(periodoAnterior)} — revisa UF, UTM y UTA antes de guardar, suelen cambiar cada mes`, 'exito');
+}
+
 function editarIndicadorExistente(periodo){
   const ind = getIndicadoresPorPeriodo(periodo);
   if(!ind) return;
@@ -245,6 +266,7 @@ function _llenarFormulario(ind){
 
   // D — SIS
   setD('ind-f-sis', ind.sis);
+  setD('ind-f-exp-vida', ind.exp_vida);
 
   // C — AFP
   const afpKeys = ['capital','cuprum','habitat','planvital','provida','modelo','uno'];
@@ -312,6 +334,7 @@ function guardarIndicadorPeriodo(){
     renta_menor18:       getM('ind-f-renta-menor18'),
     renta_casa_particular: getM('ind-f-renta-casa'),
     sis:                 getD('ind-f-sis'),
+    exp_vida:            getD('ind-f-exp-vida'),
     afp,
     afc: {
       indefinido:         { empleador: getD('ind-f-afc-indef-emp'), trabajador: getD('ind-f-afc-indef-trab') },
