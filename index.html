@@ -1318,8 +1318,13 @@
           <!-- Formulario ingreso manual -->
           <div id="ind-form-wrap" style="display:none;">
             <div class="card" style="margin-bottom:14px;border:2px solid var(--verde);">
-              <div class="card-title"><i class="ti ti-pencil"></i> Ingreso de Indicadores Previsionales
-                <span id="ind-form-titulo-periodo" style="font-weight:400;color:var(--texto2);margin-left:8px;"></span>
+              <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <span><i class="ti ti-pencil"></i> Ingreso de Indicadores Previsionales
+                  <span id="ind-form-titulo-periodo" style="font-weight:400;color:var(--texto2);margin-left:8px;"></span>
+                </span>
+                <button class="btn btn-secondary btn-sm" onclick="copiarIndicadorMesAnterior()" title="Copia los valores del mes anterior — revisa UF, UTM y UTA después de copiar">
+                  <i class="ti ti-copy"></i> Copiar mes anterior
+                </button>
               </div>
 
               <!-- A — Valores Generales -->
@@ -1418,6 +1423,10 @@
                 <div class="form-group">
                   <label>Tasa SIS — Empleador (%)</label>
                   <input type="text" id="ind-f-sis" placeholder="1,88" oninput="formatearDecimal(this)">
+                </div>
+                <div class="form-group">
+                  <label>Cotización Expectativa de Vida — Empleador (%)</label>
+                  <input type="text" id="ind-f-exp-vida" placeholder="0,9" oninput="formatearDecimal(this)">
                 </div>
               </div>
 
