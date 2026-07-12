@@ -288,7 +288,8 @@ function _construirLineaPrevired(liq, t, periodo, cfgEmp){
   const diasTrab  = Math.max(0, Math.min(30, 30 - (liq.dias_a_descontar||0)));
   const jornadaCompleta = (parseFloat(contrato?.horas_semanales)||45) >= 30;
   const esIsapre  = (liq.sistema_salud||'').toLowerCase().includes('isapre');
-  const cotExpVida= esAFP ? Math.round((liq.base_afp||0) * 0.009) : 0; // Ley reforma previsional — cargo empleador
+  const pctExpVida = (ind.exp_vida ?? 0.9) / 100; // configurable en Indicadores — la ley puede ajustarlo con el tiempo
+  const cotExpVida = esAFP ? Math.round((liq.base_afp||0) * pctExpVida) : 0; // Ley reforma previsional — cargo empleador
 
   const f = new Array(105).fill('');
 
