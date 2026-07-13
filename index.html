@@ -496,7 +496,7 @@
               <div class="card-title" style="margin:0;"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
               <input type="text" id="buscar-extranjero" placeholder="Buscar nombre o RUT..."
                 style="width:200px;padding:7px 10px;font-size:12px;"
-                oninput="cargarExtranjeros()">
+                oninput="renderTablaExtranjeros()">
             </div>
             <div style="overflow-x:auto;">
               <table class="tabla" style="min-width:750px;">
@@ -579,9 +579,10 @@
             <th>Fecha firma</th>
             <th>Generado</th>
             <th>Por</th>
+            <th></th>
           </tr></thead>
           <tbody id="tbody-carpeta">
-            <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--texto3);">
+            <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">
               Sin documentos registrados</td></tr>
           </tbody>
         </table>
