@@ -227,6 +227,10 @@ function exportarEmpresasExcel(){
     const ws2 = XLSX.utils.json_to_sheet(empresas.map(e => ({
       Mandante:        e.nombre,
       RUT:             e.rut,
+      Representante:   e.nombre_representante || '',
+      'RUT Rep.':      e.rut_representante || '',
+      Correo:          e.correo || '',
+      Teléfono:        e.telefono || '',
       Dirección:       e.direccion || '',
       Comuna:          e.comuna || '',
       Región:          e.region || '',
@@ -234,7 +238,7 @@ function exportarEmpresasExcel(){
       Trabajadores:    trabajadores.filter(t => findMandante(t)?.id === e.id).length,
       Activos:         trabajadores.filter(t => findMandante(t)?.id === e.id && t.estado === 'activo').length,
     })));
-    ws2['!cols'] = [{wch:28},{wch:14},{wch:28},{wch:16},{wch:20},{wch:14},{wch:13},{wch:9}];
+    ws2['!cols'] = [{wch:28},{wch:14},{wch:24},{wch:14},{wch:26},{wch:14},{wch:28},{wch:16},{wch:20},{wch:14},{wch:13},{wch:9}];
     XLSX.utils.book_append_sheet(wb, ws2, 'Mandantes');
   }
 
