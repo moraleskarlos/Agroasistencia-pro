@@ -97,6 +97,17 @@
 
       <div id="p-dashboard" class="pagina activa">
 
+        <!-- 🧪 BOTÓN TEMPORAL — Kit de Prueba (quitar antes de producción) -->
+        <div style="background:#EFF6FF;border:1px dashed #2563EB;border-radius:var(--radius);
+          padding:10px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:12px;color:#1E3A8A;">
+            🧪 <strong>Modo de pruebas</strong> — carga datos de ejemplo para probar Remuneraciones (junio 2026)
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="cargarKitPruebaJunio()">
+            <i class="ti ti-flask"></i> Cargar Kit de Prueba
+          </button>
+        </div>
+
         <!-- Alerta indicadores previsionales -->
         <div id="dash-alerta-indicadores" style="display:none;background:linear-gradient(135deg,#92400E,#D97706);
           color:#fff;border-radius:var(--radius);padding:13px 16px;margin-bottom:16px;
@@ -2313,6 +2324,7 @@
   <script src="js/vacaciones.js"></script>
   <script src="js/finiquitos.js"></script>
   <script src="js/alertas.js"></script>
+  <script src="js/kit-prueba.js"></script>
   <script src="js/exportar.js"></script>
   <script src="js/ayuda.js"></script>
   <script src="js/init.js"></script>
