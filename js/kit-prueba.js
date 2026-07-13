@@ -26,13 +26,25 @@ function cargarKitPruebaJunio(){
 
   /* ── 2. MANDANTES ────────────────────────────────────── */
   const mandantes = [
-    { id:'man_kit_1', nombre:'Agrícola El Peral S.A.', rut:'76.333.444-9', contacto:'contacto@agricolaelperal.cl',
+    { id:'man_kit_1', nombre:'Agrícola El Peral S.A.', rut:'76.333.444-9',
+      rut_representante:'11.987.654-0', nombre_representante:'Roberto Salinas Muñoz',
+      correo:'contacto@agricolaelperal.cl', telefono:'+56922334401',
+      direccion:'Fundo El Peral s/n', comuna:'Curicó', region:'Región del Maule',
       vigencia_contrato:'2026-12-29', faenas:[{nombre:'Cosecha de Limón'}] },
-    { id:'man_kit_2', nombre:'Frutícola Los Aromos S.A.', rut:'76.444.555-4', contacto:'contacto@losaromos.cl',
+    { id:'man_kit_2', nombre:'Frutícola Los Aromos S.A.', rut:'76.444.555-4',
+      rut_representante:'12.876.543-3', nombre_representante:'Patricia Vergara Soto',
+      correo:'contacto@losaromos.cl', telefono:'+56922334402',
+      direccion:'Camino Los Aromos km 4', comuna:'Molina', region:'Región del Maule',
       vigencia_contrato:'2026-11-30', faenas:[{nombre:'Packing de Uva'}] },
-    { id:'man_kit_3', nombre:'Exportadora San Rafael Ltda', rut:'76.555.666-K', contacto:'contacto@sanrafael.cl',
+    { id:'man_kit_3', nombre:'Exportadora San Rafael Ltda', rut:'76.555.666-K',
+      rut_representante:'13.765.432-6', nombre_representante:'Francisco Rojas Peña',
+      correo:'contacto@sanrafael.cl', telefono:'+56922334403',
+      direccion:'Parcela 20, Sector San Rafael', comuna:'Teno', region:'Región del Maule',
       vigencia_contrato:'2027-01-15', faenas:[{nombre:'Poda de Manzano'}] },
-    { id:'man_kit_4', nombre:'Agrícola Santa Elena SpA', rut:'76.666.777-5', contacto:'contacto@santaelena.cl',
+    { id:'man_kit_4', nombre:'Agrícola Santa Elena SpA', rut:'76.666.777-5',
+      rut_representante:'14.654.321-9', nombre_representante:'Verónica Astudillo Lara',
+      correo:'contacto@santaelena.cl', telefono:'+56922334404',
+      direccion:'Camino Santa Elena 800', comuna:'Sagrada Familia', region:'Región del Maule',
       vigencia_contrato:'2026-10-31', faenas:[{nombre:'Cosecha de Cereza'}] },
   ];
 
