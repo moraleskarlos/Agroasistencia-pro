@@ -479,6 +479,8 @@ function _verDocumentoCarpeta(indice){
   if(!d) return;
 
   if(d.tipo === 'contrato'){
+    if(typeof cargarContratos === 'function') cargarContratos();
+    if(typeof poblarSelectTrabajadoresContrato === 'function') poblarSelectTrabajadoresContrato();
     const sel = document.getElementById('c-trabajador');
     if(sel && d.trabajador_id){ sel.value = d.trabajador_id; generarPDFContrato(); }
     else toast('⚠️ No se pudo ubicar el contrato de este trabajador', 'error');
@@ -500,6 +502,7 @@ function _verDocumentoCarpeta(indice){
 
   if(d.tipo === 'anexo'){
     if(typeof cargarContratos === 'function') cargarContratos();
+    if(typeof poblarSelectTrabajadoresContrato === 'function') poblarSelectTrabajadoresContrato();
     const anexo = (anexos||[]).find(a => a.trabajador_rut === d.trabajador_rut && a.fecha_vigencia === d.fecha_firma);
     if(anexo) generarPDFAnexoPorId(anexo.id);
     else toast('⚠️ No se pudo ubicar el anexo exacto (revisa en el módulo Anexos)', 'error');
