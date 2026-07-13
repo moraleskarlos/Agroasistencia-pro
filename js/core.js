@@ -244,6 +244,12 @@ function guardarLocal(){localStorage.setItem(LOCAL_T,JSON.stringify(trabajadores
 function guardarCarpeta(){ localStorage.setItem(LOCAL_CARPETA, JSON.stringify(carpeta)); }
 
 function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, tipo, subtipo, folio, fecha_firma, descripcion }){
+  // Evita duplicar el mismo documento (ej. reabrir "Ver documento" o cargar el kit dos veces)
+  const yaExiste = carpeta.find(d =>
+    d.trabajador_rut === trabajador_rut && d.tipo === tipo &&
+    d.subtipo === (subtipo||'') && d.fecha_firma === (fecha_firma||''));
+  if(yaExiste) return yaExiste;
+
   const doc = {
     id:              Date.now().toString(),
     trabajador_id,
