@@ -450,13 +450,14 @@ function _renderCarpetaTrabajador(rut){
     .sort((a,b) => new Date(b.fecha_generacion) - new Date(a.fecha_generacion));
 
   if(!docs.length){
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--texto3);">
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">
       Sin documentos registrados</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = docs.map(d => {
+  tbody.innerHTML = docs.map((d, i) => {
     const tipoInfo = _TIPO_DOC_CARPETA[d.tipo] || _TIPO_DOC_CARPETA.otro;
+    const verSePuede = ['contrato','anexo','liquidacion','finiquito'].includes(d.tipo);
     return `<tr>
       <td style="font-size:13px;white-space:nowrap;">${tipoInfo.icono} ${tipoInfo.label}</td>
       <td style="font-size:12px;color:var(--texto2);">${d.descripcion || '—'}</td>
@@ -464,6 +465,44 @@ function _renderCarpetaTrabajador(rut){
       <td style="font-size:12px;">${d.fecha_firma ? fmtFecha(d.fecha_firma) : '—'}</td>
       <td style="font-size:12px;color:var(--texto3);">${fmtFecha(d.fecha_generacion)}</td>
       <td style="font-size:12px;color:var(--texto3);">${d.generado_por || '—'}</td>
+      <td>${verSePuede ? `<button class="btn btn-secondary btn-sm" onclick='_verDocumentoCarpeta(${i})'><i class="ti ti-eye"></i> Ver</button>` : ''}</td>
     </tr>`;
   }).join('');
+
+  _docsCarpetaActual = docs; // guarda referencia para _verDocumentoCarpeta
+}
+
+let _docsCarpetaActual = [];
+
+function _verDocumentoCarpeta(indice){
+  const d = _docsCarpetaActual[indice];
+  if(!d) return;
+
+  if(d.tipo === 'contrato'){
+    const sel = document.getElementById('c-trabajador');
+    if(sel && d.trabajador_id){ sel.value = d.trabajador_id; generarPDFContrato(); }
+    else toast('⚠️ No se pudo ubicar el contrato de este trabajador', 'error');
+    return;
+  }
+
+  if(d.tipo === 'finiquito'){
+    if(typeof cargarFiniquitos === 'function') cargarFiniquitos();
+    if(d.folio) imprimirFiniquito(d.folio);
+    else toast('⚠️ No se encontró el folio del finiquito', 'error');
+    return;
+  }
+
+  if(d.tipo === 'liquidacion'){
+    if(typeof cargarLiquidaciones === 'function') cargarLiquidaciones();
+    imprimirLiquidacion(d.trabajador_rut, d.subtipo); // subtipo guarda el período (AAAA-MM)
+    return;
+  }
+
+  if(d.tipo === 'anexo'){
+    if(typeof cargarContratos === 'function') cargarContratos();
+    const anexo = (anexos||[]).find(a => a.trabajador_rut === d.trabajador_rut && a.fecha_vigencia === d.fecha_firma);
+    if(anexo) generarPDFAnexoPorId(anexo.id);
+    else toast('⚠️ No se pudo ubicar el anexo exacto (revisa en el módulo Anexos)', 'error');
+    return;
+  }
 }
