@@ -2,6 +2,7 @@
 
 function cargarTrabajadores(){
   const fEmp    = document.getElementById('filtro-empresa')?.value || '';
+  const fEmpProp= document.getElementById('filtro-empresa-propia')?.value || '';
   const fEst    = document.getElementById('filtro-estado')?.value  || '';
   const fFecha  = document.getElementById('filtro-fecha-ingreso')?.value || '';
   const buscar  = (document.getElementById('buscar-trab')?.value || '').toLowerCase().replace(/\./g,'');
@@ -9,11 +10,12 @@ function cargarTrabajadores(){
   const lista = trabajadores.filter(t => {
     const m       = findMandante(t);
     const mEmp    = !fEmp || (m?.id === fEmp) || (m?.rut === fEmp) || (t.empresa_rut === fEmp) || (t.empresa === fEmp);
+    const mEmpProp= !fEmpProp || t.empresa_propia_id === fEmpProp;
     const mEst    = !fEst   || t.estado === fEst;
     const rutLimp = (t.rut||'').replace(/\./g,'').toLowerCase();
     const mBus    = !buscar || t.nombre?.toLowerCase().includes(buscar) || rutLimp.includes(buscar);
     const mFecha  = !fFecha || t.fecha_ingreso === fFecha;
-    return mEmp && mEst && mBus && mFecha;
+    return mEmp && mEmpProp && mEst && mBus && mFecha;
   });
 
   // KPIs
