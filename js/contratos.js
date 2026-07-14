@@ -121,12 +121,18 @@ function precargarContrato(){
   document.getElementById('cp-afp').value           = t.afiliacion_afp || '';
   document.getElementById('cp-salud').value         = t.sistema_salud || '';
 
+  // Auto-seleccionar la empresa empleadora del trabajador (o la ya guardada en su contrato existente)
+  const contratoPrevio = (typeof contratos !== 'undefined' ? contratos : []).find(c => c.trabajador_id === t.id);
+  const epIdTrabajador = contratoPrevio?.empresa_propia_id || t.empresa_propia_id || '';
+  const selEmpresaPropia = document.getElementById('c-empresa-propia');
+  if(selEmpresaPropia && epIdTrabajador && _modoContratoActual !== 'masivo') selEmpresaPropia.value = epIdTrabajador;
+
   // Precargar datos bloqueados — EMPRESA CONTRATISTA (desde select de empresa propia)
   const epId = document.getElementById('c-empresa-propia')?.value;
   const contratista = getEmpresaEmpleadora(epId);
   document.getElementById('cp-empresa-rut').value    = contratista.rut || '';
-  document.getElementById('cp-empresa-nombre').value = contratista.razon_social || '';
-  document.getElementById('cp-rep-nombre').value     = contratista.representante || '';
+  document.getElementById('cp-empresa-nombre').value = contratista.razon_social || contratista.nombre || '';
+  document.getElementById('cp-rep-nombre').value     = contratista.nombre_representante || '';
   document.getElementById('cp-rep-rut').value        = contratista.rut_representante || '';
 
   // Precargar EMPRESA MANDANTE (según asignación del trabajador)
@@ -192,6 +198,7 @@ const t = trabajadores.find(
     trabajador_id:       trabajadorId,
     trabajador_rut:      t?.rut || '',
     empresa_rut:         t?.empresa || t?.empresa_rut || '',
+    empresa_propia_id:   document.getElementById('c-empresa-propia')?.value || t?.empresa_propia_id || '',
     tipo:                document.getElementById('c-tipo').value,
     ciudad_firma:        document.getElementById('c-ciudad').value.trim(),
     fecha_firma:         document.getElementById('c-fecha-firma').value,
