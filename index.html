@@ -397,6 +397,7 @@
         <div class="sec-header">
           <div><div class="sec-title">Trabajadores</div><div class="sec-sub" id="trab-sub">Gestión y control del personal</div></div>
           <div style="display:flex;gap:8px;">
+            <select id="filtro-empresa-propia" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todas las empresas</option></select>
             <select id="filtro-empresa" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todos los mandantes</option></select>
             <select id="filtro-estado" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
             <button class="btn btn-secondary" onclick="exportarTrabajadoresExcel()"><i class="ti ti-download"></i> Excel</button>
