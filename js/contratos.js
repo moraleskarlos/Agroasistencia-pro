@@ -110,6 +110,55 @@ function poblarSelectTrabajadoresContrato(){
   }
   if(val) sel.value = val;
   _actualizarContadorContratos();
+  _renderListaVisualTrabajadorContrato();
+}
+
+function _renderListaVisualTrabajadorContrato(){
+  const cont = document.getElementById('lista-visual-trabajador-contrato');
+  if(!cont) return;
+
+  const buscar = (document.getElementById('ct-buscar-visual')?.value || '').toLowerCase().trim();
+  const valActual = document.getElementById('c-trabajador')?.value || '';
+
+  let lista = (_modoContratoActual === 'corregir')
+    ? trabajadores.filter(t => contratos.some(c => c.trabajador_id === t.id))
+    : trabajadores.slice();
+
+  if(buscar){
+    lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
+  }
+  lista.sort((a,b) => a.nombre?.localeCompare(b.nombre));
+
+  if(!lista.length){
+    cont.innerHTML = `<div style="padding:18px;text-align:center;color:var(--texto3);font-size:13px;">Sin resultados</div>`;
+    return;
+  }
+
+  cont.innerHTML = lista.map(t => {
+    const tieneContrato = contratos.some(c => c.trabajador_id === t.id);
+    const seleccionado  = valActual === t.id;
+    return `<div onclick="_seleccionarTrabajadorContratoVisual('${t.id}')"
+        style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
+        border-bottom:1px solid var(--borde);background:${seleccionado?'#EFF6FF':'#fff'};"
+        onmouseover="this.style.background='${seleccionado?'#EFF6FF':'#f8fafc'}'"
+        onmouseout="this.style.background='${seleccionado?'#EFF6FF':'#fff'}'">
+      <span style="width:22px;height:22px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+        font-weight:700;font-size:13px;color:#fff;background:${tieneContrato?'#16a34a':'#dc2626'};">
+        ${tieneContrato ? '✓' : '✕'}
+      </span>
+      <span style="font-size:13px;font-weight:500;flex:1;">${t.nombre}</span>
+      <span style="font-size:12px;font-family:monospace;color:var(--texto3);">${t.rut}</span>
+      <span style="font-size:11px;font-weight:600;color:${tieneContrato?'#16a34a':'#dc2626'};">${tieneContrato?'con contrato':'sin contrato'}</span>
+    </div>`;
+  }).join('');
+}
+
+function _seleccionarTrabajadorContratoVisual(id){
+  const sel = document.getElementById('c-trabajador');
+  if(!sel) return;
+  sel.value = id;
+  precargarContrato();
+  _renderListaVisualTrabajadorContrato();
 }
 
 function _actualizarContadorContratos(){
