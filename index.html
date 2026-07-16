@@ -627,25 +627,40 @@
           cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
           <i class="ti ti-shield-check"></i> EPP / IRL
         </button>
+        <button id="tab-corregir" onclick="switchTabContratos('corregir')"
+          style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
+          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+          <i class="ti ti-edit"></i> Corregir Contrato
+        </button>
       </div>
 
       <!-- SUBMÓDULO CONTRATOS -->
       <div id="sub-tab-contratos">
 
-      <div style="display:flex;gap:4px;margin-bottom:14px;">
-        <button id="btn-modo-individual" class="btn btn-primary btn-sm" onclick="cambiarModoContrato('individual')">
-          <i class="ti ti-user"></i> Individual
-        </button>
-        <button id="btn-modo-masivo" class="btn btn-secondary btn-sm" onclick="cambiarModoContrato('masivo')">
-          <i class="ti ti-users"></i> Masivo
-        </button>
+      <div id="bloque-toggle-individual-masivo" style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="display:flex;gap:4px;">
+          <button id="btn-modo-individual" class="btn btn-primary btn-sm" onclick="cambiarModoContrato('individual')">
+            <i class="ti ti-user"></i> Individual
+          </button>
+          <button id="btn-modo-masivo" class="btn btn-secondary btn-sm" onclick="cambiarModoContrato('masivo')">
+            <i class="ti ti-users"></i> Masivo
+          </button>
+        </div>
+        <div id="contratos-contador" style="font-size:12px;"></div>
+      </div>
+
+      <!-- Aviso fijo del modo Corregir -->
+      <div id="aviso-corregir-contrato" style="display:none;background:#FFFBEB;border:1px solid #FDE68A;
+        border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400E;">
+        <i class="ti ti-alert-triangle"></i> <strong>Solo para corregir errores de ingreso.</strong>
+        Si necesitas cambiar sueldo, cargo, faena o cualquier condición ya pactada con el trabajador, usa un <strong>Anexo</strong> en su lugar.
       </div>
 
       <div class="card" style="margin-bottom:14px;">
         <div class="g2">
           <div class="f-group"><label class="form-label">Tipo de contrato</label><select class="f-input" id="c-tipo" onchange="cambiarTipoContrato()"><option value="temporada">Contrato de temporada</option><option value="indefinido">Contrato indefinido</option><option value="plazo_fijo">Contrato a plazo fijo</option></select></div>
           <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="precargarContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
-          <div class="f-group" id="campo-c-trabajador-individual"><label class="form-label">Seleccionar trabajador</label><select class="f-input" id="c-trabajador" onchange="precargarContrato()"><option value="">— Seleccionar trabajador —</option></select></div>
+          <div class="f-group" id="campo-c-trabajador-individual"><label class="form-label" id="lbl-c-trabajador-select">Seleccionar trabajador</label><select class="f-input" id="c-trabajador" onchange="precargarContrato()"><option value="">— Seleccionar trabajador —</option></select></div>
         </div>
       </div>
 
@@ -741,6 +756,10 @@
             </div>
             <div style="display:none;gap:8px;" id="botones-contrato-masivo">
               <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="previsualizarContratosMasivo()"><i class="ti ti-eye"></i> Vista previa</button>
+              <button class="btn btn-secondary" onclick="limpiarContrato()"><i class="ti ti-refresh"></i> Limpiar</button>
+            </div>
+            <div style="display:none;gap:8px;" id="botones-contrato-corregir">
+              <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="guardarCorreccionContrato()"><i class="ti ti-device-floppy"></i> Guardar corrección</button>
               <button class="btn btn-secondary" onclick="limpiarContrato()"><i class="ti ti-refresh"></i> Limpiar</button>
             </div>
           </div>
