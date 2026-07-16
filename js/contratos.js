@@ -96,9 +96,31 @@ function poblarSelectTrabajadoresContrato(){
   const sel = document.getElementById('c-trabajador');
   if(!sel) return;
   const val = sel.value;
-  sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>' +
-    trabajadores.map(t => `<option value="${t.id}">${t.nombre} — ${t.rut}</option>`).join('');
+
+  if(_modoContratoActual === 'corregir'){
+    const conContrato = trabajadores.filter(t => contratos.some(c => c.trabajador_id === t.id));
+    sel.innerHTML = '<option value="">— Selecciona el contrato a corregir —</option>' +
+      conContrato.map(t => `<option value="${t.id}">${t.nombre} — ${t.rut}</option>`).join('');
+  } else {
+    sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>' +
+      trabajadores.map(t => {
+        const yaTiene = contratos.some(c => c.trabajador_id === t.id);
+        return `<option value="${t.id}">${yaTiene ? '✓ ' : ''}${t.nombre} — ${t.rut}</option>`;
+      }).join('');
+  }
   if(val) sel.value = val;
+  _actualizarContadorContratos();
+}
+
+function _actualizarContadorContratos(){
+  const el = document.getElementById('contratos-contador');
+  if(!el) return;
+  const conContrato = trabajadores.filter(t => contratos.some(c => c.trabajador_id === t.id)).length;
+  const sinContrato = trabajadores.length - conContrato;
+  el.innerHTML = `
+    <span style="cursor:pointer;color:#065f46;font-weight:600;" onclick="switchTabContratos('corregir')">${conContrato} con contrato</span>
+    <span style="color:var(--texto3);"> · </span>
+    <span style="cursor:pointer;color:#92400e;font-weight:600;" onclick="switchTabContratos('contratos')">${sinContrato} sin contrato</span>`;
 }
 
 function precargarContrato(){
@@ -108,6 +130,10 @@ function precargarContrato(){
 
   const t = trabajadores.find(x => x.rut === id || x.id === id);
   if(!t) return;
+
+  if(_modoContratoActual === 'individual' && contratos.some(c => c.trabajador_id === t.id)){
+    toast(`⚠️ ${t.nombre} ya tiene contrato — considera usar "Corregir Contrato" o un Anexo en su lugar`, 'error');
+  }
 
   if(eppCont && _modoContratoActual !== 'masivo'){
     eppCont.innerHTML = _htmlFormularioEpp('cepp', t);
@@ -275,6 +301,46 @@ function guardarContrato(){
 
   toast('✅ Contrato guardado correctamente','exito');
   actualizarPrevia();
+}
+
+function guardarCorreccionContrato(){
+  const id = document.getElementById('c-trabajador').value;
+  if(!id){ toast('⚠️ Selecciona el contrato a corregir','error'); return; }
+
+  const t = trabajadores.find(x => x.rut === id || x.id === id);
+  if(!t){ toast('⚠️ Trabajador no encontrado','error'); return; }
+
+  cargarContratos();
+  const existe = contratos.findIndex(c => c.trabajador_id === (t.id));
+  if(existe < 0){ toast('⚠️ Este trabajador no tiene un contrato registrado para corregir','error'); return; }
+
+  const cargo = document.getElementById('c-cargo').value.trim();
+  if(!cargo){ toast('⚠️ Ingresa la función/cargo','error'); return; }
+  const faena = document.getElementById('c-faena').value.trim();
+  if(!faena){ toast('⚠️ Ingresa el nombre de la faena','error'); return; }
+  const termino = document.getElementById('c-fecha-termino').value;
+  if(!termino){ toast('⚠️ Ingresa la fecha de término','error'); return; }
+
+  const datos = obtenerDatosFormulario();
+  contratos[existe] = {...contratos[existe], ...datos};
+  guardarContratos();
+
+  Object.assign(t, _leerFormularioEpp('cepp'));
+  guardarLocal();
+
+  const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[datos.tipo] || datos.tipo;
+  registrarDocumentoCarpeta({
+    trabajador_id:  t.id,
+    trabajador_rut: t.rut,
+    tipo:           'correccion_contrato',
+    subtipo:        datos.tipo,
+    fecha_firma:    datos.fecha_firma || '',
+    descripcion:    `Corrección de datos del contrato ${tipoTxt} — ${datos.nombre_faena || ''}`.trim(),
+  });
+
+  toast('✅ Corrección guardada — quedó registrada en la Carpeta Laboral', 'exito');
+  actualizarPrevia();
+  poblarSelectTrabajadoresContrato();
 }
 
 function limpiarContrato(){
@@ -1004,19 +1070,22 @@ ${clausulasHTML}
 
 function switchTabContratos(tab){
   tabContratosActivo = tab;
-  const tabs = { contratos:'tab-contratos', anexos:'tab-anexos', epp:'tab-epp' };
-  const subs = { contratos:'sub-tab-contratos', anexos:'sub-tab-anexos', epp:'sub-tab-epp' };
+  const tabs = { contratos:'tab-contratos', anexos:'tab-anexos', epp:'tab-epp', corregir:'tab-corregir' };
+  // 'corregir' reutiliza el mismo panel visual que 'contratos' (mismo formulario)
+  const subs = { contratos:'sub-tab-contratos', anexos:'sub-tab-anexos', epp:'sub-tab-epp', corregir:'sub-tab-contratos' };
   const hdrBtns = document.getElementById('contratos-header-btns');
 
   Object.keys(tabs).forEach(key => {
     const btn = document.getElementById(tabs[key]);
-    const sub = document.getElementById(subs[key]);
-    if(!btn || !sub) return;
+    if(!btn) return;
     const activo = key === tab;
     btn.style.borderBottomColor = activo ? 'var(--azul)' : 'transparent';
     btn.style.color = activo ? 'var(--azul)' : 'var(--texto2)';
-    sub.style.display = activo ? '' : 'none';
   });
+  // Mostrar/ocultar los paneles (sin duplicar 'sub-tab-contratos' al ocultarlo dos veces)
+  document.getElementById('sub-tab-contratos').style.display = (tab === 'contratos' || tab === 'corregir') ? '' : 'none';
+  document.getElementById('sub-tab-anexos').style.display    = (tab === 'anexos') ? '' : 'none';
+  document.getElementById('sub-tab-epp').style.display       = (tab === 'epp') ? '' : 'none';
 
   if(hdrBtns) hdrBtns.style.display = (tab === 'contratos') ? 'flex' : 'none';
 
@@ -1026,6 +1095,12 @@ function switchTabContratos(tab){
   }
   if(tab === 'epp'){
     initEppTab();
+  }
+  if(tab === 'contratos'){
+    cambiarModoContrato('individual');
+  }
+  if(tab === 'corregir'){
+    cambiarModoContrato('corregir');
   }
 }
 
@@ -1102,25 +1177,40 @@ let _modoContratoActual = 'individual';
 
 function cambiarModoContrato(modo){
   _modoContratoActual = modo;
-  const esMasivo = modo === 'masivo';
+  const esMasivo   = modo === 'masivo';
+  const esCorregir = modo === 'corregir';
+  const esIndividual = modo === 'individual';
 
-  document.getElementById('btn-modo-individual').className = esMasivo ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm';
-  document.getElementById('btn-modo-masivo').className     = esMasivo ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+  document.getElementById('btn-modo-individual').className = esIndividual ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+  document.getElementById('btn-modo-masivo').className     = esMasivo     ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+
+  const bloqueToggle = document.getElementById('bloque-toggle-individual-masivo');
+  if(bloqueToggle) bloqueToggle.style.display = esCorregir ? 'none' : 'flex';
 
   document.getElementById('campo-c-trabajador-individual').style.display = esMasivo ? 'none' : '';
   document.getElementById('bloque-contrato-masivo').style.display       = esMasivo ? 'block' : 'none';
   document.getElementById('bloque-precargados-individual').style.display= esMasivo ? 'none' : '';
   document.getElementById('g2-contrato-cols').style.gridTemplateColumns = esMasivo ? '1fr' : '1fr 1fr';
 
-  document.getElementById('botones-contrato-individual').style.display = esMasivo ? 'none' : 'flex';
+  document.getElementById('botones-contrato-individual').style.display = (esIndividual) ? 'flex' : 'none';
   document.getElementById('botones-contrato-masivo').style.display     = esMasivo ? 'flex' : 'none';
+  const botonesCorregir = document.getElementById('botones-contrato-corregir');
+  if(botonesCorregir) botonesCorregir.style.display = esCorregir ? 'flex' : 'none';
 
   const btnHeader = document.getElementById('btn-generar-pdf-header');
   if(btnHeader) btnHeader.style.display = esMasivo ? 'none' : '';
   const btnVerDoc = document.getElementById('btn-ver-doc-individual');
   if(btnVerDoc) btnVerDoc.style.display = esMasivo ? 'none' : '';
 
-  // Cargo y horas pasan a ser editables (son compartidos para todo el grupo)
+  // Aviso fijo del modo Corregir
+  const avisoCorregir = document.getElementById('aviso-corregir-contrato');
+  if(avisoCorregir) avisoCorregir.style.display = esCorregir ? 'block' : 'none';
+
+  // Label del selector cambia según el modo
+  const lblSelector = document.getElementById('lbl-c-trabajador-select');
+  if(lblSelector) lblSelector.textContent = esCorregir ? 'Selecciona el contrato a corregir' : 'Seleccionar trabajador';
+
+  // Cargo y horas pasan a ser editables solo en modo masivo (compartidos para todo el grupo)
   const cCargo = document.getElementById('c-cargo');
   const cHoras = document.getElementById('c-horas');
   const lblCargo = document.getElementById('lbl-c-cargo');
@@ -1138,12 +1228,14 @@ function cambiarModoContrato(modo){
   if(lblHoras) lblHoras.textContent = esMasivo ? 'Horas semanales' : 'Horas semanales (auto)';
 
   document.getElementById('c-trabajador').value = '';
+  limpiarPreview();
 
   const eppCont = document.getElementById('epp-en-contrato');
   if(eppCont){
     eppCont.innerHTML = esMasivo ? _htmlFormularioEpp('cepp', {}) : '';
   }
 
+  poblarSelectTrabajadoresContrato(); // repuebla según el modo (todos con check, o solo los que tienen contrato)
   if(esMasivo) renderListaContratoMasivo();
 }
 
