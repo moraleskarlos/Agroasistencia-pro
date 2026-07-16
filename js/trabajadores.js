@@ -322,13 +322,14 @@ function _badgeSemaforo(semaforo, fechaVenc){
 let _perfil_rut_actual = null;
 
 const _TIPO_DOC_CARPETA = {
-  contrato:       { icono:'📄', label:'Contrato' },
-  anexo:          { icono:'📎', label:'Anexo' },
-  liquidacion:    { icono:'💰', label:'Liquidación' },
-  finiquito:      { icono:'📝', label:'Finiquito' },
-  epp_riohs_irl:  { icono:'⚠️', label:'RIOHS / IRL' },
-  carta:          { icono:'✉️', label:'Carta' },
-  otro:           { icono:'📁', label:'Otro' },
+  contrato:            { icono:'📄', label:'Contrato' },
+  correccion_contrato: { icono:'✏️', label:'Corrección de contrato' },
+  anexo:               { icono:'📎', label:'Anexo' },
+  liquidacion:         { icono:'💰', label:'Liquidación' },
+  finiquito:           { icono:'📝', label:'Finiquito' },
+  epp_riohs_irl:       { icono:'⚠️', label:'RIOHS / IRL' },
+  carta:               { icono:'✉️', label:'Carta' },
+  otro:                { icono:'📁', label:'Otro' },
 };
 
 function verPerfilTrabajador(rut){
@@ -459,7 +460,7 @@ function _renderCarpetaTrabajador(rut){
 
   tbody.innerHTML = docs.map((d, i) => {
     const tipoInfo = _TIPO_DOC_CARPETA[d.tipo] || _TIPO_DOC_CARPETA.otro;
-    const verSePuede = ['contrato','anexo','liquidacion','finiquito'].includes(d.tipo);
+    const verSePuede = ['contrato','correccion_contrato','anexo','liquidacion','finiquito'].includes(d.tipo);
     return `<tr>
       <td style="font-size:13px;white-space:nowrap;">${tipoInfo.icono} ${tipoInfo.label}</td>
       <td style="font-size:12px;color:var(--texto2);">${d.descripcion || '—'}</td>
@@ -480,7 +481,7 @@ function _verDocumentoCarpeta(indice){
   const d = _docsCarpetaActual[indice];
   if(!d) return;
 
-  if(d.tipo === 'contrato'){
+  if(d.tipo === 'contrato' || d.tipo === 'correccion_contrato'){
     if(typeof cargarContratos === 'function') cargarContratos();
     if(typeof poblarSelectTrabajadoresContrato === 'function') poblarSelectTrabajadoresContrato();
     const sel = document.getElementById('c-trabajador');
