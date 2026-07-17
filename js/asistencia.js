@@ -2,7 +2,30 @@
 
 function initAsistencia(){
   document.getElementById('asist-fecha').value = new Date().toISOString().split('T')[0];
+  switchTabAsistencia('registro');
   cargarAsistencia();
+}
+
+function switchTabAsistencia(tab){
+  const esRegistro = tab === 'registro';
+  document.getElementById('tab-asist-registro').style.borderBottomColor = esRegistro ? 'var(--azul)' : 'transparent';
+  document.getElementById('tab-asist-registro').style.color = esRegistro ? 'var(--azul)' : 'var(--texto2)';
+  document.getElementById('tab-asist-reportes').style.borderBottomColor = esRegistro ? 'transparent' : 'var(--azul)';
+  document.getElementById('tab-asist-reportes').style.color = esRegistro ? 'var(--texto2)' : 'var(--azul)';
+  document.getElementById('sub-tab-asist-registro').style.display = esRegistro ? '' : 'none';
+  document.getElementById('sub-tab-asist-reportes').style.display = esRegistro ? 'none' : '';
+
+  if(!esRegistro){
+    if(typeof poblarSelects === 'function') poblarSelects();
+    const selRep = document.getElementById('rep-asist-empresa');
+    const selReg = document.getElementById('asist-empresa');
+    if(selRep && selReg){
+      const val = selRep.value;
+      selRep.innerHTML = selReg.innerHTML;
+      if(val) selRep.value = val;
+    }
+    if(!document.getElementById('rep-asist-inicio').value) rangoRapidoAsistencia('semana');
+  }
 }
 
 function calcularHoras(entrada, salida){
@@ -44,13 +67,15 @@ function badgeEstado(registro){
 }
 
 function cargarAsistencia(){
-  const filtro = document.getElementById('asist-empresa').value;
-  const fecha  = document.getElementById('asist-fecha').value;
-  const clave  = 'asistencia_' + fecha;
-  const data   = JSON.parse(localStorage.getItem(clave) || '[]');
+  const filtro  = document.getElementById('asist-empresa').value;
+  const fecha   = document.getElementById('asist-fecha').value;
+  const buscar  = (document.getElementById('asist-buscar')?.value || '').toLowerCase().trim();
+  const clave   = 'asistencia_' + fecha;
+  const data    = JSON.parse(localStorage.getItem(clave) || '[]');
 
   let lista = trabajadores.filter(t => t.estado === 'activo');
   if(filtro) lista = lista.filter(t => (t.mandante_id === filtro || t.empresa_rut === filtro || t.empresa === filtro));
+  if(buscar) lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
 
   // KPIs — basados en nuevo estado
   let pendientes = 0, activos = 0, cerrados = 0;
@@ -94,7 +119,7 @@ function cargarAsistencia(){
     const ini      = (t.nombre||'??').split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
     const rid      = t.rut.replace(/\./g,'').replace('-','');
     const registro = data.find(x => x.rut === t.rut);
-    const bloq     = !!registro;
+    const bloq     = !!registro && !_filasEditandoAsist.has(t.rut);
 
     // Calcular horas y jornada desde datos guardados
     const horasGuardadas = registro ? registro.horas_trabajadas : null;
@@ -141,8 +166,9 @@ function cargarAsistencia(){
       <td>${badgeEstado(registro)}</td>
       <td>
         ${bloq
-          ? `<button class="btn btn-secondary btn-sm" onclick="editarAsistencia('${t.rut}')" title="Editar"><i class="ti ti-edit"></i></button>`
-          : `<button class="btn btn-primary btn-sm" onclick="guardarMarcacion('${t.rut}')"><i class="ti ti-check"></i> Marcar</button>`
+          ? `<button class="btn btn-secondary btn-sm" onclick="habilitarEdicionAsistencia('${t.rut}')" title="Editar"><i class="ti ti-edit"></i></button>
+             <button class="btn btn-secondary btn-sm" onclick="eliminarMarcacionAsistencia('${t.rut}')" title="Eliminar"><i class="ti ti-trash"></i></button>`
+          : `<button class="btn btn-primary btn-sm" onclick="guardarMarcacion('${t.rut}')"><i class="ti ti-check"></i> ${registro ? 'Guardar cambios' : 'Marcar'}</button>`
         }
       </td>
     </tr>`;
@@ -199,16 +225,30 @@ function guardarMarcacion(rut){
 
   const t = trabajadores.find(x => x.rut === rut);
   toast(`✅ ${t?.nombre?.split(' ')[0]||rut} — ${entrada}${salida ? ' → ' + salida : ''}`, 'exito');
+  _filasEditandoAsist.delete(rut);
   cargarAsistencia();
 }
 
-function editarAsistencia(rut){
+let _filasEditandoAsist = new Set();
+
+function habilitarEdicionAsistencia(rut){
+  _filasEditandoAsist.add(rut);
+  cargarAsistencia();
+}
+
+function eliminarMarcacionAsistencia(rut){
+  const t = trabajadores.find(x => x.rut === rut);
+  if(!confirm(`¿Eliminar la marcación de ${t?.nombre||rut}? Esta acción no se puede deshacer.`)) return;
+
   const fecha = document.getElementById('asist-fecha').value;
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
   const idx   = data.findIndex(x => x.rut === rut);
   if(idx >= 0) data.splice(idx, 1);
   localStorage.setItem(clave, JSON.stringify(data));
+
+  _filasEditandoAsist.delete(rut);
+  toast('🗑️ Marcación eliminada', 'exito');
   cargarAsistencia();
 }
 
@@ -256,4 +296,132 @@ function cierreMasivoTurno(){
 
 function seleccionarTodosAsist(checked){
   document.querySelectorAll('.asist-check:not(:disabled)').forEach(c => c.checked = checked);
+}
+
+/* ════════════════════════════════════════════════════════
+   REPORTES DE ASISTENCIA — rango de fechas
+   ════════════════════════════════════════════════════════ */
+function rangoRapidoAsistencia(tipo){
+  const hoy = new Date();
+  const fmt = d => d.toISOString().slice(0,10);
+  let inicio, fin;
+
+  if(tipo === 'hoy'){
+    inicio = fin = new Date(hoy);
+  } else if(tipo === 'ayer'){
+    inicio = fin = new Date(hoy); inicio.setDate(inicio.getDate()-1); fin = new Date(inicio);
+  } else if(tipo === 'semana'){
+    const diaSemana = (hoy.getDay() + 6) % 7; // lunes=0
+    inicio = new Date(hoy); inicio.setDate(hoy.getDate() - diaSemana);
+    fin = new Date(hoy);
+  } else if(tipo === 'semana_pasada'){
+    const diaSemana = (hoy.getDay() + 6) % 7;
+    fin = new Date(hoy); fin.setDate(hoy.getDate() - diaSemana - 1);
+    inicio = new Date(fin); inicio.setDate(fin.getDate() - 6);
+  } else if(tipo === 'mes'){
+    inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    fin = new Date(hoy);
+  } else if(tipo === 'mes_pasado'){
+    inicio = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
+    fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+  }
+
+  document.getElementById('rep-asist-inicio').value = fmt(inicio);
+  document.getElementById('rep-asist-fin').value = fmt(fin);
+  generarReporteAsistencia();
+}
+
+function _fechasEnRango(inicio, fin){
+  const fechas = [];
+  const d = new Date(inicio + 'T00:00:00');
+  const dFin = new Date(fin + 'T00:00:00');
+  while(d <= dFin){
+    fechas.push(d.toISOString().slice(0,10));
+    d.setDate(d.getDate()+1);
+  }
+  return fechas;
+}
+
+function generarReporteAsistencia(){
+  const inicio = document.getElementById('rep-asist-inicio').value;
+  const fin    = document.getElementById('rep-asist-fin').value;
+  if(!inicio || !fin){ toast('⚠️ Elige fecha de inicio y de término', 'error'); return; }
+  if(inicio > fin){ toast('⚠️ La fecha de inicio no puede ser posterior a la de término', 'error'); return; }
+
+  const filtroEmp = document.getElementById('rep-asist-empresa')?.value || '';
+  const buscar    = (document.getElementById('rep-asist-buscar')?.value || '').toLowerCase().trim();
+
+  const fechas = _fechasEnRango(inicio, fin);
+  const filas = [];
+
+  fechas.forEach(fecha => {
+    const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
+    data.forEach(m => {
+      const t = trabajadores.find(x => x.rut === m.rut);
+      if(!t) return;
+      if(filtroEmp && !(t.mandante_id === filtroEmp || t.empresa_rut === filtroEmp || t.empresa === filtroEmp)) return;
+      if(buscar && !(t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar))) return;
+
+      const mandante = (typeof findMandante === 'function') ? findMandante(t) : null;
+      filas.push({
+        fecha, nombre: t.nombre, rut: t.rut,
+        mandante: mandante?.nombre || '—',
+        hora_entrada: m.hora_entrada || '—',
+        hora_salida: m.hora_salida || '—',
+        horas: m.horas_trabajadas || 0,
+        jornada: m.jornada || '—',
+      });
+    });
+  });
+
+  filas.sort((a,b) => a.fecha === b.fecha ? a.nombre.localeCompare(b.nombre) : a.fecha.localeCompare(b.fecha));
+
+  const tbody = document.getElementById('tbody-reporte-asistencia');
+  if(!filas.length){
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Sin marcaciones en este rango</td></tr>`;
+  } else {
+    tbody.innerHTML = filas.map(f => `<tr>
+      <td style="font-size:12px;">${fmtFecha(f.fecha)}</td>
+      <td style="font-size:13px;font-weight:500;">${f.nombre}</td>
+      <td style="font-size:12px;font-family:monospace;">${f.rut}</td>
+      <td style="font-size:12px;">${f.mandante}</td>
+      <td style="font-size:12px;">${f.hora_entrada}</td>
+      <td style="font-size:12px;">${f.hora_salida}</td>
+      <td style="font-size:12px;text-align:center;">${f.horas || '—'}</td>
+      <td>${badgeJornada(f.jornada)}</td>
+    </tr>`).join('');
+  }
+
+  const diasConDatos = new Set(filas.map(f => f.fecha)).size;
+  const totalHoras = filas.reduce((s,f) => s + (parseFloat(f.horas)||0), 0);
+  const promedio = filas.length ? (totalHoras / filas.length) : 0;
+  const porRevisar = filas.filter(f => f.jornada === '⚠️ Revisar').length;
+
+  document.getElementById('rep-asist-dias').textContent = diasConDatos;
+  document.getElementById('rep-asist-horas').textContent = totalHoras.toFixed(1);
+  document.getElementById('rep-asist-promedio').textContent = promedio.toFixed(1);
+  document.getElementById('rep-asist-revisar').textContent = porRevisar;
+
+  _reporteAsistenciaActual = filas;
+}
+
+let _reporteAsistenciaActual = [];
+
+function exportarReporteAsistenciaExcel(){
+  if(!_reporteAsistenciaActual.length){ toast('⚠️ Genera el reporte primero', 'error'); return; }
+
+  const inicio = document.getElementById('rep-asist-inicio').value;
+  const fin    = document.getElementById('rep-asist-fin').value;
+
+  const rows = _reporteAsistenciaActual.map(f => ({
+    'Fecha': f.fecha, 'Trabajador': f.nombre, 'RUT': f.rut, 'Mandante': f.mandante,
+    'Entrada': f.hora_entrada, 'Salida': f.hora_salida, 'Horas': f.horas, 'Jornada': f.jornada,
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:12},{wch:26},{wch:14},{wch:24},{wch:10},{wch:10},{wch:8},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
+  XLSX.writeFile(wb, `Reporte_Asistencia_${inicio}_a_${fin}.xlsx`);
+  toast('⬇️ Excel exportado', 'exito');
 }
