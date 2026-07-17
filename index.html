@@ -1819,9 +1819,29 @@
       <div id="p-asistencia" class="pagina">
         <div class="sec-header">
           <div><div class="sec-title">Control de Asistencia</div><div class="sec-sub">Tareo diario y registro de jornadas</div></div>
-          <div style="display:flex;gap:8px;">
+        </div>
+
+        <div style="display:flex;gap:0;border-bottom:1px solid var(--borde);margin-bottom:16px;">
+          <button id="tab-asist-registro" onclick="switchTabAsistencia('registro')"
+            style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
+            cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);">
+            <i class="ti ti-calendar-check"></i> Registro
+          </button>
+          <button id="tab-asist-reportes" onclick="switchTabAsistencia('reportes')"
+            style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
+            cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+            <i class="ti ti-report"></i> Reportes
+          </button>
+        </div>
+
+        <!-- SUBMÓDULO REGISTRO (diario) -->
+        <div id="sub-tab-asist-registro">
+        <div class="sec-header">
+          <div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <input type="date" id="asist-fecha" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()">
             <select id="asist-empresa" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()"><option value="">Todos los mandantes</option></select>
+            <input type="text" id="asist-buscar" oninput="cargarAsistencia()" placeholder="Buscar nombre o RUT..." style="padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
             <button class="btn btn-secondary" onclick="exportarAsistenciaExcel()"><i class="ti ti-download"></i> Excel</button>
           </div>
         </div>
@@ -1862,6 +1882,63 @@
             <tbody id="tbody-asistencia"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--texto3);">Selecciona una fecha para ver la asistencia</td></tr></tbody></table>
           </div>
         </div>
+        </div><!-- /sub-tab-asist-registro -->
+
+        <!-- SUBMÓDULO REPORTES (rango de fechas) -->
+        <div id="sub-tab-asist-reportes" style="display:none;">
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+              <button class="btn btn-secondary btn-sm" onclick="rangoRapidoAsistencia('hoy')">Hoy</button>
+              <button class="btn btn-secondary btn-sm" onclick="rangoRapidoAsistencia('ayer')">Ayer</button>
+              <button class="btn btn-secondary btn-sm" onclick="rangoRapidoAsistencia('semana')">Esta semana</button>
+              <button class="btn btn-secondary btn-sm" onclick="rangoRapidoAsistencia('semana_pasada')">Semana pasada</button>
+              <button class="btn btn-secondary btn-sm" onclick="rangoRapidoAsistencia('mes')">Este mes</button>
+              <button class="btn btn-secondary btn-sm" onclick="rangoRapidoAsistencia('mes_pasado')">Mes pasado</button>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+              <div class="form-group" style="margin:0;">
+                <label>Desde</label>
+                <input type="date" id="rep-asist-inicio">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>Hasta</label>
+                <input type="date" id="rep-asist-fin">
+              </div>
+              <div class="form-group" style="min-width:200px;margin:0;">
+                <label>Mandante</label>
+                <select id="rep-asist-empresa"><option value="">Todos los mandantes</option></select>
+              </div>
+              <div class="form-group" style="min-width:200px;margin:0;">
+                <label>Buscar trabajador</label>
+                <input type="text" id="rep-asist-buscar" placeholder="Nombre o RUT...">
+              </div>
+              <button class="btn btn-primary" onclick="generarReporteAsistencia()"><i class="ti ti-search"></i> Generar reporte</button>
+              <button class="btn btn-secondary" onclick="exportarReporteAsistenciaExcel()"><i class="ti ti-download"></i> Excel</button>
+            </div>
+          </div>
+
+          <div class="g4" style="margin-bottom:16px;">
+            <div class="kpi azul"><div class="kpi-label">Días con datos</div><div class="kpi-value" id="rep-asist-dias">0</div><div class="kpi-sub">en el rango</div></div>
+            <div class="kpi verde"><div class="kpi-label">Total horas</div><div class="kpi-value" id="rep-asist-horas">0</div><div class="kpi-sub">trabajadas</div></div>
+            <div class="kpi azul"><div class="kpi-label">Promedio diario</div><div class="kpi-value" id="rep-asist-promedio">0</div><div class="kpi-sub">horas / marcación</div></div>
+            <div class="kpi amarillo"><div class="kpi-label">Por revisar</div><div class="kpi-value" id="rep-asist-revisar">0</div><div class="kpi-sub">jornadas +12h</div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title"><i class="ti ti-table"></i> Detalle del período</div>
+            <div class="tabla-wrap">
+              <table class="tabla">
+                <thead><tr>
+                  <th>Fecha</th><th>Trabajador</th><th>RUT</th><th>Mandante</th>
+                  <th>Entrada</th><th>Salida</th><th>Horas</th><th>Estado</th>
+                </tr></thead>
+                <tbody id="tbody-reporte-asistencia">
+                  <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--texto3);">Elige un rango y genera el reporte</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /sub-tab-asist-reportes -->
       </div>
 
       <!-- EXPORTAR -->
