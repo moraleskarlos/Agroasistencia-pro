@@ -449,57 +449,26 @@ function actualizarPrevia(){
   const p  = document.getElementById('contrato-preview');
   if(!id || !p){ limpiarPreview(); return; }
 
-  const t    = trabajadores.find(x => x.id === id);
-  const emp  = empresas.find(e => e.id===(t?.mandante_id||t?.empresa||t?.empresa_rut) || e.rut===(t?.empresa||t?.empresa_rut));
-  const tipo = document.getElementById('c-tipo').value;
-  const tipoTxt = tipo === 'temporada' ? 'Temporada' : tipo === 'indefinido' ? 'Indefinido' : 'Plazo fijo';
+  const t        = trabajadores.find(x => x.id === id);
+  const epId     = document.getElementById('c-empresa-propia')?.value || t?.empresa_propia_id || '';
+  const emp      = getEmpresaEmpleadora(epId);
+  const mandante = findMandante(t);
+  const datos    = obtenerDatosFormulario();
 
-  const cargo    = document.getElementById('c-cargo')?.value || '—';
-  const faena    = document.getElementById('c-faena')?.value || '—';
-  const region   = emp?.region || '—';
-  const temporada= document.getElementById('c-temporada')?.value || '—';
-  const termino  = document.getElementById('c-fecha-termino')?.value
-    ? new Date(document.getElementById('c-fecha-termino').value).toLocaleDateString('es-CL') : '—';
-  const horas    = document.getElementById('c-horas')?.value || '—';
-  const sueldo   = document.getElementById('c-sueldo')?.value
-    ? '$' + parseInt(document.getElementById('c-sueldo').value).toLocaleString('es-CL') : '—';
-  const tipoRem  = document.getElementById('c-tipo-rem')?.value || '—';
-  const bens     = [];
-  if(document.getElementById('ben-alojamiento')?.checked) bens.push('Alojamiento');
-  if(document.getElementById('ben-alimentacion')?.checked) bens.push('Alimentación');
-  if(document.getElementById('ben-transporte')?.checked)  bens.push('Transporte');
-  if(document.getElementById('ben-luz')?.checked)         bens.push('Luz');
-
-  const rows = [
-    ['Tipo contrato', tipoTxt],
-    ['Trabajador',    t?.nombre || '—'],
-    ['RUT',           t?.rut || '—'],
-    ['Empleador',     (()=>{ const epId=document.getElementById('c-empresa-propia')?.value; const ep=epId?empresas_propias.find(e=>e.id===epId):null; return ep?.nombre||ep?.razon_social||cfg.empresa?.razon_social||'—'; })()],
-    ['Mandante',      emp?.nombre || '—'],
-    ['Función',       cargo],
-    ['Faena',         faena],
-    ['Región',        region],
-    ['Temporada',     temporada],
-    ['F. Inicio',     t?.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString('es-CL') : '—'],
-    ['F. Término',    termino],
-    ['Jornada',       horas !== '—' ? horas + ' hrs/sem' : '—'],
-    ['Remuneración',  tipoRem + ' · ' + sueldo],
-    ['Beneficios',    bens.length ? bens.join(', ') : 'Sin beneficios'],
-  ];
+  const { htmlCompleto } = construirDocumentoContrato(t, emp, mandante, datos);
+  const docHTML = _contenidoInternoDocumento(htmlCompleto);
 
   p.innerHTML = `
     <div style="background:#0f2942;color:#fff;padding:9px 12px;border-radius:var(--radius) var(--radius) 0 0;font-size:12px;font-weight:600;text-align:center;">
-      Contrato de trabajo — ${tipoTxt}<br>
-      <span style="font-size:10px;opacity:0.65;font-weight:400;">${emp?.nombre || ''} · ${temporada}</span>
+      Vista previa del documento
     </div>
-    <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 var(--radius) var(--radius);overflow:hidden;">
-      ${rows.map(([k,v]) => `
-        <div style="display:flex;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--borde);">
-          <span style="font-size:11px;color:var(--texto2);">${k}</span>
-          <span style="font-size:11px;font-weight:500;color:var(--texto);text-align:right;max-width:55%;">${v}</span>
-        </div>`).join('')}
+    <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 var(--radius) var(--radius);
+      max-height:520px;overflow-y:auto;background:#fff;padding:20px;">
+      <style>#contrato-preview .doc-wrap{max-width:none;font-size:9.5pt;line-height:1.55;}</style>
+      <div class="doc-wrap">${docHTML}</div>
     </div>`;
 }
+
 
 function cambiarTipoContrato(){
   const tipo = document.getElementById('c-tipo')?.value;
@@ -521,19 +490,13 @@ function cambiarTipoContrato(){
   actualizarPrevia();
 }
 
-function generarPDFContrato(soloContenido){
-  const id = document.getElementById('c-trabajador')?.value;
-  if(!id){ toast('⚠️ Selecciona un trabajador primero','error'); return; }
-
-  const datos    = obtenerDatosFormulario();
-  const t        = trabajadores.find(x => x.id === id);
-  const epId     = document.getElementById('c-empresa-propia')?.value || t?.empresa_propia_id || '';
-  const emp      = getEmpresaEmpleadora(epId);
-  const mandante = findMandante(t);
+/* Construye el documento completo (Contrato + EPP + RIOHS + IRL) a partir de
+   t/emp/mandante/datos ya resueltos. Es la ÚNICA fuente del documento — la usan
+   tanto la Vista Previa en vivo como la generación de PDF (individual y masivo),
+   así lo que se ve en pantalla mientras se completa el formulario es exactamente
+   el documento que se imprime. */
+function construirDocumentoContrato(t, emp, mandante, datos){
   const otrosMandantes = empresas.filter(e => e.id !== mandante?.id && e.estado !== 'inactivo');
-
-  if(!datos.funcion_cargo){ toast('⚠️ Ingresa la función/cargo','error'); return; }
-  if(!datos.nombre_faena){  toast('⚠️ Ingresa el nombre de la faena','error'); return; }
 
   // Fechas formateadas
   const fmtLarga = v => v ? new Date(v).toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'}) : '___________';
@@ -1091,6 +1054,36 @@ ${clausulasHTML}
 </div>
 </body></html>`;
 
+  return { htmlCompleto, folioDoc, tipo };
+}
+
+/* Extrae solo el contenido interno del documento (sin <head>/<style>, sin botones
+   de impresión) — usado para la Vista Previa en pantalla y para concatenar varios
+   contratos en un solo documento de impresión masiva. */
+function _contenidoInternoDocumento(htmlCompleto){
+  let contenido = htmlCompleto.split('<div class="doc-wrap">')[1] || '';
+  contenido = contenido.split('</body></html>')[0];
+  contenido = contenido.replace(/<div class="no-print"[\s\S]*?<\/div>\s*\n/, '');
+  return contenido;
+}
+
+/* Genera el PDF desde el formulario Individual (o para un trabajador del modo Masivo).
+   soloContenido=true devuelve solo el contenido interno, para el combinado masivo. */
+function generarPDFContrato(soloContenido){
+  const id = document.getElementById('c-trabajador')?.value;
+  if(!id){ toast('⚠️ Selecciona un trabajador primero','error'); return; }
+
+  const datos    = obtenerDatosFormulario();
+  const t        = trabajadores.find(x => x.id === id);
+  const epId     = document.getElementById('c-empresa-propia')?.value || t?.empresa_propia_id || '';
+  const emp      = getEmpresaEmpleadora(epId);
+  const mandante = findMandante(t);
+
+  if(!datos.funcion_cargo){ toast('⚠️ Ingresa la función/cargo','error'); return; }
+  if(!datos.nombre_faena){  toast('⚠️ Ingresa el nombre de la faena','error'); return; }
+
+  const { htmlCompleto, folioDoc, tipo } = construirDocumentoContrato(t, emp, mandante, datos);
+
   // Registrar en Carpeta Laboral (aplica tanto en modo individual como masivo)
   const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[tipo] || tipo;
   registrarDocumentoCarpeta({
@@ -1104,12 +1097,7 @@ ${clausulasHTML}
   });
 
   if(soloContenido){
-    // Extrae solo el contenido interno (sin <head>/<style>, sin botones de impresión)
-    // para poder concatenar varios contratos en un solo documento de impresión masiva.
-    let contenido = htmlCompleto.split('<div class="doc-wrap">')[1] || '';
-    contenido = contenido.split('</body></html>')[0];
-    contenido = contenido.replace(/<div class="no-print"[\s\S]*?<\/div>\s*\n/, '');
-    return contenido;
+    return _contenidoInternoDocumento(htmlCompleto);
   }
 
   const win = window.open('','_blank');
