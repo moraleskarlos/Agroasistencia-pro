@@ -486,12 +486,12 @@ function _folioAnexo(t){
 
 /* Arma el contexto (trabajador/empresa/contrato) desde el formulario en vivo */
 function _contextoAnexoDesdeForm(){
-  const id  = document.getElementById('anexo-trabajador-select')?.value || document.getElementById('c-trabajador')?.value;
+  const id  = document.getElementById('anexo-trabajador-select')?.value;
   const tipo = document.getElementById('anexo-tipo')?.value;
   if(!id || !tipo) return null;
 
   const t    = trabajadores.find(x => x.id === id);
-  const epId = t?.empresa_propia_id || document.getElementById('c-empresa-propia')?.value || '';
+  const epId = document.getElementById('anexo-empresa-propia')?.value || t?.empresa_propia_id || '';
   const emp  = getEmpresaEmpleadora(epId);
   const cont = contratos.find(c => c.trabajador_id === id || c.trabajador_rut === t?.rut);
 
@@ -711,6 +711,8 @@ function generarPDFAnexoPorId(id){
 /* ───────── Selección de trabajador (lista visual) ───────── */
 
 function poblarSelectAnexoTrabajador(){
+  poblarSelectEmpresaAnexo();
+
   const sel = document.getElementById('anexo-trabajador-select');
   if(!sel) return;
   const val = sel.value;
@@ -723,14 +725,44 @@ function poblarSelectAnexoTrabajador(){
   _renderListaVisualTrabajadorAnexo();
 }
 
+function poblarSelectEmpresaAnexo(){
+  const sel = document.getElementById('anexo-empresa-propia');
+  if(!sel) return;
+  const val = sel.value;
+  sel.innerHTML = '<option value="">— Todas las empresas —</option>'
+    + (empresas_propias||[])
+      .map(e => `<option value="${e.id}">${e.razon_social || e.nombre}</option>`)
+      .join('');
+  if(val) sel.value = val;
+}
+
+/* Al cambiar la Empresa Empleadora: refiltra la lista y, si el trabajador ya
+   seleccionado no pertenece a la empresa recién elegida, limpia la selección. */
+function onCambioEmpresaFiltroAnexo(){
+  const epFiltro = document.getElementById('anexo-empresa-propia')?.value || '';
+  const sel = document.getElementById('anexo-trabajador-select');
+  const actual = trabajadores.find(t => t.id === sel?.value);
+
+  if(epFiltro && actual && (actual.empresa_propia_id || '') !== epFiltro){
+    sel.value = '';
+    onSeleccionTrabajadorAnexo();
+  }
+
+  _renderListaVisualTrabajadorAnexo();
+}
+
 function _renderListaVisualTrabajadorAnexo(){
   const cont = document.getElementById('lista-visual-trabajador-anexo');
   if(!cont) return;
 
-  const buscar = (document.getElementById('anx-buscar-visual')?.value || '').toLowerCase().trim();
+  const buscar    = (document.getElementById('anx-buscar-visual')?.value || '').toLowerCase().trim();
   const valActual = document.getElementById('anexo-trabajador-select')?.value || '';
+  const epFiltro  = document.getElementById('anexo-empresa-propia')?.value || '';
 
   let lista = trabajadores.filter(t => t.estado === 'activo');
+  if(epFiltro){
+    lista = lista.filter(t => (t.empresa_propia_id || '') === epFiltro);
+  }
   if(buscar){
     lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
   }
@@ -779,8 +811,8 @@ function onSeleccionTrabajadorAnexo(){
     return;
   }
   const t    = trabajadores.find(x => x.id === id);
-  const epId3 = t?.empresa_propia_id || '';
-  const emp  = getEmpresaEmpleadora(epId3);
+  const epId = document.getElementById('anexo-empresa-propia')?.value || t?.empresa_propia_id || '';
+  const emp  = getEmpresaEmpleadora(epId);
   const man  = findMandante(t);
   const cont = contratos.find(c => c.trabajador_id === id || c.trabajador_rut === t?.rut);
 
