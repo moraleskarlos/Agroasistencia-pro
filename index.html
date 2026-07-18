@@ -646,16 +646,17 @@
       </div>
 
       <div class="card" style="margin-bottom:14px;">
-        <div class="g2">
-          <div class="f-group"><label class="form-label">Tipo de contrato</label><select class="f-input" id="c-tipo" onchange="cambiarTipoContrato()"><option value="temporada">Contrato de temporada</option><option value="indefinido">Contrato indefinido</option><option value="plazo_fijo">Contrato a plazo fijo</option></select></div>
-          <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="precargarContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
-          <div class="f-group" id="campo-c-trabajador-individual">
-          <label class="form-label" id="lbl-c-trabajador-select">Seleccionar trabajador</label>
-          <select class="f-input" id="c-trabajador" onchange="precargarContrato()" style="display:none;"><option value="">— Seleccionar trabajador —</option></select>
-          <input type="text" id="ct-buscar-visual" oninput="_renderListaVisualTrabajadorContrato()" placeholder="Buscar por RUT o nombre..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
-          <div id="lista-visual-trabajador-contrato" style="max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
-        </div>
-        </div>
+  <div class="g2">
+    <div class="f-group"><label class="form-label">Tipo de contrato</label><select class="f-input" id="c-tipo" onchange="cambiarTipoContrato()"><option value="temporada">Contrato de temporada</option><option value="indefinido">Contrato indefinido</option><option value="plazo_fijo">Contrato a plazo fijo</option></select></div>
+     <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="precargarContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
+  </div>
+  <div class="f-group" id="campo-c-trabajador-individual" style="margin-top:12px;">
+    <label class="form-label" id="lbl-c-trabajador-select">Seleccionar trabajador</label>
+    <select class="f-input" id="c-trabajador" onchange="precargarContrato()" style="display:none;"><option value="">— Seleccionar trabajador —</option></select>
+    <input type="text" id="ct-buscar-visual" oninput="_renderListaVisualTrabajadorContrato()" placeholder="Buscar por RUT o nombre..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
+    <div id="lista-visual-trabajador-contrato" style="max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
+  </div>
+</div>
       </div>
 
       <!-- SELECCIÓN MASIVA DE TRABAJADORES -->
@@ -773,21 +774,29 @@
 
 <!-- Selector trabajador en tab anexos -->
 <div class="card" style="margin-bottom:14px;">
-  <div class="f-group" style="margin-bottom:10px;">
-    <label class="form-label">Tipo de Anexo *</label>
-    <select id="anexo-tipo" onchange="onCambioTipoAnexo()" class="f-input">
-      <option value="">— Seleccionar tipo —</option>
-      <option value="cambio_labor">Cambio de Labor</option>
-      <option value="cambio_cargo">Cambio de Cargo</option>
-      <option value="cambio_faena">Cambio de Faena</option>
-      <option value="cambio_mandante">Cambio de Empresa Mandante</option>
-      <option value="cambio_jornada">Cambio de Jornada</option>
-      <option value="cambio_remuneracion">Cambio de Remuneración</option>
-      <option value="prorroga">Prórroga de Contrato</option>
-      <option value="cambio_domicilio">Cambio de Domicilio Laboral</option>
-      <option value="asignacion_especial">Asignación Especial</option>
-      <option value="otro">Otro</option>
-    </select>
+  <div class="g2" style="margin-bottom:10px;">
+    <div class="f-group">
+      <label class="form-label">Empresa Empleadora</label>
+      <select id="anexo-empresa-propia" onchange="onCambioEmpresaFiltroAnexo()" class="f-input">
+        <option value="">— Todas las empresas —</option>
+      </select>
+    </div>
+    <div class="f-group">
+      <label class="form-label">Tipo de Anexo *</label>
+      <select id="anexo-tipo" onchange="onCambioTipoAnexo()" class="f-input">
+        <option value="">— Seleccionar tipo —</option>
+        <option value="cambio_labor">Cambio de Labor</option>
+        <option value="cambio_cargo">Cambio de Cargo</option>
+        <option value="cambio_faena">Cambio de Faena</option>
+        <option value="cambio_mandante">Cambio de Empresa Mandante</option>
+        <option value="cambio_jornada">Cambio de Jornada</option>
+        <option value="cambio_remuneracion">Cambio de Remuneración</option>
+        <option value="prorroga">Prórroga de Contrato</option>
+        <option value="cambio_domicilio">Cambio de Domicilio Laboral</option>
+        <option value="asignacion_especial">Asignación Especial</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
   </div>
   <div class="f-group">
     <label class="form-label">Trabajador</label>
@@ -798,7 +807,6 @@
     <div id="lista-visual-trabajador-anexo" style="max-height:220px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
   </div>
 </div>
-
         <div class="g2" style="align-items:start;">
 
           <!-- Columna izquierda: formulario anexo -->
