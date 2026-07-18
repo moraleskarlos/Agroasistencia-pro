@@ -117,12 +117,17 @@ function _renderListaVisualTrabajadorContrato(){
   const cont = document.getElementById('lista-visual-trabajador-contrato');
   if(!cont) return;
 
-  const buscar = (document.getElementById('ct-buscar-visual')?.value || '').toLowerCase().trim();
+  const buscar  = (document.getElementById('ct-buscar-visual')?.value || '').toLowerCase().trim();
   const valActual = document.getElementById('c-trabajador')?.value || '';
+  const epFiltro  = document.getElementById('c-empresa-propia')?.value || '';
 
   let lista = (_modoContratoActual === 'corregir')
     ? trabajadores.filter(t => contratos.some(c => c.trabajador_id === t.id))
     : trabajadores.slice();
+
+  if(epFiltro){
+    lista = lista.filter(t => (t.empresa_propia_id || '') === epFiltro);
+  }
 
   if(buscar){
     lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
@@ -151,6 +156,24 @@ function _renderListaVisualTrabajadorContrato(){
       <span style="font-size:11px;font-weight:600;color:${tieneContrato?'#16a34a':'#dc2626'};">${tieneContrato?'con contrato':'sin contrato'}</span>
     </div>`;
   }).join('');
+}
+
+/* Al cambiar la Empresa Empleadora: refiltra la lista de trabajadores y, si el
+   trabajador ya seleccionado no pertenece a la empresa recién elegida, limpia
+   la selección para no dejar datos de un trabajador que ya no aparece en la lista. */
+function onCambioEmpresaFiltroContrato(){
+  const epFiltro = document.getElementById('c-empresa-propia')?.value || '';
+  const selTrabajador = document.getElementById('c-trabajador');
+  const actual = trabajadores.find(t => t.id === selTrabajador?.value);
+
+  if(epFiltro && actual && (actual.empresa_propia_id || '') !== epFiltro){
+    selTrabajador.value = '';
+    limpiarPreview();
+  }
+
+  _renderListaVisualTrabajadorContrato();
+  precargarContrato();
+  renderListaContratoMasivo();
 }
 
 function _seleccionarTrabajadorContratoVisual(id){
@@ -1284,10 +1307,12 @@ function _tieneContratoVigente(rut){
 function renderListaContratoMasivo(){
   const buscar     = (document.getElementById('cm-buscar')?.value || '').toLowerCase().trim();
   const mostrarTodos = document.getElementById('cm-mostrar-con-contrato')?.checked;
+  const epFiltro   = document.getElementById('c-empresa-propia')?.value || '';
   const cont = document.getElementById('cm-lista-trabajadores');
   if(!cont) return;
 
   let lista = trabajadores.filter(t => t.estado === 'activo');
+  if(epFiltro) lista = lista.filter(t => (t.empresa_propia_id || '') === epFiltro);
   if(!mostrarTodos) lista = lista.filter(t => !_tieneContratoVigente(t.rut));
   if(buscar) lista = lista.filter(t => t.rut?.toLowerCase().includes(buscar) || t.nombre?.toLowerCase().includes(buscar));
 
