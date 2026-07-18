@@ -771,35 +771,33 @@
       <!-- SUBMÓDULO ANEXOS -->
       <div id="sub-tab-anexos" style="display:none;">
 
-        <!-- Selector trabajador en tab anexos -->
-        <div class="card" style="margin-bottom:14px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;">
-            <div class="f-group">
-              <label class="form-label">Trabajador</label>
-              <select id="anexo-trabajador-select" onchange="onSeleccionTrabajadorAnexo()" class="f-input" style="display:none;">
-                <option value="">— Seleccionar trabajador —</option>
-              </select>
-              <input type="text" id="anx-buscar-visual" oninput="_renderListaVisualTrabajadorAnexo()" placeholder="Buscar por RUT o nombre..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
-              <div id="lista-visual-trabajador-anexo" style="max-height:220px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
-            </div>
-            <div class="f-group">
-              <label class="form-label">Tipo de Anexo *</label>
-              <select id="anexo-tipo" onchange="onCambioTipoAnexo()" class="f-input">
-                <option value="">— Seleccionar tipo —</option>
-                <option value="cambio_labor">Cambio de Labor</option>
-                <option value="cambio_cargo">Cambio de Cargo</option>
-                <option value="cambio_faena">Cambio de Faena</option>
-                <option value="cambio_mandante">Cambio de Empresa Mandante</option>
-                <option value="cambio_jornada">Cambio de Jornada</option>
-                <option value="cambio_remuneracion">Cambio de Remuneración</option>
-                <option value="prorroga">Prórroga de Contrato</option>
-                <option value="cambio_domicilio">Cambio de Domicilio Laboral</option>
-                <option value="asignacion_especial">Asignación Especial</option>
-                <option value="otro">Otro</option>
-              </select>
-            </div>
-          </div>
-        </div>
+<!-- Selector trabajador en tab anexos -->
+<div class="card" style="margin-bottom:14px;">
+  <div class="f-group" style="margin-bottom:10px;">
+    <label class="form-label">Tipo de Anexo *</label>
+    <select id="anexo-tipo" onchange="onCambioTipoAnexo()" class="f-input">
+      <option value="">— Seleccionar tipo —</option>
+      <option value="cambio_labor">Cambio de Labor</option>
+      <option value="cambio_cargo">Cambio de Cargo</option>
+      <option value="cambio_faena">Cambio de Faena</option>
+      <option value="cambio_mandante">Cambio de Empresa Mandante</option>
+      <option value="cambio_jornada">Cambio de Jornada</option>
+      <option value="cambio_remuneracion">Cambio de Remuneración</option>
+      <option value="prorroga">Prórroga de Contrato</option>
+      <option value="cambio_domicilio">Cambio de Domicilio Laboral</option>
+      <option value="asignacion_especial">Asignación Especial</option>
+      <option value="otro">Otro</option>
+    </select>
+  </div>
+  <div class="f-group">
+    <label class="form-label">Trabajador</label>
+    <select id="anexo-trabajador-select" onchange="onSeleccionTrabajadorAnexo()" class="f-input" style="display:none;">
+      <option value="">— Seleccionar trabajador —</option>
+    </select>
+    <input type="text" id="anx-buscar-visual" oninput="_renderListaVisualTrabajadorAnexo()" placeholder="Buscar por RUT o nombre..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
+    <div id="lista-visual-trabajador-anexo" style="max-height:220px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
+  </div>
+</div>
 
         <div class="g2" style="align-items:start;">
 
