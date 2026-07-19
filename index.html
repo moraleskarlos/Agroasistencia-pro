@@ -771,6 +771,18 @@
       <!-- SUBMÓDULO ANEXOS -->
       <div id="sub-tab-anexos" style="display:none;">
 
+<div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+  <div style="display:flex;gap:4px;">
+    <button id="btn-modo-anexo-individual" class="btn btn-primary btn-sm" onclick="cambiarModoAnexo('individual')">
+      <i class="ti ti-user"></i> Individual
+    </button>
+    <button id="btn-modo-anexo-masivo" class="btn btn-secondary btn-sm" onclick="cambiarModoAnexo('masivo')">
+      <i class="ti ti-users"></i> Masivo
+    </button>
+  </div>
+  <div id="anexo-contador-masivo" style="font-size:12px;"></div>
+</div>
+
 <!-- Selector trabajador en tab anexos -->
 <div class="card" style="margin-bottom:14px;">
   <div class="g2" style="margin-bottom:10px;">
@@ -802,6 +814,10 @@
     <select id="anexo-trabajador-select" onchange="onSeleccionTrabajadorAnexo()" class="f-input" style="display:none;">
       <option value="">— Seleccionar trabajador —</option>
     </select>
+    <div id="anexo-controles-masivo" style="display:none;gap:8px;align-items:center;margin-bottom:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="_amSeleccionarTodos(true)">Todos</button>
+      <button class="btn btn-secondary btn-sm" onclick="_amSeleccionarTodos(false)">Ninguno</button>
+    </div>
     <input type="text" id="anx-buscar-visual" oninput="_renderListaVisualTrabajadorAnexo()" placeholder="Buscar por RUT o nombre..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
     <div id="lista-visual-trabajador-anexo" style="max-height:220px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
   </div>
@@ -843,17 +859,24 @@
                 <textarea id="anexo-observaciones" rows="2" placeholder="Observaciones adicionales (opcional)"
                   class="f-input" style="resize:vertical;" oninput="actualizarPreviaAnexo()"></textarea>
               </div>
-              <div style="display:flex;gap:8px;">
-                <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="guardarAnexo()">
-                  <i class="ti ti-device-floppy"></i> Guardar Anexo
-                </button>
-                <button class="btn btn-secondary" onclick="limpiarFormAnexo()">
-                  <i class="ti ti-refresh"></i> Limpiar
-                </button>
+              <div id="botones-anexo-individual">
+                <div style="display:flex;gap:8px;">
+                  <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="guardarAnexo()">
+                    <i class="ti ti-device-floppy"></i> Guardar Anexo
+                  </button>
+                  <button class="btn btn-secondary" onclick="limpiarFormAnexo()">
+                    <i class="ti ti-refresh"></i> Limpiar
+                  </button>
+                </div>
+                <div style="margin-top:8px;">
+                  <button class="btn btn-primary btn-full" style="justify-content:center;" onclick="generarPDFAnexo()">
+                    <i class="ti ti-file-type-pdf"></i> Ver documento completo
+                  </button>
+                </div>
               </div>
-              <div style="margin-top:8px;">
-                <button class="btn btn-primary btn-full" style="justify-content:center;" onclick="generarPDFAnexo()">
-                  <i class="ti ti-file-type-pdf"></i> Ver documento completo
+              <div style="display:none;gap:8px;" id="botones-anexo-masivo">
+                <button class="btn btn-primary btn-full" style="justify-content:center;" onclick="generarAnexosMasivo()">
+                  <i class="ti ti-file-type-pdf"></i> Generar Anexos (Masivo)
                 </button>
               </div>
             </div>
@@ -864,7 +887,7 @@
             <div class="card" style="position:sticky;top:14px;">
               <div class="card-title"><i class="ti ti-eye"></i> Vista Previa</div>
               <div id="anexo-preview"></div>
-              <div style="margin-top:12px;"><button class="btn btn-primary btn-full" onclick="generarPDFAnexo()"><i class="ti ti-file-type-pdf"></i> Ver documento completo</button></div>
+              <div style="margin-top:12px;" id="anexo-preview-btn-pdf"><button class="btn btn-primary btn-full" onclick="generarPDFAnexo()"><i class="ti ti-file-type-pdf"></i> Ver documento completo</button></div>
             </div>
             <div class="card" style="margin-top:14px;">
               <div class="card-title"><i class="ti ti-history"></i> Historial de Anexos</div>
@@ -1841,14 +1864,11 @@
 
         <!-- SUBMÓDULO REGISTRO (diario) -->
         <div id="sub-tab-asist-registro">
-        <div class="sec-header">
-          <div></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <input type="date" id="asist-fecha" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()">
-            <select id="asist-empresa" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()"><option value="">Todos los mandantes</option></select>
-            <input type="text" id="asist-buscar" oninput="cargarAsistencia()" placeholder="Buscar nombre o RUT..." style="padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
-            <button class="btn btn-secondary" onclick="exportarAsistenciaExcel()"><i class="ti ti-download"></i> Excel</button>
-          </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          <input type="date" id="asist-fecha" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()">
+          <select id="asist-empresa" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()"><option value="">Todos los mandantes</option></select>
+          <input type="text" id="asist-buscar" oninput="cargarAsistencia()" placeholder="Buscar nombre o RUT..." style="padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
+          <button class="btn btn-secondary" onclick="exportarAsistenciaExcel()"><i class="ti ti-download"></i> Excel</button>
         </div>
         <div class="g4" style="margin-bottom:16px;">
           <div class="kpi azul"><div class="kpi-label">Total trabajadores</div><div class="kpi-value" id="asist-total">0</div><div class="kpi-sub">registrados</div></div>
