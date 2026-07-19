@@ -648,7 +648,7 @@
       <div class="card" style="margin-bottom:14px;">
   <div class="g2">
     <div class="f-group"><label class="form-label">Tipo de contrato</label><select class="f-input" id="c-tipo" onchange="cambiarTipoContrato()"><option value="temporada">Contrato de temporada</option><option value="indefinido">Contrato indefinido</option><option value="plazo_fijo">Contrato a plazo fijo</option></select></div>
-     <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="precargarContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
+     <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="onCambioEmpresaFiltroContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
   </div>
   <div class="f-group" id="campo-c-trabajador-individual" style="margin-top:12px;">
     <label class="form-label" id="lbl-c-trabajador-select">Seleccionar trabajador</label>
@@ -657,7 +657,6 @@
     <div id="lista-visual-trabajador-contrato" style="max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
   </div>
 </div>
-      </div>
 
       <!-- SELECCIÓN MASIVA DE TRABAJADORES -->
       <div id="bloque-contrato-masivo" class="card" style="display:none;margin-bottom:14px;">
