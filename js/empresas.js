@@ -127,7 +127,7 @@ function renderContratistas(){
       <div style="flex:1.6;">Empresa</div>
       <div style="flex:0.7;">RUT</div>
       <div style="flex:1.1;">Faena</div>
-      <div style="flex:0.8;">Vencimiento</div>
+      <div style="flex:0.8;">Vigencia</div>
       <div style="flex:0.4;text-align:center;">Total</div>
       <div style="flex:0.4;text-align:center;">Activos</div>
       <div style="flex:0.5;text-align:center;">Inactivos</div>
@@ -171,6 +171,7 @@ function renderContratistas(){
         <div style="flex:0.7;font-family:monospace;font-size:11px;color:var(--texto2);">${e.rut}</div>
         <div style="flex:1.1;min-width:0;">${faenaColHTML}</div>
         <div style="flex:0.8;min-width:0;">
+          ${e.fecha_inicio_contrato ? `<div style="font-size:10.5px;color:var(--texto3);white-space:nowrap;">Desde ${new Date(e.fecha_inicio_contrato).toLocaleDateString('es-CL')}</div>` : ''}
           <div style="font-size:12px;font-weight:600;color:${venc.color};white-space:nowrap;">${venc.texto}</div>
           <div style="margin-top:4px;height:4px;background:var(--gris-bg);border-radius:2px;overflow:hidden;max-width:110px;">
             <div style="height:100%;width:${pct}%;background:${fg};border-radius:2px;"></div>
