@@ -1,5 +1,23 @@
 /* ════ EMPRESAS — mis empresas, mandantes, faenas ════ */
 
+/* Normaliza un RUT para comparar (sin puntos/guión, mayúscula) */
+function _normRUT(rut){
+  return (rut || '').replace(/[^0-9kK]/g, '').toUpperCase();
+}
+function _rutsIguales(a, b){
+  if(!a || !b) return false;
+  return _normRUT(a) === _normRUT(b);
+}
+/* ¿Ese RUT ya está usado por otra empresa (propia o mandante)? idExcluir = el registro que se está editando */
+function _rutYaExiste(rut, idExcluir){
+  if(!rut) return null;
+  const enMandantes = empresas.find(e => e.id !== idExcluir && _rutsIguales(e.rut, rut));
+  if(enMandantes) return { registro: enMandantes, tipo: 'mandante' };
+  const enPropias = empresas_propias.find(e => e.id !== idExcluir && _rutsIguales(e.rut, rut));
+  if(enPropias) return { registro: enPropias, tipo: 'empresa propia' };
+  return null;
+}
+
 function abrirModalMiEmpresa(){
   const modal = document.getElementById('modal-mi-empresa');
   modal.style.display = 'flex';
@@ -24,11 +42,16 @@ function cerrarModalMiEmpresa(){
 function guardarMiEmpresa(){
   const nombre = document.getElementById('me-nombre').value.trim();
   const rut    = document.getElementById('me-rut').value.trim();
+  const rutRep = document.getElementById('me-rut-representante').value.trim();
   if(!nombre){ toast('⚠️ Ingresa la razón social','error'); return; }
   if(!rut)   { toast('⚠️ Ingresa el RUT de la empresa','error'); return; }
   if(!validarRUT(rut)){
     const continuar = confirm(`El dígito verificador del RUT "${rut}" no coincide.\n¿Deseas guardarlo de todas formas?`);
     if(!continuar) return;
+  }
+  if(rutRep && _rutsIguales(rut, rutRep)){
+    toast('❌ El RUT del representante no puede ser igual al RUT de la empresa','error');
+    return;
   }
 
   cfg.empresa = {
@@ -101,13 +124,14 @@ function renderContratistas(){
 
   el.innerHTML=`
     <div style="background:var(--gris-bg);display:flex;padding:10px 16px;font-size:11px;font-weight:600;color:var(--texto3);border-bottom:2px solid var(--borde);text-transform:uppercase;letter-spacing:0.4px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
-      <div style="flex:1.8;">Empresa</div>
-      <div style="flex:0.8;">RUT</div>
+      <div style="flex:1.6;">Empresa</div>
+      <div style="flex:0.7;">RUT</div>
+      <div style="flex:1.1;">Faena</div>
       <div style="flex:0.8;">Vencimiento</div>
       <div style="flex:0.4;text-align:center;">Total</div>
       <div style="flex:0.4;text-align:center;">Activos</div>
       <div style="flex:0.5;text-align:center;">Inactivos</div>
-      <div style="flex:2.1;text-align:right;">Acciones</div>
+      <div style="flex:1.8;text-align:right;">Acciones</div>
     </div>
     <div style="background:var(--blanco);border:1px solid var(--borde);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);overflow:hidden;">
     ${empresas.map((e,i)=>{
@@ -119,17 +143,33 @@ function renderContratistas(){
       const pct=total?Math.round(act/total*100):0;
       const venc=estadoVencimiento(e.vigencia_contrato);
       const ini=e.nombre.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+      const faenas=e.faenas||[];
+      const faenaColHTML = !faenas.length
+        ? '<span style="color:var(--texto3);font-size:12px;">— sin faena —</span>'
+        : faenas.length===1
+          ? `<span style="font-size:12px;">${faenas[0].nombre||faenas[0]}</span>`
+          : `<span onclick="event.stopPropagation();_toggleFaenasFila('${empId}')" style="cursor:pointer;font-size:12px;font-weight:600;color:var(--azul);">
+               <i class="ti ti-plant"></i> ${faenas.length} faenas <i class="ti ti-chevron-down" id="chev-faenas-${empId}"></i>
+             </span>`;
+      const subfilaFaenas = faenas.length>1 ? `
+        <div id="subfila-faenas-${empId}" style="display:none;background:var(--gris-bg);padding:10px 16px 10px 64px;border-bottom:1px solid var(--borde);">
+          ${faenas.map(f=>`<span style="display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--borde);
+            border-radius:99px;padding:4px 12px;font-size:12px;margin:0 6px 6px 0;">
+            <i class="ti ti-plant" style="font-size:11px;color:var(--verde-dark);"></i> ${f.nombre||f}
+          </span>`).join('')}
+        </div>` : '';
       return`<div style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--borde);cursor:pointer;transition:.15s;"
         onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''"
         onclick="verTrabajadoresEmpresa('${e.id||e.rut}')">
-        <div style="flex:1.8;display:flex;align-items:center;gap:10px;">
+        <div style="flex:1.6;display:flex;align-items:center;gap:10px;">
           <div style="width:38px;height:38px;border-radius:9px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${ini}</div>
           <div>
             <div style="font-weight:600;font-size:13px;">${e.nombre}${venc.badge}</div>
             <div style="font-size:11px;color:var(--texto3);">${e.correo||''}</div>
           </div>
         </div>
-        <div style="flex:0.8;font-family:monospace;font-size:11px;color:var(--texto2);">${e.rut}</div>
+        <div style="flex:0.7;font-family:monospace;font-size:11px;color:var(--texto2);">${e.rut}</div>
+        <div style="flex:1.1;min-width:0;">${faenaColHTML}</div>
         <div style="flex:0.8;min-width:0;">
           <div style="font-size:12px;font-weight:600;color:${venc.color};white-space:nowrap;">${venc.texto}</div>
           <div style="margin-top:4px;height:4px;background:var(--gris-bg);border-radius:2px;overflow:hidden;max-width:110px;">
@@ -143,12 +183,9 @@ function renderContratistas(){
         <div style="flex:0.5;text-align:center;">
           <span style="background:${inact>0?'#FEE2E2':'#F1F5F9'};color:${inact>0?'#dc2626':'#94A3B8'};font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;">${inact}</span>
         </div>
-        <div style="flex:2.1;display:flex;gap:5px;justify-content:flex-end;" onclick="event.stopPropagation()">
+        <div style="flex:1.8;display:flex;gap:5px;justify-content:flex-end;" onclick="event.stopPropagation()">
           <button class="btn btn-secondary btn-sm" onclick="verTrabajadoresEmpresa('${e.id||e.rut}')" title="Ver trabajadores">
   <i class="ti ti-eye"></i> Trabajadores
-</button>
-          <button class="btn btn-secondary btn-sm" onclick="abrirModalFaena('${e.id||e.rut}')" title="Nueva faena">
-  <i class="ti ti-plant"></i> Faena
 </button>
           <button class="btn btn-secondary btn-sm" onclick="abrirModalEmpresa('${e.id||e.rut}')" title="Editar mandante">
   <i class="ti ti-edit"></i> Editar
@@ -164,18 +201,35 @@ function renderContratistas(){
   <i class="ti ti-trash"></i>
 </button>
         </div>
-      </div>`;
+      </div>${subfilaFaenas}`;
     }).join('')}
     </div>`;
 }
+
+function _toggleFaenasFila(empId){
+  const sub = document.getElementById(`subfila-faenas-${empId}`);
+  const chev = document.getElementById(`chev-faenas-${empId}`);
+  if(!sub) return;
+  const abierto = sub.style.display !== 'none';
+  sub.style.display = abierto ? 'none' : 'block';
+  if(chev) chev.className = abierto ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
+}
+
+/* Faenas del mandante que se está editando en el modal (en memoria hasta guardar) */
+let _faenasEnEdicion = [];
 
 function abrirModalEmpresa(idOrRut=null){
   const m=document.getElementById('modal-empresa');
   m.style.display='flex';
   document.getElementById('modal-empresa-titulo').textContent=idOrRut?'Editar mandante':'Nuevo mandante';
   document.getElementById('e-rut-original').value=idOrRut||'';
-  const campos=['e-rut','e-nombre','e-rut-rep','e-nombre-rep','e-correo','e-telefono','e-vigencia','e-direccion','e-comuna','e-region'];
-  if(!idOrRut){campos.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});return;}
+  const campos=['e-rut','e-nombre','e-rut-rep','e-nombre-rep','e-correo','e-telefono','e-fecha-inicio','e-vigencia','e-direccion','e-comuna','e-region'];
+  if(!idOrRut){
+    campos.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    _faenasEnEdicion = [];
+    _renderFaenasEnEdicion();
+    return;
+  }
   // Buscar por id primero, luego por rut (compatibilidad)
   const e=empresas.find(x=>x.id===idOrRut)||empresas.find(x=>x.rut===idOrRut);
   if(e){
@@ -185,13 +239,53 @@ function abrirModalEmpresa(idOrRut=null){
     document.getElementById('e-nombre-rep').value   = e.nombre_representante||'';
     document.getElementById('e-correo').value       = e.correo||'';
     document.getElementById('e-telefono').value     = e.telefono||'';
+    document.getElementById('e-fecha-inicio').value = e.fecha_inicio_contrato||'';
     document.getElementById('e-vigencia').value     = e.vigencia_contrato||'';
     document.getElementById('e-direccion').value    = e.direccion||'';
     document.getElementById('e-comuna').value       = e.comuna||'';
     document.getElementById('e-region').value       = e.region||'';
     // Guardar el id para que guardarEmpresa actualice el registro correcto
     document.getElementById('e-rut-original').value = e.id||e.rut;
+
+    _faenasEnEdicion = (e.faenas||[]).map(f => ({ nombre: f.nombre || f }));
+    _renderFaenasEnEdicion();
   }
+}
+
+/* ───────── Faenas — filas repetibles dentro del modal de mandante ───────── */
+
+function _renderFaenasEnEdicion(){
+  const cont = document.getElementById('e-faenas-lista');
+  if(!cont) return;
+
+  if(!_faenasEnEdicion.length){
+    cont.innerHTML = '<div style="font-size:12px;color:var(--texto3);padding:6px 0;">Sin faenas agregadas</div>';
+    return;
+  }
+
+  cont.innerHTML = _faenasEnEdicion.map((f, i) => `
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+      <input type="text" value="${f.nombre||''}" placeholder="Ej: Cosecha, Packing, Poda, Raleo..."
+        oninput="_actualizarFaenaNombre(${i}, this.value)"
+        style="flex:1;padding:8px 10px;border-radius:7px;border:1px solid var(--borde);font-size:13px;">
+      <button type="button" onclick="_eliminarFilaFaena(${i})" class="btn btn-secondary btn-sm" title="Eliminar faena">
+        <i class="ti ti-trash"></i>
+      </button>
+    </div>`).join('');
+}
+
+function _agregarFilaFaena(){
+  _faenasEnEdicion.push({ nombre:'' });
+  _renderFaenasEnEdicion();
+}
+
+function _actualizarFaenaNombre(i, valor){
+  if(_faenasEnEdicion[i]) _faenasEnEdicion[i].nombre = valor;
+}
+
+function _eliminarFilaFaena(i){
+  _faenasEnEdicion.splice(i, 1);
+  _renderFaenasEnEdicion();
 }
 
 function cerrarModalEmpresa(){document.getElementById('modal-empresa').style.display='none';}
@@ -208,10 +302,13 @@ async function guardarEmpresa(){
     nombre_representante: document.getElementById('e-nombre-rep').value.trim(),
     correo:            document.getElementById('e-correo').value.trim(),
     telefono:          document.getElementById('e-telefono').value.trim(),
+    fecha_inicio_contrato: document.getElementById('e-fecha-inicio')?.value || null,
     vigencia_contrato: document.getElementById('e-vigencia').value||null,
     direccion:         document.getElementById('e-direccion').value.trim(),
     comuna:            document.getElementById('e-comuna')?.value.trim()||'',
     region:            document.getElementById('e-region')?.value||'',
+    estado:            empExistente?.estado || 'activo',
+    faenas:            _faenasEnEdicion.filter(f => f.nombre?.trim()).map(f => ({ nombre: f.nombre.trim() })),
   };
 
   if(!datos.rut||!datos.nombre){toast('⚠️ RUT y nombre son obligatorios','error');return;}
@@ -223,6 +320,15 @@ async function guardarEmpresa(){
   if(datos.rut_representante && !validarRUT(datos.rut_representante)){
     const continuar = confirm(`El dígito verificador del RUT representante "${datos.rut_representante}" no coincide.\n¿Deseas guardarlo de todas formas?`);
     if(!continuar) return;
+  }
+  if(datos.rut_representante && _rutsIguales(datos.rut, datos.rut_representante)){
+    toast('❌ El RUT del representante no puede ser igual al RUT de la empresa','error');
+    return;
+  }
+  const dup = _rutYaExiste(datos.rut, datos.id);
+  if(dup){
+    toast(`❌ Ese RUT ya está registrado en "${dup.registro.nombre}" (${dup.tipo})`,'error');
+    return;
   }
 
   if(!supabaseClient){
@@ -280,46 +386,50 @@ function _kpiCard(label, value, sub, color){
     <div class="kpi-sub">${sub}</div></div>`;
 }
 
+/* KPI compacto "activas/inactivas" — ej. 3/0 */
+function _kpiActivoInactivo(label, activas, inactivas, sub){
+  return `<div class="kpi">
+    <div class="kpi-label">${label}</div>
+    <div class="kpi-value">
+      <span style="color:var(--verde-dark);">${activas}</span><span style="color:var(--texto3);font-weight:400;"> / </span><span style="color:${inactivas>0?'#dc2626':'var(--texto3)'};">${inactivas}</span>
+    </div>
+    <div class="kpi-sub">${sub} (activas / inactivas)</div>
+  </div>`;
+}
+
 function renderKpisMisEmpresas(){
   const zona = document.getElementById('kpi-mis-empresas-zone');
   if(!zona) return;
-  const total   = empresas_propias.length;
-  const trabEP  = trabajadores.filter(t => t.empresa_propia_id);
-  const activos = trabEP.filter(t => t.estado === 'activo').length;
-  const inact   = trabEP.filter(t => t.estado !== 'activo').length;
-  const contr   = contratos.filter(c =>
+  const activas   = empresas_propias.filter(e => e.estado !== 'inactivo').length;
+  const inactivas = empresas_propias.filter(e => e.estado === 'inactivo').length;
+  const trabEP    = trabajadores.filter(t => t.empresa_propia_id);
+  const contr     = contratos.filter(c =>
     trabEP.some(t => t.id === c.trabajador_id || t.rut === c.trabajador_rut)
   ).length;
 
   zona.style.display = 'grid';
-  zona.style.gridTemplateColumns = 'repeat(4,1fr)';
+  zona.style.gridTemplateColumns = 'repeat(3,1fr)';
   zona.style.gap = '14px';
   zona.innerHTML =
-    _kpiCard('Mis Empresas',        total,   'empresas propias',   'var(--azul)')  +
-    _kpiCard('Trabajadores Activos',activos, 'trabajando',         'var(--verde)') +
-    _kpiCard('Inactivos',           inact,   'dados de baja',      '#ef4444')      +
-    _kpiCard('Contratos',           contr,   'registrados',        'var(--verde-dark)');
+    _kpiActivoInactivo('Mis Empresas', activas, inactivas, 'empresas propias') +
+    _kpiCard('Trabajadores',  trabEP.length, 'en mis empresas',   'var(--texto)') +
+    _kpiCard('Contratos',     contr,         'registrados',       'var(--verde-dark)');
 }
 
 function renderKpisMandantes(){
   const zona = document.getElementById('kpi-mandantes-zone');
   if(!zona) return;
-  const total   = empresas.length;
-  const trabMan = trabajadores.filter(t => t.mandante_id || t.empresa_rut || t.empresa);
-  const activos = trabMan.filter(t => t.estado === 'activo').length;
-  const inact   = trabMan.filter(t => t.estado !== 'activo').length;
-  const contr   = contratos.filter(c =>
-    trabMan.some(t => t.id === c.trabajador_id || t.rut === c.trabajador_rut)
-  ).length;
+  const activos    = empresas.filter(e => e.estado !== 'inactivo').length;
+  const inactivos  = empresas.filter(e => e.estado === 'inactivo').length;
+  const totalFaenas= empresas.reduce((acc, e) => acc + (e.faenas?.length || 0), 0);
 
   zona.style.display = 'grid';
-  zona.style.gridTemplateColumns = 'repeat(4,1fr)';
+  zona.style.gridTemplateColumns = 'repeat(3,1fr)';
   zona.style.gap = '14px';
   zona.innerHTML =
-    _kpiCard('Mandantes',           total,   'empresas registradas','var(--azul)') +
-    _kpiCard('Trabajadores Activos',activos, 'asignados a faenas', 'var(--verde)') +
-    _kpiCard('Inactivos',           inact,   'dados de baja',      '#ef4444')      +
-    _kpiCard('Contratos',           contr,   'registrados',        'var(--verde-dark)');
+    _kpiActivoInactivo('Mandantes', activos, inactivos, 'empresas mandante') +
+    _kpiCard('Faenas Registradas', totalFaenas, 'entre todos los mandantes', 'var(--azul)') +
+    _kpiCard('Trabajadores',       trabajadores.filter(t => t.mandante_id || t.empresa_rut || t.empresa).length, 'asignados a faenas', 'var(--texto)');
 }
 
 function switchTabEmpresas(tab){
@@ -420,6 +530,12 @@ function renderMisEmpresas(){
           <button class="btn btn-secondary btn-sm" onclick="abrirModalEmpresaPropia('${ep.id}')" title="Editar">
             <i class="ti ti-edit"></i> Editar
           </button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleEstadoEmpresaPropia('${ep.id}')"
+            style="color:${ep.estado==='inactivo'?'var(--verde-dark)':'var(--danger)'};"
+            title="${ep.estado==='inactivo'?'Activar':'Dar de baja'}">
+            <i class="ti ti-${ep.estado==='inactivo'?'circle-check':'circle-minus'}"></i>
+            ${ep.estado==='inactivo'?'Activar':'Baja'}
+          </button>
           <button class="btn btn-secondary btn-sm" onclick="eliminarEmpresaPropia('${ep.id}')"
             style="color:var(--danger);" title="Eliminar">
             <i class="ti ti-trash"></i>
@@ -464,19 +580,36 @@ function cerrarModalEmpresaPropia(){
 function guardarEmpresaPropia(){
   const rut    = document.getElementById('ep-rut').value.trim();
   const nombre = document.getElementById('ep-nombre').value.trim();
+  const rutRep = document.getElementById('ep-rut-rep').value.trim();
   if(!rut)    { toast('⚠️ Ingresa el RUT de la empresa','error'); return; }
   if(!nombre) { toast('⚠️ Ingresa la razón social','error'); return; }
   if(!validarRUT(rut)){
     const continuar = confirm(`El dígito verificador del RUT "${rut}" no coincide.\n¿Deseas guardarlo de todas formas?`);
     if(!continuar) return;
   }
+  if(rutRep && !validarRUT(rutRep)){
+    const continuar = confirm(`El dígito verificador del RUT representante "${rutRep}" no coincide.\n¿Deseas guardarlo de todas formas?`);
+    if(!continuar) return;
+  }
+  if(rutRep && _rutsIguales(rut, rutRep)){
+    toast('❌ El RUT del representante no puede ser igual al RUT de la empresa','error');
+    return;
+  }
 
   const idOrig = document.getElementById('ep-id-original').value;
+
+  const dup = _rutYaExiste(rut, idOrig);
+  if(dup){
+    toast(`❌ Ese RUT ya está registrado en "${dup.registro.nombre}" (${dup.tipo})`,'error');
+    return;
+  }
+
+  const epExistente = empresas_propias.find(e => e.id === idOrig || e.rut === rut);
   const datos = {
     id:                  idOrig || 'ep_' + Date.now(),
     rut,
     nombre,
-    rut_representante:   document.getElementById('ep-rut-rep').value.trim(),
+    rut_representante:   rutRep,
     nombre_representante:document.getElementById('ep-nombre-rep').value.trim(),
     cargo_representante: document.getElementById('ep-cargo-rep').value.trim(),
     correo:              document.getElementById('ep-correo').value.trim(),
@@ -485,6 +618,7 @@ function guardarEmpresaPropia(){
     direccion:           document.getElementById('ep-direccion').value.trim(),
     comuna:              document.getElementById('ep-comuna').value.trim(),
     region:              document.getElementById('ep-region').value,
+    estado:              epExistente?.estado || 'activo',
   };
 
   const idx = empresas_propias.findIndex(e => e.id === idOrig || e.rut === rut);
@@ -496,6 +630,18 @@ function guardarEmpresaPropia(){
   renderMisEmpresas();
   poblarSelectsEmpresaPropia();
   toast(`✅ ${datos.nombre} guardada`, 'exito');
+}
+
+function toggleEstadoEmpresaPropia(id){
+  const ep = empresas_propias.find(e => e.id === id);
+  if(!ep) return;
+  const nuevoEstado = ep.estado === 'inactivo' ? 'activo' : 'inactivo';
+  const accion = nuevoEstado === 'inactivo' ? 'dar de baja' : 'reactivar';
+  if(!confirm(`¿Confirmas ${accion} a ${ep.nombre}?`)) return;
+  ep.estado = nuevoEstado;
+  guardarLocal();
+  renderMisEmpresas();
+  toast(`✅ ${ep.nombre} ${nuevoEstado === 'inactivo' ? 'dada de baja' : 'reactivada'}`, 'exito');
 }
 
 function eliminarEmpresaPropia(id){
@@ -614,99 +760,6 @@ async function guardarAsignacionMandante(){
 
   const emp = empresas.find(e => (e.id === empresa_rut || e.rut === empresa_rut));
   toast(`✅ ${t.nombre} asignado a ${emp?.nombre || 'sin mandante'}`, 'exito');
-}
-
-function abrirModalFaena(rutMandantePresel){
-  const modal = document.getElementById('modal-faena');
-  modal.style.display = 'flex';
-
-  // Poblar select de mandantes
-  const sel = document.getElementById('faena-mandante');
-  sel.innerHTML = '<option value="">— Seleccionar mandante —</option>'
-    + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
-
-  // Limpiar campos
-  document.getElementById('faena-nombre').value       = '';
-  document.getElementById('faena-descripcion').value  = '';
-  document.getElementById('faenas-existentes').style.display = 'none';
-
-  // Si viene con mandante preseleccionado (ej: desde botón de fila)
-  if(rutMandantePresel){
-    sel.value = rutMandantePresel;
-    actualizarFaenasExistentes();
-  }
-}
-
-function cerrarModalFaena(){
-  document.getElementById('modal-faena').style.display = 'none';
-}
-
-function actualizarFaenasExistentes(){
-  const idOrRut = document.getElementById('faena-mandante').value;
-  const zona    = document.getElementById('faenas-existentes');
-  const lista   = document.getElementById('faenas-existentes-lista');
-  const subtit  = document.getElementById('modal-faena-mandante-nombre');
-
-  if(!idOrRut){ zona.style.display='none'; subtit.textContent='Selecciona un mandante'; return; }
-
-  const mandante = empresas.find(e => e.id === idOrRut) || empresas.find(e => e.rut === idOrRut);
-  if(!mandante){ zona.style.display='none'; return; }
-
-  subtit.textContent = mandante.nombre;
-  const faenas = mandante.faenas || [];
-
-  if(!faenas.length){
-    zona.style.display = 'none';
-    return;
-  }
-
-  zona.style.display = 'block';
-  lista.innerHTML = faenas.map(f => `
-    <span style="background:#F1F5F9;border:1px solid var(--borde);border-radius:99px;
-      padding:4px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;">
-      <i class="ti ti-plant" style="font-size:11px;color:var(--verde-dark);"></i>
-      ${f.nombre || f}
-      <button onclick="eliminarFaena('${mandante.id||mandante.rut}','${f.nombre||f}')"
-        style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:13px;line-height:1;padding:0;"
-        title="Eliminar faena">×</button>
-    </span>`).join('');
-}
-
-function guardarFaena(){
-  const idOrRut = document.getElementById('faena-mandante').value;
-  const nombre  = document.getElementById('faena-nombre').value.trim();
-  const desc    = document.getElementById('faena-descripcion').value.trim();
-
-  if(!idOrRut){ toast('⚠️ Selecciona un mandante','error'); return; }
-  if(!nombre) { toast('⚠️ Ingresa el nombre de la faena','error'); return; }
-
-  const mandante = empresas.find(e => e.id === idOrRut) || empresas.find(e => e.rut === idOrRut);
-  if(!mandante){ toast('❌ Mandante no encontrado','error'); return; }
-
-  if(!mandante.faenas) mandante.faenas = [];
-
-  // Evitar duplicados
-  const yaExiste = mandante.faenas.some(f => (f.nombre||f).toLowerCase() === nombre.toLowerCase());
-  if(yaExiste){ toast(`⚠️ La faena "${nombre}" ya existe en este mandante`,'error'); return; }
-
-  mandante.faenas.push({ nombre, descripcion: desc });
-  guardarLocal();
-  poblarSelects();           // actualiza selects en Registro Personal
-  actualizarFaenasExistentes(); // refresca la lista en el modal
-  document.getElementById('faena-nombre').value      = '';
-  document.getElementById('faena-descripcion').value = '';
-  toast(`✅ Faena "${nombre}" agregada a ${mandante.nombre}`, 'exito');
-}
-
-function eliminarFaena(idOrRutMandante, nombreFaena){
-  if(!confirm(`¿Eliminar la faena "${nombreFaena}"?`)) return;
-  const mandante = empresas.find(e => e.id === idOrRutMandante) || empresas.find(e => e.rut === idOrRutMandante);
-  if(!mandante || !mandante.faenas) return;
-  mandante.faenas = mandante.faenas.filter(f => (f.nombre||f) !== nombreFaena);
-  guardarLocal();
-  poblarSelects();
-  actualizarFaenasExistentes();
-  toast(`🗑️ Faena "${nombreFaena}" eliminada`, 'exito');
 }
 
 function estadoVencimiento(fecha){
