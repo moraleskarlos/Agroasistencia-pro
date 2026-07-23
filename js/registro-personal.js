@@ -565,6 +565,8 @@ function abrirModalAsignacionMasiva(ruts){
   if(selFaena) selFaena.innerHTML = '<option value="">— Selecciona primero un mandante —</option>';
   const cargo = document.getElementById('am-cargo');
   if(cargo) cargo.value = '';
+  const cargoOtro = document.getElementById('am-cargo-otro');
+  if(cargoOtro){ cargoOtro.value = ''; cargoOtro.style.display = 'none'; }
 
   const lista = document.getElementById('am-lista-trabajadores');
   if(lista){
@@ -608,11 +610,19 @@ function toggleSeleccionarTodosMasivo(){
   document.querySelectorAll('.am-check-trab').forEach(chk => chk.checked = todos);
 }
 
+function onCambioCargoAsignacionMasiva(){
+  const sel = document.getElementById('am-cargo');
+  const otro = document.getElementById('am-cargo-otro');
+  if(!sel || !otro) return;
+  otro.style.display = sel.value === 'otro' ? 'block' : 'none';
+}
+
 function aplicarAsignacionMasiva(){
   const epId    = document.getElementById('am-empresa-propia')?.value || '';
   const manId   = document.getElementById('am-mandante')?.value || '';
   const faena   = document.getElementById('am-faena')?.value || '';
-  const cargo   = document.getElementById('am-cargo')?.value.trim() || '';
+  let cargo     = document.getElementById('am-cargo')?.value || '';
+  if(cargo === 'otro') cargo = document.getElementById('am-cargo-otro')?.value.trim() || '';
 
   const seleccionados = Array.from(document.querySelectorAll('.am-check-trab:checked')).map(chk => chk.value);
   if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
@@ -640,6 +650,24 @@ function aplicarAsignacionMasiva(){
     cerrarModalAsignacionMasiva();
   }
 
+  if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
+  if(typeof renderContratistas === 'function') renderContratistas();
+}
+
+/* Deshace la importación: elimina del sistema a los trabajadores de esta tanda
+   que todavía no han recibido ninguna asignación (si ya aplicaste a un subgrupo,
+   esos quedan — solo se borran los que siguen pendientes en este modal). */
+function deshacerImportacionMasiva(){
+  if(!_ruts_asignacion_masiva.length) return;
+  const n = _ruts_asignacion_masiva.length;
+  if(!confirm(`¿Deshacer la importación? Se eliminarán los ${n} trabajador${n!==1?'es':''} recién importado${n!==1?'s':''} que aún no ha${n!==1?'n':''} sido asignado${n!==1?'s':''}. Esta acción no se puede deshacer.`)) return;
+
+  trabajadores = trabajadores.filter(t => !_ruts_asignacion_masiva.includes(t.rut));
+  guardarLocal();
+
+  toast(`🗑️ ${n} trabajador${n!==1?'es':''} eliminado${n!==1?'s':''} — importación deshecha`, 'exito');
+
+  cerrarModalAsignacionMasiva();
   if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
   if(typeof renderContratistas === 'function') renderContratistas();
 }
