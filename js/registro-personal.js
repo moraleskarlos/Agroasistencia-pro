@@ -310,20 +310,45 @@ function procesarExcel(event){
         }
         rutsVistosEnArchivo.add(rut);
 
+        const fecha_nacimiento = fmtFecha(row['Fecha Nacimiento'] || row['fecha_nacimiento']);
+        if(!fecha_nacimiento){
+          errores.push({ fila, nombre, mensaje:'Falta la Fecha de Nacimiento', correccion:'Completa la columna "Fecha Nacimiento" en formato AAAA-MM-DD — es obligatoria.' });
+          return;
+        }
+        const anioNac = parseInt(fecha_nacimiento.split('-')[0], 10);
+        if(String(anioNac).length !== 4 || anioNac < 1900 || anioNac > new Date().getFullYear()){
+          errores.push({ fila, nombre, mensaje:`Fecha de Nacimiento inválida ("${fecha_nacimiento}")`, correccion:'Revisa que el año tenga 4 dígitos y esté dentro de un rango válido (1900–hoy).' });
+          return;
+        }
+
+        const fecha_ingreso = fmtFecha(row['Fecha Ingreso'] || row['fecha_ingreso']);
+        if(!fecha_ingreso){
+          errores.push({ fila, nombre, mensaje:'Falta la Fecha de Ingreso', correccion:'Completa la columna "Fecha Ingreso" en formato AAAA-MM-DD — es obligatoria.' });
+          return;
+        }
+
         const nacionalidad = normalizar(row['Nacionalidad'] || row['NACIONALIDAD'], mapNac);
         const tipo_doc_migratorio   = (row['Tipo Doc. Migratorio']  || row['tipo_doc_migratorio']  || '').toString().trim();
         const num_doc_migratorio    = (row['N° Doc. Migratorio']    || row['num_doc_migratorio']   || '').toString().trim();
         const fecha_venc_migratorio = fmtFecha(row['Fecha Venc. Documento'] || row['fecha_venc_migratorio']);
 
-        if(nacionalidad && nacionalidad !== 'Chileno' && !fecha_venc_migratorio){
-          advertencias.push({ fila, nombre, mensaje:'Trabajador extranjero sin fecha de vencimiento de documento', correccion:'Agrega la fecha en la columna "Fecha Venc. Documento" — mientras falte, el semáforo de vencimiento no mostrará alertas para esta persona.' });
+        if(nacionalidad && nacionalidad !== 'Chileno'){
+          if(_fechaVencMigratorioObligatoria(tipo_doc_migratorio) && !fecha_venc_migratorio){
+            errores.push({ fila, nombre, mensaje:`Falta la fecha de vencimiento (obligatoria para "${tipo_doc_migratorio}")`, correccion:'Completa la columna "Fecha Venc. Documento" en formato AAAA-MM-DD, o cambia la Situación Migratoria si no corresponde.' });
+            return;
+          }
+          if(!tipo_doc_migratorio){
+            advertencias.push({ fila, nombre, mensaje:'Trabajador extranjero sin Situación Migratoria indicada', correccion:'Completa la columna "Tipo Doc. Migratorio" cuando la tengas — mientras tanto se importará sin esa información.' });
+          } else if(!fecha_venc_migratorio){
+            advertencias.push({ fila, nombre, mensaje:'Trabajador extranjero sin fecha de vencimiento de documento', correccion:'Agrega la fecha en la columna "Fecha Venc. Documento" — mientras falte, el semáforo de vencimiento no mostrará alertas para esta persona.' });
+          }
         }
 
         const trabajador = {
           id:                crypto.randomUUID(),
           rut, nombre,
           nacionalidad,
-          fecha_nacimiento:  fmtFecha(row['Fecha Nacimiento']  || row['fecha_nacimiento']),
+          fecha_nacimiento,
           estado_civil:      normalizar(row['Estado Civil']    || row['estado_civil'],   mapCivil),
           domicilio:         (row['Domicilio']  || '').toString().trim(),
           correo_electronico:(row['Correo']     || row['correo_electronico'] || '').toString().trim(),
@@ -337,7 +362,7 @@ function procesarExcel(event){
           empresa_rut:       '',
           empresa:           '',
           funcion_cargo:     (row['Cargo'] || row['cargo'] || '').toString().trim(),
-          fecha_ingreso:     fmtFecha(row['Fecha Ingreso'] || row['fecha_ingreso']),
+          fecha_ingreso,
           estado:            'activo'
         };
 
