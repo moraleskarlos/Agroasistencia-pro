@@ -2436,7 +2436,26 @@
         </div>
         <div class="form-group">
           <label>Cargo</label>
-          <input type="text" id="am-cargo" placeholder="Ej: Cosechero">
+          <select id="am-cargo" onchange="onCambioCargoAsignacionMasiva()">
+            <option value="">— Seleccionar cargo —</option>
+            <option value="Cosechero">Cosechero</option>
+            <option value="Cosechera">Cosechera</option>
+            <option value="Podador">Podador</option>
+            <option value="Raleador">Raleador</option>
+            <option value="Operario de Packing">Operario de Packing</option>
+            <option value="Seleccionador">Seleccionador</option>
+            <option value="Amarrador">Amarrador</option>
+            <option value="Regador">Regador</option>
+            <option value="Fumigador">Fumigador</option>
+            <option value="Tractorista">Tractorista</option>
+            <option value="Jefe de Cuadrilla">Jefe de Cuadrilla</option>
+            <option value="Supervisor de Campo">Supervisor de Campo</option>
+            <option value="Encargado de Bodega">Encargado de Bodega</option>
+            <option value="Estibador">Estibador</option>
+            <option value="Chofer">Chofer</option>
+            <option value="otro">Otro (especificar)</option>
+          </select>
+          <input type="text" id="am-cargo-otro" placeholder="Especifica el cargo" style="display:none;margin-top:8px;">
         </div>
       </div>
 
@@ -2446,9 +2465,14 @@
       </label>
       <div id="am-lista-trabajadores" style="max-height:220px;overflow-y:auto;margin-bottom:16px;"></div>
 
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn btn-secondary btn-sm" onclick="cerrarModalAsignacionMasiva()">Cerrar</button>
-        <button class="btn btn-primary btn-sm" onclick="aplicarAsignacionMasiva()"><i class="ti ti-check"></i> Aplicar a seleccionados</button>
+      <div style="display:flex;gap:8px;justify-content:space-between;">
+        <button class="btn btn-secondary btn-sm" onclick="deshacerImportacionMasiva()" style="color:var(--danger);">
+          <i class="ti ti-trash"></i> Deshacer importación
+        </button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="cerrarModalAsignacionMasiva()">Cerrar (asignar después)</button>
+          <button class="btn btn-primary btn-sm" onclick="aplicarAsignacionMasiva()"><i class="ti ti-check"></i> Aplicar a seleccionados</button>
+        </div>
       </div>
     </div>
   </div>
