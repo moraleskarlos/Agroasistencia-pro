@@ -12,6 +12,7 @@ function exportarTrabajadoresExcel(){
 
   const data = trabajadores.map(t => {
     const mandante = findMandante(t);
+    const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
     const cont     = contratos.find(c => c.trabajador_id === t.id || c.trabajador_rut === t.rut);
     const fmt      = v => v ? new Date(v).toLocaleDateString('es-CL') : '';
 
@@ -25,6 +26,8 @@ function exportarTrabajadoresExcel(){
       Domicilio:              t.domicilio || '',
       AFP:                    t.afiliacion_afp || '',
       'Sistema de Salud':     t.sistema_salud || '',
+      'Empresa Contratista':  empEmpleadora?.razon_social || empEmpleadora?.nombre || '',
+      'RUT Contratista':      empEmpleadora?.rut || '',
       'Empresa Mandante':     mandante?.nombre || '',
       'RUT Mandante':         mandante?.rut || '',
       Faena:                  t.faena_obra || '',
@@ -49,6 +52,50 @@ function exportarTrabajadoresExcel(){
   XLSX.utils.book_append_sheet(wb, ws, 'Trabajadores');
   XLSX.writeFile(wb, `Nomina_${new Date().toLocaleDateString('es-CL').replace(/\//g,'-')}.xlsx`);
   toast('⬇️ Nómina exportada con todos los campos','exito');
+}
+
+/* ── 1b. NÓMINA DE TRABAJADORES EXTRANJEROS ────────────── */
+function exportarExtranjerosExcel(){
+  const extranjeros = trabajadores.filter(t => t.nacionalidad && t.nacionalidad !== 'Chileno');
+  if(!extranjeros.length){
+    toast('⚠️ Sin trabajadores extranjeros para exportar','error');
+    return;
+  }
+
+  const data = extranjeros.map(t => {
+    const mandante = findMandante(t);
+    const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
+    const fmt = v => v ? new Date(v).toLocaleDateString('es-CL') : '';
+    const sem = _calcularSemaforo(t.fecha_venc_migratorio);
+    const estadoTxt = { verde:'Vigente', amarillo:'Vigente (iniciar trámite)', rojo:'Por vencer', negro:'Vencido', gris:'Sin fecha' }[sem];
+
+    return {
+      RUT:                       t.rut,
+      'Nombre Completo':         t.nombre,
+      Nacionalidad:              t.nacionalidad || '',
+      'Situación Migratoria':    t.tipo_doc_migratorio || '',
+      'N° Documento':            t.num_doc_migratorio || '',
+      'Fecha Vencimiento':       fmt(t.fecha_venc_migratorio),
+      'Estado Documento':        estadoTxt,
+      'Empresa Contratista':     empEmpleadora?.razon_social || empEmpleadora?.nombre || '',
+      'Empresa Mandante':        mandante?.nombre || '',
+      Faena:                     t.faena_obra || '',
+      Cargo:                     t.funcion_cargo || '',
+      Estado:                    t.estado === 'activo' ? 'Activo' : 'Inactivo',
+    };
+  });
+
+  const ws = XLSX.utils.json_to_sheet(data);
+  const anchos = Object.keys(data[0] || {}).map(key => {
+    const maxLen = Math.max(key.length, ...data.map(row => String(row[key]||'').length));
+    return { wch: Math.min(Math.max(maxLen + 2, 10), 35) };
+  });
+  ws['!cols'] = anchos;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Extranjeros');
+  XLSX.writeFile(wb, `Trabajadores_Extranjeros_${new Date().toLocaleDateString('es-CL').replace(/\//g,'-')}.xlsx`);
+  toast('⬇️ Nómina de extranjeros exportada','exito');
 }
 
 /* ── 2. PLANTILLA EXCEL PARA CARGA MASIVA ──────────────── */
