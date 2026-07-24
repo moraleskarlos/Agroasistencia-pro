@@ -123,15 +123,15 @@ function calcularAlertas(){
       if(sem === 'gris'){
         alertas.push(_alerta('critico','Trabajadores',`mig_sin_fecha_${t.rut}`,
           'Documento migratorio sin fecha registrada', `${t.nombre} es extranjero y no tiene fecha de vencimiento registrada`,
-          () => verPerfilTrabajador(t.rut)));
+          () => editarTrabajador(t.rut)));
       } else if(sem === 'negro'){
         alertas.push(_alerta('critico','Trabajadores',`mig_vencido_${t.rut}`,
           'Documento migratorio vencido', `El documento de ${t.nombre} está vencido`,
-          () => verPerfilTrabajador(t.rut)));
+          () => editarTrabajador(t.rut)));
       } else if(sem === 'rojo'){
         alertas.push(_alerta('importante','Trabajadores',`mig_por_vencer_${t.rut}`,
           'Documento migratorio vence pronto', `El documento de ${t.nombre} vence en menos de 30 días`,
-          () => verPerfilTrabajador(t.rut)));
+          () => editarTrabajador(t.rut)));
       }
     }
   });
