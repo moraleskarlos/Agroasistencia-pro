@@ -132,16 +132,48 @@ function seleccionarTodosTrab(val){
   document.querySelectorAll('.trab-check').forEach(c => c.checked = val);
 }
 
+/* Si el guardado vino desde el modal de edición (TR-005), lo cierra y devuelve
+   el formulario a su lugar en Registro Personal, y refresca la lista/KPIs. */
+function _cerrarModalEditarTrabajadorSiAbierto(){
+  const modal = document.getElementById('modal-editar-trabajador');
+  if(!modal || modal.style.display === 'none') return;
+  _devolverFormularioTrabajadorASuLugar();
+  modal.style.display = 'none';
+  if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
+  if(typeof renderTablaExtranjeros === 'function') renderTablaExtranjeros();
+}
+
 function editarTrabajador(rut){
   const t = trabajadores.find(x => x.rut === rut);
   if(!t) return;
-  irA('registro', document.querySelectorAll('.sb-item')[2]);
-  setTimeout(() => {
-    cargarEnFormulario(t);
-    const btn = document.getElementById('btn-guardar-txt');
-    if(btn) btn.textContent = 'Actualizar trabajador';
-    toast('✅ Datos cargados para editar', 'exito');
-  }, 150);
+
+  const modal = document.getElementById('modal-editar-trabajador');
+  const slot  = document.getElementById('modal-editar-trabajador-form-slot');
+  const form  = document.getElementById('form-trabajador');
+  if(!modal || !slot || !form) return;
+
+  slot.appendChild(form); // mueve el formulario real (mismos IDs, misma lógica) dentro del modal
+  modal.style.display = 'flex';
+
+  cargarEnFormulario(t);
+  const btn = document.getElementById('btn-guardar-txt');
+  if(btn) btn.textContent = 'Actualizar trabajador';
+}
+
+/* Devuelve el formulario a su lugar de origen en Registro Personal y cierra el modal,
+   sin guardar nada — para el botón Cancelar y para el clic fuera del modal. */
+function cerrarModalEditarTrabajador(){
+  const modal = document.getElementById('modal-editar-trabajador');
+  if(!modal || modal.style.display === 'none') return;
+  _devolverFormularioTrabajadorASuLugar();
+  modal.style.display = 'none';
+  limpiarFormulario();
+}
+
+function _devolverFormularioTrabajadorASuLugar(){
+  const anchor = document.getElementById('form-trabajador-anchor');
+  const form   = document.getElementById('form-trabajador');
+  if(anchor && form && anchor.parentNode) anchor.parentNode.insertBefore(form, anchor);
 }
 
 /* Un trabajador solo se puede eliminar de verdad si nunca tuvo movimientos reales:
@@ -245,13 +277,23 @@ function switchTabTrabajadores(tab){
 }
 
 function renderTablaExtranjeros(){
-  const buscar = (document.getElementById('buscar-extranjero')?.value || '').toLowerCase();
-  const tbody  = document.getElementById('tbody-extranjeros');
+  const buscar   = (document.getElementById('buscar-extranjero')?.value || '').toLowerCase();
+  const fEmpProp = document.getElementById('filtro-empresa-propia-ext')?.value || '';
+  const fEmp     = document.getElementById('filtro-empresa-ext')?.value || '';
+  const fEst     = document.getElementById('filtro-estado-ext')?.value || '';
+  const tbody    = document.getElementById('tbody-extranjeros');
   if(!tbody) return;
 
   const extranjeros = trabajadores.filter(t => {
     const esExtranjero = t.nacionalidad && t.nacionalidad !== 'Chileno';
     if(!esExtranjero) return false;
+
+    const m = findMandante(t);
+    const mEmpProp = !fEmpProp || t.empresa_propia_id === fEmpProp;
+    const mEmp     = !fEmp || (m?.id === fEmp) || (m?.rut === fEmp) || (t.empresa_rut === fEmp) || (t.empresa === fEmp);
+    const mEst     = !fEst || t.estado === fEst;
+    if(!mEmpProp || !mEmp || !mEst) return false;
+
     if(!buscar) return true;
     return t.nombre?.toLowerCase().includes(buscar) ||
            t.rut?.toLowerCase().replace(/\./g,'').includes(buscar.replace(/\./g,''));
