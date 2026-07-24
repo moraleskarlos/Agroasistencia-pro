@@ -303,7 +303,7 @@ async function cargarDatos(){
 
 function poblarSelects(){
   // Selects de mandantes (antes "contratistas")
-  const ids=['m-empresa','filtro-empresa','asist-empresa','qr-filtro-empresa'];
+  const ids=['m-empresa','filtro-empresa','filtro-empresa-ext','asist-empresa','qr-filtro-empresa'];
   ids.forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
     const val=el.value;
