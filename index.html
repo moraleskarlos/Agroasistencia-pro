@@ -356,6 +356,7 @@
   </div>
 
 </form>
+<div id="form-trabajador-anchor"></div>
           </div>
           <div class="card">
             <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva desde Excel</div>
@@ -428,7 +429,7 @@
            placeholder="Buscar nombre o RUT..."
            id="buscar-trab"
            style="width:190px;padding:7px 10px;font-size:12px;"
-           oninput="formatearRutBuscador(this); cargarTrabajadores()">
+           oninput="cargarTrabajadores()">
 
     <label style="font-size:12px;color:var(--texto2);white-space:nowrap;display:flex;align-items:center;gap:5px;">
       <i class="ti ti-calendar"></i> F. Ingreso:
@@ -483,11 +484,17 @@
         <!-- SUB-TAB EXTRANJEROS -->
         <div id="sub-tab-extranjeros-trab" style="display:none;">
           <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
-              <input type="text" id="buscar-extranjero" placeholder="Buscar nombre o RUT..."
-                style="width:200px;padding:7px 10px;font-size:12px;"
-                oninput="renderTablaExtranjeros()">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <select id="filtro-empresa-propia-ext" class="btn btn-secondary" style="font-size:13px;" onchange="renderTablaExtranjeros()"><option value="">Todas las empresas</option></select>
+                <select id="filtro-empresa-ext" class="btn btn-secondary" style="font-size:13px;" onchange="renderTablaExtranjeros()"><option value="">Todos los mandantes</option></select>
+                <select id="filtro-estado-ext" class="btn btn-secondary" style="font-size:13px;" onchange="renderTablaExtranjeros()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
+                <input type="text" id="buscar-extranjero" placeholder="Buscar nombre o RUT..."
+                  style="width:200px;padding:7px 10px;font-size:12px;"
+                  oninput="renderTablaExtranjeros()">
+                <button class="btn btn-secondary btn-sm" onclick="exportarExtranjerosExcel()"><i class="ti ti-download"></i> Excel</button>
+              </div>
             </div>
             <div style="overflow-x:auto;">
               <table class="tabla" style="min-width:750px;">
@@ -2241,6 +2248,23 @@
 
 <!-- MODAL FAENA -->
 <!-- MODAL EMPRESA -->
+<!-- MODAL EDITAR TRABAJADOR (TR-005) — reutiliza el mismo #form-trabajador, sin duplicar campos -->
+<div id="modal-editar-trabajador" style="display:none;position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:16px;font-weight:700;">
+        <i class="ti ti-user-edit" style="color:var(--verde-dark);margin-right:6px;"></i>
+        Editar trabajador
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="cerrarModalEditarTrabajador()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-editar-trabajador-form-slot"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+      <button class="btn btn-secondary" onclick="cerrarModalEditarTrabajador()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-empresa" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
   <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:520px;box-shadow:var(--shadow-md);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
