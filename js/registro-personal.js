@@ -52,13 +52,19 @@ function _fechaVencMigratorioObligatoria(tipo){
 }
 
 /* RP-008: estado automático del documento migratorio, calculado desde la fecha de vencimiento */
+/* RP-008: estado del documento migratorio. Delega en _calcularSemaforo() (trabajadores.js)
+   para que Registro Personal, Trabajadores y Alertas usen siempre el mismo criterio. */
 function estadoDocumentoMigratorio(fecha){
   if(!fecha) return { texto:'Sin fecha', color:'var(--texto3)', emoji:'⚪' };
-  const dias = (new Date(fecha) - new Date()) / (1000*60*60*24);
-  const txt  = new Date(fecha).toLocaleDateString('es-CL');
-  if(dias < 0)   return { texto:`${txt} · Vencido`,      color:'#dc2626', emoji:'🔴' };
-  if(dias <= 30) return { texto:`${txt} · Por vencer`,   color:'#d97706', emoji:'🟡' };
-  return           { texto:`${txt} · Vigente`,           color:'#16a34a', emoji:'🟢' };
+  const sem = _calcularSemaforo(fecha);
+  const txt = new Date(fecha+'T12:00:00').toLocaleDateString('es-CL');
+  const map = {
+    negro:    { texto:`${txt} · Vencido`,               color:'#dc2626', emoji:'⚫' },
+    rojo:     { texto:`${txt} · Vence pronto`,          color:'#dc2626', emoji:'🔴' },
+    amarillo: { texto:`${txt} · Vigente (iniciar trámite)`, color:'#d97706', emoji:'🟡' },
+    verde:    { texto:`${txt} · Vigente`,               color:'#16a34a', emoji:'🟢' },
+  };
+  return map[sem] || map.verde;
 }
 
 async function buscarPorRUT(){
@@ -224,6 +230,7 @@ async function guardarTrabajador(e){
       trabajadores.push({id: crypto.randomUUID(), ...datos});
     }
     guardarLocal(); limpiarFormulario();
+    _cerrarModalEditarTrabajadorSiAbierto();
 
     const btn = document.getElementById('btn-guardar-trabajador');
     const txt = document.getElementById('btn-guardar-txt');
@@ -245,6 +252,7 @@ async function guardarTrabajador(e){
     else({error:err}=await supabaseClient.from('trabajadores').insert([{id: crypto.randomUUID(), ...datos}]));
     if(err)throw err;
     await cargarDatos(); limpiarFormulario();
+    _cerrarModalEditarTrabajadorSiAbierto();
     toast(`✅ ${datos.nombre} ${idOriginal?'actualizado':'registrado'} en la nube`,'exito');
   }catch(err){toast(`❌ Error: ${err.message}`,'error')}
 }
