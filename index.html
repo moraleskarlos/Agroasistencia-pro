@@ -487,9 +487,9 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <select id="filtro-empresa-propia-ext" class="btn btn-secondary" style="font-size:13px;" onchange="renderTablaExtranjeros()"><option value="">Todas las empresas</option></select>
-                <select id="filtro-empresa-ext" class="btn btn-secondary" style="font-size:13px;" onchange="renderTablaExtranjeros()"><option value="">Todos los mandantes</option></select>
-                <select id="filtro-estado-ext" class="btn btn-secondary" style="font-size:13px;" onchange="renderTablaExtranjeros()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
+                <select id="filtro-empresa-propia-ext" class="btn btn-secondary" style="font-size:13px;width:auto;min-width:170px;" onchange="renderTablaExtranjeros()"><option value="">Todas las empresas</option></select>
+                <select id="filtro-empresa-ext" class="btn btn-secondary" style="font-size:13px;width:auto;min-width:170px;" onchange="renderTablaExtranjeros()"><option value="">Todos los mandantes</option></select>
+                <select id="filtro-estado-ext" class="btn btn-secondary" style="font-size:13px;width:auto;min-width:140px;" onchange="renderTablaExtranjeros()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
                 <input type="text" id="buscar-extranjero" placeholder="Buscar nombre o RUT..."
                   style="width:200px;padding:7px 10px;font-size:12px;"
                   oninput="renderTablaExtranjeros()">
@@ -506,9 +506,10 @@
                   <th>Vencimiento</th>
                   <th>Días restantes</th>
                   <th style="text-align:center;">Estado</th>
+                  <th style="text-align:right;">Acciones</th>
                 </tr></thead>
                 <tbody id="tbody-extranjeros">
-                  <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">Sin trabajadores extranjeros registrados</td></tr>
+                  <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--texto3);">Sin trabajadores extranjeros registrados</td></tr>
                 </tbody>
               </table>
             </div>
