@@ -269,7 +269,10 @@ function cargarContratoEnFormulario(c){
   document.getElementById('c-distribucion').value  = c.distribucion_jornada || '';
      renderJornadaDias(c.jornada_dias);
   document.getElementById('c-colacion').value      = c.colacion || '';
-  document.getElementById('c-tipo-rem').value      = c.tipo_remuneracion || 'tiempo';
+  // Compatibilidad: contratos guardados con el select viejo (tiempo/trato/
+  // kilo/caja/bin) se muestran como "mensual" por defecto.
+  const _formasValidas = ['mensual','diaria'];
+  document.getElementById('c-tipo-rem').value = _formasValidas.includes(c.tipo_remuneracion) ? c.tipo_remuneracion : 'mensual';
   document.getElementById('c-sueldo').value        = c.sueldo_monto || '';
   document.getElementById('c-sueldo-escrito').value= c.sueldo_escrito || '';
   const bens = c.beneficios || [];
@@ -345,6 +348,9 @@ function guardarContrato(){
   const termino = document.getElementById('c-fecha-termino').value;
   if(!termino){ toast('⚠️ Ingresa la fecha de término','error'); return; }
 
+  const formaRem = document.getElementById('c-tipo-rem').value;
+  if(!formaRem){ toast('⚠️ Selecciona la forma de remuneración (Mensual o Diaria)','error'); return; }
+
   const datos = obtenerDatosFormulario();
   cargarContratos();
 
@@ -372,7 +378,8 @@ function guardarContrato(){
   if(b) b.textContent = contratos.length;
 
   toast('✅ Contrato guardado correctamente','exito');
-  actualizarPrevia();
+  limpiarContrato();
+  _renderListaVisualTrabajadorContrato();
 }
 
 function guardarCorreccionContrato(){
@@ -428,7 +435,7 @@ function limpiarContrato(){
   });
   document.getElementById('c-trabajador').value = '';
   document.getElementById('c-tipo').value = 'temporada';
-  document.getElementById('c-tipo-rem').value = 'tiempo';
+  document.getElementById('c-tipo-rem').value = '';
   limpiarPreview();
 }
 
@@ -536,6 +543,7 @@ function construirDocumentoContrato(t, emp, mandante, datos){
   const sueldoPalab  = sueldoNum
     ? numeroALetras(sueldoNum).trim() + ' pesos'
     : '_______________________________________________';
+  const formaRemTxt  = datos.tipo_remuneracion === 'diaria' ? 'diaria' : 'mensual';
 
   // Jornada
   const horasSem  = datos.horas_semanales || '___';
@@ -646,15 +654,14 @@ function construirDocumentoContrato(t, emp, mandante, datos){
     dentro de los límites legales.</p>`});
 
   clausulas.push({tit:'Remuneración', body:`
-    <p>Por la prestación de sus servicios, el trabajador percibirá:</p>
-    <p>a) Sueldo base mensual: <strong>${sueldoFmt} (${sueldoPalab})</strong>.</p>
-    <p>Las remuneraciones serán pagadas por períodos vencidos, el último día hábil de cada mes,
-    mediante transferencia electrónica, depósito en cuenta bancaria u otro medio acordado
-    entre las partes.</p>
-    <p>Se deja constancia de que cualquier beneficio adicional otorgado por la empresa, en dinero
-    o especie, no consignado expresamente en este contrato, se otorgará a título de mera
-    liberalidad del empleador, sin constituir derecho adquirido, siempre que no se otorgue
-    en forma permanente.</p>`});
+    <p>El trabajador percibirá como remuneración la suma de
+    <strong>${sueldoFmt} (${sueldoPalab})</strong>, correspondiente a una remuneración
+    <strong>${formaRemTxt}</strong>, la que será pagada en moneda de curso legal dentro
+    de los plazos establecidos en el artículo 55 del Código del Trabajo, mediante el
+    sistema de pago acordado entre las partes.</p>
+    <p>En caso de corresponder, el trabajador tendrá derecho a percibir las demás
+    remuneraciones, beneficios o asignaciones pactadas en el presente contrato, en sus
+    anexos o las que procedan conforme a la legislación laboral vigente.</p>`});
 
   clausulas.push({tit:'Prohibiciones', body:`
     <p>El trabajador(a) se obliga a no incurrir en las siguientes conductas:</p>
@@ -1152,6 +1159,7 @@ function switchTabContratos(tab){
   if(tab === 'anexos'){
     poblarSelectAnexoTrabajador();
     actualizarBadgesContratos();
+    cambiarModoAnexo('individual');
   }
   if(tab === 'epp'){
     initEppTab();
