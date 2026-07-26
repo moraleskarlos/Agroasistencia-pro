@@ -80,7 +80,13 @@ function cargarEnFormulario(t){
   set('m-rut',           t.rut);
   set('m-nombre',        t.nombre);
   set('m-fecha-nac',     t.fecha_nacimiento);
-  set('m-estado-civil',  t.estado_civil);
+  // RP-015: trabajadores importados por Excel antes de este fix quedaron con
+  // "Soltero"/"Casado"/etc. sin "/a" — no coincide con las <option> del select
+  // (que sí tienen "/a"), así que el select aparecía vacío al editar aunque el
+  // dato estuviera guardado. Se autocorrige el valor legacy solo al mostrarlo;
+  // queda arreglado en el trabajador la próxima vez que se guarde el formulario.
+  const mapCivilLegacy = {'Soltero':'Soltero/a','Casado':'Casado/a','Divorciado':'Divorciado/a','Viudo':'Viudo/a'};
+  set('m-estado-civil',  mapCivilLegacy[t.estado_civil] || t.estado_civil);
   set('m-correo',        t.correo_electronico);
   set('m-domicilio',     t.domicilio);
   set('m-afp',           t.afiliacion_afp);
@@ -274,7 +280,7 @@ function procesarExcel(event){
         .toLowerCase().replace(/^\w/, c => c.toUpperCase());
 
       const mapNac   = {'chileno':'Chileno','colombiano':'Colombiano','peruano':'Peruano','boliviano':'Boliviano','venezolano':'Venezolano','ecuatoriano':'Ecuatoriano','haitiano':'Haitiano','argentino':'Argentino','otro':'Otro'};
-      const mapCivil = {'soltero':'Soltero','casado':'Casado','divorciado':'Divorciado','viudo':'Viudo','conviviente':'Conviviente'};
+      const mapCivil = {'soltero':'Soltero/a','casado':'Casado/a','divorciado':'Divorciado/a','viudo':'Viudo/a','conviviente':'Conviviente'};
       const mapAfp   = {'habitat':'Habitat','provida':'Provida','capital':'Capital','cuprum':'Cuprum','planvital':'Planvital','modelo':'Modelo','uno':'Uno','no cotiza':'No cotiza'};
       const mapSalud = {'fonasa':'Fonasa','banmedica':'Isapre Banm\u00e9dica','cruz blanca':'Isapre Cruz Blanca','colmena':'Isapre Colmena','consalud':'Isapre Consalud','esencial':'Isapre Esencial','vida tres':'Isapre Vida Tres','isapre banmedica':'Isapre Banm\u00e9dica','isapre cruz blanca':'Isapre Cruz Blanca','isapre colmena':'Isapre Colmena','isapre consalud':'Isapre Consalud'};
 
@@ -352,6 +358,16 @@ function procesarExcel(event){
           }
         }
 
+        // RP-014: correo con formato inválido no bloquea la fila — se importa
+        // el trabajador igual, pero sin el correo, y queda como advertencia.
+        const correoRaw = (row['Correo'] || row['correo_electronico'] || '').toString().trim();
+        const correoValido = c => /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(c);
+        let correo_electronico = correoRaw;
+        if(correoRaw && !correoValido(correoRaw)){
+          advertencias.push({ fila, nombre, mensaje:`Correo "${correoRaw}" con formato inválido`, correccion:'No se importó ese correo (probablemente tiene tildes, ñ o espacios) — agrégalo manualmente después desde el formulario individual.' });
+          correo_electronico = '';
+        }
+
         const trabajador = {
           id:                crypto.randomUUID(),
           rut, nombre,
@@ -359,7 +375,7 @@ function procesarExcel(event){
           fecha_nacimiento,
           estado_civil:      normalizar(row['Estado Civil']    || row['estado_civil'],   mapCivil),
           domicilio:         (row['Domicilio']  || '').toString().trim(),
-          correo_electronico:(row['Correo']     || row['correo_electronico'] || '').toString().trim(),
+          correo_electronico:correo_electronico,
           afiliacion_afp:    normalizar(row['AFP']  || row['afp'],   mapAfp),
           sistema_salud:     normalizar(row['Salud']|| row['salud'], mapSalud),
           tipo_doc_migratorio:   tipo_doc_migratorio || null,
