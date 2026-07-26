@@ -290,8 +290,8 @@ function procesarExcel(event){
       };
 
       datosExcel = [];
-      let errores = [];
-      let advertencias = [];
+      errores = [];
+      advertencias = [];
       const rutsVistosEnArchivo = new Set();
 
       rows.forEach((row, i) => {
@@ -454,6 +454,19 @@ function _renderAvisosImportacion(errores, advertencias){
 function subirMasivo(){
   if(!datosExcel.length){ toast('\u26a0\ufe0f No hay datos para importar','error'); return; }
 
+  // RP-013: si el archivo tiene filas con error, nunca se importa en silencio —
+  // se pide confirmación explícita indicando cuántos entran y cuántos se quedan fuera.
+  if((errores||[]).length){
+    const n = errores.length;
+    const ok = confirm(
+      `Este archivo tiene ${n} fila${n!==1?'s':''} con error.\n\n`+
+      `Se importarán los ${datosExcel.length} trabajador${datosExcel.length!==1?'es':''} válido${datosExcel.length!==1?'s':''}.\n`+
+      `${n} fila${n!==1?'s':''} con error NO se importará${n!==1?'n':''} — corrígelas y súbelas en un archivo aparte si quieres incluirlas.\n\n`+
+      `¿Continuar con la importación parcial?`
+    );
+    if(!ok) return;
+  }
+
   let importados = 0;
   let omitidos = 0;
   const rutsImportados = [];
@@ -474,6 +487,8 @@ function subirMasivo(){
   toast(msg, 'exito');
 
   datosExcel = [];
+  errores = [];
+  advertencias = [];
   document.getElementById('seccion-preview').style.display = 'none';
   document.getElementById('archivo-excel').value = '';
   const avisos = document.getElementById('preview-avisos');
@@ -484,6 +499,8 @@ function subirMasivo(){
 
 function cancelarMasivo(){
   datosExcel = [];
+  errores = [];
+  advertencias = [];
   document.getElementById('seccion-preview').style.display = 'none';
   document.getElementById('archivo-excel').value = '';
   const avisos = document.getElementById('preview-avisos');
