@@ -300,7 +300,7 @@ function renderTablaExtranjeros(){
   });
 
   if(!extranjeros.length){
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--texto3);">
       Sin trabajadores extranjeros registrados</td></tr>`;
     return;
   }
@@ -327,6 +327,11 @@ function renderTablaExtranjeros(){
       <td style="font-size:12px;">${fechaTxt}</td>
       <td style="font-size:12px;">${diasTxt}</td>
       <td style="text-align:center;">${badge}</td>
+      <td style="text-align:right;">
+        <button class="btn btn-secondary btn-sm" onclick="editarTrabajador('${t.rut}')" title="Editar">
+          <i class="ti ti-edit"></i> Editar
+        </button>
+      </td>
     </tr>`;
   }).join('');
 }
