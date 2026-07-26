@@ -1,5 +1,27 @@
 /* ════ QR ════ */
 
+/* QR-008: registro de credenciales realmente impresas (no solo previsualizadas).
+   Estructura en localStorage: [{ rut, fecha }] — una entrada por trabajador,
+   se actualiza la fecha si se vuelve a imprimir. */
+function _credencialesQR(){
+  return JSON.parse(localStorage.getItem('credenciales_qr') || '[]');
+}
+
+function _tieneCredencialQR(rut){
+  return _credencialesQR().some(c => c.rut === rut);
+}
+
+function _registrarCredencialesQR(ruts){
+  const registro = _credencialesQR();
+  const hoy = new Date().toISOString().split('T')[0];
+  ruts.forEach(rut => {
+    const existente = registro.find(c => c.rut === rut);
+    if(existente) existente.fecha = hoy;
+    else registro.push({ rut, fecha: hoy });
+  });
+  localStorage.setItem('credenciales_qr', JSON.stringify(registro));
+}
+
 function cargarListaQR(){
   const filtro  = document.getElementById('qr-filtro-empresa')?.value || '';
   const buscar  = (document.getElementById('qr-buscar')?.value || '').toLowerCase().trim();
@@ -84,8 +106,11 @@ function cargarListaQR(){
           <!-- Empresa -->
           <div style="flex:1.5;font-size:12px;color:var(--texto2);">${empNom}</div>
 
-          <!-- Ver credencial individual -->
-          <div style="flex:0.8;text-align:center;">
+          <!-- Ver credencial individual + estado -->
+          <div style="flex:0.8;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;">
+            ${_tieneCredencialQR(t.rut)
+              ? `<span style="font-size:10px;font-weight:600;color:#065F46;background:#D1FAE5;padding:2px 8px;border-radius:10px;">✓ Con credencial</span>`
+              : `<span style="font-size:10px;font-weight:600;color:#991B1B;background:#FEE2E2;padding:2px 8px;border-radius:10px;">✕ Sin credencial</span>`}
             <button class="btn btn-secondary btn-sm" onclick="generarQRIndividual('${t.rut}')" style="font-size:11px;">
               <i class="ti ti-qrcode"></i> Ver
             </button>
@@ -191,10 +216,15 @@ function imprimirQRDesdeModal(){
     <h2>Códigos QR — ${empPrincipal}</h2>
     <p>${_trabajadores_modal_qr.length} trabajador${_trabajadores_modal_qr.length>1?'es':''} · ${new Date().toLocaleDateString('es-CL')}</p>
     <div class="grid">${cards}</div>
-    <script>setTimeout(()=>window.print(),400);<\/script>
+    <script>window.onload = () => window.print();<\/script>
     </body></html>`);
   win.document.close();
 
+  // QR-008: se marca "con credencial" recién aquí — imprimir es la acción
+  // real, no la vista previa.
+  _registrarCredencialesQR(_trabajadores_modal_qr.map(t => t.rut));
+
   cerrarModalQR();
   seleccionarTodosQR(false);
+  cargarListaQR();
 }
