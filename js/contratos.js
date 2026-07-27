@@ -174,7 +174,8 @@ function onCambioEmpresaFiltroContrato(){
 
   _renderListaVisualTrabajadorContrato();
   precargarContrato();
-  renderListaContratoMasivo();
+  _masivoSeleccionados.clear();
+  renderPiramideMasivo();
 }
 
 function _seleccionarTrabajadorContratoVisual(id){
@@ -1259,10 +1260,10 @@ function cambiarModoContrato(modo){
   document.getElementById('campo-c-trabajador-individual').style.display = esMasivo ? 'none' : '';
   document.getElementById('bloque-contrato-masivo').style.display       = esMasivo ? 'block' : 'none';
   document.getElementById('bloque-precargados-individual').style.display= esMasivo ? 'none' : '';
-  document.getElementById('g2-contrato-cols').style.gridTemplateColumns = esMasivo ? '1fr' : '1fr 1fr';
+  document.getElementById('g2-contrato-cols').style.display             = esMasivo ? 'none' : 'grid';
+  document.getElementById('g2-contrato-cols').style.gridTemplateColumns = '1fr 1fr';
 
   document.getElementById('botones-contrato-individual').style.display = (esIndividual) ? 'flex' : 'none';
-  document.getElementById('botones-contrato-masivo').style.display     = esMasivo ? 'flex' : 'none';
   const botonesCorregir = document.getElementById('botones-contrato-corregir');
   if(botonesCorregir) botonesCorregir.style.display = esCorregir ? 'flex' : 'none';
 
@@ -1279,33 +1280,18 @@ function cambiarModoContrato(modo){
   const lblSelector = document.getElementById('lbl-c-trabajador-select');
   if(lblSelector) lblSelector.textContent = esCorregir ? 'Selecciona el contrato a corregir' : 'Seleccionar trabajador';
 
-  // Cargo y horas pasan a ser editables solo en modo masivo (compartidos para todo el grupo)
+  // Cargo y horas ya no se editan de forma compartida en Masivo — cada grupo
+  // define su propia jornada/cargo en la pirámide, no en un formulario único.
   const cCargo = document.getElementById('c-cargo');
   const cHoras = document.getElementById('c-horas');
-  const lblCargo = document.getElementById('lbl-c-cargo');
-  const lblHoras = document.getElementById('lbl-c-horas');
-  if(cCargo){
-    cCargo.readOnly = !esMasivo;
-    cCargo.style.background = esMasivo ? '' : 'var(--gris-bg)';
-    cCargo.placeholder = esMasivo ? 'Ej: Cosechero' : 'Se carga al seleccionar trabajador';
-  }
-  if(cHoras){
-    cHoras.readOnly = !esMasivo;
-    cHoras.style.background = esMasivo ? '' : 'var(--gris-bg)';
-  }
-  if(lblCargo) lblCargo.textContent = esMasivo ? 'Función / cargo (para todo el grupo) *' : 'Función / cargo *';
-  if(lblHoras) lblHoras.textContent = esMasivo ? 'Horas semanales' : 'Horas semanales (auto)';
+  if(cCargo){ cCargo.readOnly = true; cCargo.style.background = 'var(--gris-bg)'; cCargo.placeholder = 'Se carga al seleccionar trabajador'; }
+  if(cHoras){ cHoras.readOnly = true; cHoras.style.background = 'var(--gris-bg)'; }
 
   document.getElementById('c-trabajador').value = '';
   limpiarPreview();
 
-  const eppCont = document.getElementById('epp-en-contrato');
-  if(eppCont){
-    eppCont.innerHTML = esMasivo ? _htmlFormularioEpp('cepp', {}) : '';
-  }
-
   poblarSelectTrabajadoresContrato(); // repuebla según el modo (todos con check, o solo los que tienen contrato)
-  if(esMasivo) renderListaContratoMasivo();
+  if(esMasivo){ _masivoSeleccionados.clear(); renderPiramideMasivo(); }
 }
 
 /* Un trabajador tiene contrato vigente si existe un documento tipo 'contrato' en su carpeta laboral */
@@ -1313,137 +1299,485 @@ function _tieneContratoVigente(rut){
   return (carpeta || []).some(d => d.trabajador_rut === rut && d.tipo === 'contrato');
 }
 
-function renderListaContratoMasivo(){
-  const buscar     = (document.getElementById('cm-buscar')?.value || '').toLowerCase().trim();
-  const mostrarTodos = document.getElementById('cm-mostrar-con-contrato')?.checked;
-  const epFiltro   = document.getElementById('c-empresa-propia')?.value || '';
-  const cont = document.getElementById('cm-lista-trabajadores');
+let _masivoSeleccionados = new Set();
+let _configGruposActuales = [];
+let _importMasivoValidas  = [];
+
+function _grupoIdSafe(key){ return 'grp_' + key.replace(/[^a-zA-Z0-9]/g, '_'); }
+
+function _agruparTrabajadoresMasivo(lista){
+  const grupos = {};
+  lista.forEach(t => {
+    const mandante = findMandante(t);
+    const mandanteId = mandante?.id || 'sin-mandante';
+    const mandanteNombre = mandante?.nombre || 'Sin mandante asignado';
+    const faena = t.faena_obra || 'Sin faena';
+    const cargo = t.funcion_cargo || 'Sin cargo';
+    const key = `${mandanteId}||${faena}||${cargo}`;
+    (grupos[key] = grupos[key] || {key, mandanteId, mandanteNombre, faena, cargo, trabajadores:[]}).trabajadores.push(t);
+  });
+  return grupos;
+}
+
+function renderPiramideMasivo(){
+  const epId = document.getElementById('c-empresa-propia')?.value || '';
+  const cont = document.getElementById('piramide-masivo');
+  const vacio = document.getElementById('piramide-masivo-vacio');
   if(!cont) return;
 
-  let lista = trabajadores.filter(t => t.estado === 'activo');
-  if(epFiltro) lista = lista.filter(t => (t.empresa_propia_id || '') === epFiltro);
-  if(!mostrarTodos) lista = lista.filter(t => !_tieneContratoVigente(t.rut));
-  if(buscar) lista = lista.filter(t => t.rut?.toLowerCase().includes(buscar) || t.nombre?.toLowerCase().includes(buscar));
+  if(!epId){
+    cont.innerHTML = '';
+    if(vacio) vacio.style.display = 'block';
+    _masivoActualizarContador();
+    return;
+  }
+  if(vacio) vacio.style.display = 'none';
 
-  const contador = document.getElementById('cm-contador');
+  const lista = trabajadores.filter(t => t.estado === 'activo' && (t.empresa_propia_id||'') === epId && !_tieneContratoVigente(t.rut));
+
   if(!lista.length){
-    cont.innerHTML = `<div style="padding:20px;text-align:center;color:var(--texto3);font-size:13px;">
-      ${mostrarTodos ? 'Sin trabajadores para mostrar' : 'Todos los trabajadores activos ya tienen contrato — activa "Mostrar también con contrato vigente" para recontratarlos'}
-    </div>`;
-    if(contador) contador.textContent = '';
+    cont.innerHTML = `<div style="padding:20px;text-align:center;color:var(--texto3);font-size:13px;">Esta empresa no tiene trabajadores activos sin contrato.</div>`;
+    _masivoActualizarContador();
     return;
   }
 
-  cont.innerHTML = lista.map(t => {
-    const yaContrato = _tieneContratoVigente(t.rut);
-    return `<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;border-bottom:1px solid var(--borde);cursor:pointer;">
-      <input type="checkbox" class="cm-check-trab" value="${t.id}" data-rut="${t.rut}" onchange="_cmActualizarContador()" style="width:auto;">
-      <span style="flex:1;">${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
-      ${yaContrato ? '<span class="badge badge-amarillo" style="font-size:10px;">Ya tiene contrato</span>' : ''}
-    </label>`;
+  const grupos = _agruparTrabajadoresMasivo(lista);
+  const porMandante = [];
+  Object.values(grupos).forEach(g => {
+    let m = porMandante.find(x => x.mandanteId === g.mandanteId);
+    if(!m){ m = {mandanteId:g.mandanteId, mandanteNombre:g.mandanteNombre, faenas:[]}; porMandante.push(m); }
+    let f = m.faenas.find(x => x.faena === g.faena);
+    if(!f){ f = {faena:g.faena, grupos:[]}; m.faenas.push(f); }
+    f.grupos.push(g);
+  });
+
+  cont.innerHTML = porMandante.map(m => `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">
+        <i class="ti ti-building-skyscraper"></i> ${m.mandanteNombre}
+      </div>
+      ${m.faenas.map(f => `
+        <div style="margin-left:10px;margin-bottom:8px;">
+          <div style="font-size:11px;font-weight:600;color:var(--texto3);margin-bottom:4px;">
+            <i class="ti ti-building-factory"></i> ${f.faena}
+          </div>
+          ${f.grupos.map(g => {
+            const gid = _grupoIdSafe(g.key);
+            return `
+            <div style="margin-left:10px;border:1px solid var(--borde);border-radius:8px;margin-bottom:8px;overflow:hidden;">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;cursor:pointer;" onclick="_toggleAccordionMasivo('${gid}')">
+                <input type="checkbox" onclick="event.stopPropagation();_toggleGrupoMasivoCheck('${g.key}', this.checked)" style="width:auto;">
+                <span style="font-size:13px;font-weight:600;flex:1;">${g.cargo} (${g.trabajadores.length})</span>
+                <i class="ti ti-chevron-down" id="chev_${gid}"></i>
+              </div>
+              <div id="${gid}" style="display:none;">
+                ${g.trabajadores.map(t => `
+                  <label style="display:flex;align-items:center;gap:8px;padding:7px 12px 7px 32px;font-size:13px;border-top:1px solid var(--borde);cursor:pointer;">
+                    <input type="checkbox" class="masivo-check-trab" data-id="${t.id}" data-grupo="${g.key}" onchange="_toggleMasivoCheck('${t.id}', this.checked)" style="width:auto;">
+                    <span style="flex:1;">${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
+                  </label>`).join('')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`).join('')}
+    </div>`).join('');
+
+  _masivoActualizarContador();
+}
+
+function _toggleAccordionMasivo(gid){
+  const el = document.getElementById(gid);
+  const chev = document.getElementById('chev_'+gid);
+  if(!el) return;
+  const abierto = el.style.display !== 'none';
+  el.style.display = abierto ? 'none' : 'block';
+  if(chev) chev.className = abierto ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
+}
+
+function _toggleMasivoCheck(id, val){
+  if(val) _masivoSeleccionados.add(id); else _masivoSeleccionados.delete(id);
+  _masivoActualizarContador();
+}
+
+function _toggleGrupoMasivoCheck(grupoKey, val){
+  document.querySelectorAll(`.masivo-check-trab[data-grupo="${grupoKey}"]`).forEach(c => {
+    c.checked = val;
+    if(val) _masivoSeleccionados.add(c.dataset.id); else _masivoSeleccionados.delete(c.dataset.id);
+  });
+  _masivoActualizarContador();
+}
+
+function _masivoActualizarContador(){
+  const n = _masivoSeleccionados.size;
+  const contador = document.getElementById('masivo-contador');
+  if(contador) contador.textContent = n ? `${n} trabajador${n!==1?'es':''} seleccionado${n!==1?'s':''}` : 'Selecciona trabajadores para generar contratos';
+  const btn = document.getElementById('btn-config-descarga-masivo');
+  if(btn) btn.disabled = n === 0;
+}
+
+/* ── CONFIGURACIÓN POR GRUPO (una vez por grupo, no por trabajador) ─────── */
+function abrirConfigDescargaMasivo(){
+  if(!_masivoSeleccionados.size){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
+
+  const idsSel = Array.from(_masivoSeleccionados);
+  const trabsSel = idsSel.map(id => trabajadores.find(t => t.id === id)).filter(Boolean);
+  const gruposMap = _agruparTrabajadoresMasivo(trabsSel);
+  const grupos = Object.values(gruposMap);
+
+  const cont = document.getElementById('config-grupos-contenido');
+  cont.innerHTML = grupos.map(g => {
+    const gid = _grupoIdSafe(g.key);
+    return `
+    <div style="border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">${g.mandanteNombre} — ${g.faena} — ${g.cargo} (${g.trabajadores.length} trabajador${g.trabajadores.length!==1?'es':''})</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div class="f-group"><label class="form-label">Tipo de Contrato</label>
+          <select class="f-input" id="cfg-tipo-${gid}" onchange="_onCambioTipoConfigGrupo('${gid}')">
+            <option value="temporada">Contrato de Temporada</option>
+            <option value="plazo_fijo">Contrato a Plazo Fijo</option>
+            <option value="indefinido">Contrato Indefinido</option>
+          </select>
+        </div>
+        <div class="f-group"><label class="form-label">Ciudad de firma</label><input class="f-input" id="cfg-ciudad-${gid}" placeholder="Ej: Santiago"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div class="f-group" id="cfg-campo-temporada-${gid}"><label class="form-label">Temporada</label><input class="f-input" id="cfg-temporada-${gid}" placeholder="Ej: Temporada 2026"></div>
+        <div class="f-group" id="cfg-campo-termino-${gid}"><label class="form-label">Fecha de término</label><input class="f-input" type="date" id="cfg-termino-${gid}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div class="f-group"><label class="form-label">Colación (minutos)</label><input class="f-input" id="cfg-colacion-${gid}" placeholder="30"></div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;margin-bottom:6px;">Jornada</div>
+      <div id="cfg-jornada-${gid}" style="border:1px solid var(--borde);border-radius:8px;overflow:hidden;"></div>
+    </div>`;
   }).join('');
 
-  _cmActualizarContador();
+  _configGruposActuales = grupos.map(g => ({...g, gid:_grupoIdSafe(g.key)}));
+  _configGruposActuales.forEach(g => _renderJornadaDiasGrupo(g.gid));
+
+  document.getElementById('modal-config-grupos-masivo').style.display = 'flex';
 }
 
-function _cmActualizarContador(){
-  const n = document.querySelectorAll('.cm-check-trab:checked').length;
-  const contador = document.getElementById('cm-contador');
-  if(contador) contador.textContent = n ? `${n} trabajador${n!==1?'es':''} seleccionado${n!==1?'s':''}` : '';
+function cerrarModalConfigGruposMasivo(){
+  document.getElementById('modal-config-grupos-masivo').style.display = 'none';
 }
 
-function _cmSeleccionarTodos(val){
-  document.querySelectorAll('.cm-check-trab').forEach(c => c.checked = val);
-  _cmActualizarContador();
+function _onCambioTipoConfigGrupo(gid){
+  const tipo = document.getElementById(`cfg-tipo-${gid}`)?.value;
+  const campoTemp = document.getElementById(`cfg-campo-temporada-${gid}`);
+  const campoTermino = document.getElementById(`cfg-campo-termino-${gid}`);
+  if(campoTemp) campoTemp.style.display = tipo === 'temporada' ? '' : 'none';
+  if(campoTermino) campoTermino.style.display = tipo === 'indefinido' ? 'none' : '';
 }
 
-/* ── VISTA PREVIA ────────────────────────────────────────── */
-function previsualizarContratosMasivo(){
-  const epId = document.getElementById('c-empresa-propia')?.value;
-  if(!epId){ toast('⚠️ Selecciona la empresa empleadora', 'error'); return; }
-
-  const cargo = document.getElementById('c-cargo').value.trim();
-  if(!cargo){ toast('⚠️ Ingresa la función/cargo', 'error'); return; }
-  const faena = document.getElementById('c-faena').value.trim();
-  if(!faena){ toast('⚠️ Ingresa el nombre de la faena', 'error'); return; }
-  const termino = document.getElementById('c-fecha-termino').value;
-  if(!termino){ toast('⚠️ Ingresa la fecha de término', 'error'); return; }
-
-  const seleccionados = Array.from(document.querySelectorAll('.cm-check-trab:checked'));
-  if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
-
-  const sueldo = document.getElementById('c-sueldo').value;
-  const sueldoFmt = sueldo ? '$' + parseInt(sueldo).toLocaleString('es-CL') : '—';
-
-  const tbody = document.getElementById('pcm-tbody');
-  tbody.innerHTML = seleccionados.map(chk => {
-    const t = trabajadores.find(x => x.id === chk.value);
-    return `<tr>
-      <td style="font-size:13px;">${t?.nombre||'—'}</td>
-      <td style="font-size:12px;font-family:monospace;">${t?.rut||'—'}</td>
-      <td style="font-size:12px;">${cargo}</td>
-      <td style="font-size:12px;">${faena}</td>
-      <td style="font-size:12px;">${sueldoFmt}</td>
-      <td style="font-size:12px;">${fmtFecha(termino)}</td>
-    </tr>`;
+/* Misma estructura visual que renderJornadaDias() de Individual, con ids propios por grupo */
+function _renderJornadaDiasGrupo(gid){
+  const cont = document.getElementById(`cfg-jornada-${gid}`);
+  if(!cont) return;
+  cont.innerHTML = DIAS_JORNADA.map((dia,i) => {
+    const act = i < 5;
+    const ini = i < 5 ? '08:00' : '';
+    const fin = i < 5 ? '18:00' : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:${i<6?'1px solid var(--borde)':'none'};">
+      <input type="checkbox" id="cfg-dia-${gid}-${i}" ${act?'checked':''} style="width:16px;height:16px;accent-color:var(--verde);">
+      <label style="flex:1;font-size:12px;">${dia}</label>
+      <input type="time" id="cfg-dia-ini-${gid}-${i}" value="${ini}" style="width:90px;padding:3px 6px;font-size:11px;">
+      <span style="font-size:11px;">–</span>
+      <input type="time" id="cfg-dia-fin-${gid}-${i}" value="${fin}" style="width:90px;padding:3px 6px;font-size:11px;">
+    </div>`;
   }).join('');
-
-  document.getElementById('pcm-contador').textContent = `${seleccionados.length} contrato${seleccionados.length!==1?'s':''} se van a generar con estos datos compartidos`;
-  document.getElementById('modal-preview-contrato-masivo').style.display = 'flex';
+  _onCambioTipoConfigGrupo(gid);
 }
 
-function cerrarModalPreviewMasivo(){
-  document.getElementById('modal-preview-contrato-masivo').style.display = 'none';
+function _leerJornadaGrupo(gid){
+  const j = {};
+  let totalHoras = 0;
+  const colMin = parseInt(document.getElementById(`cfg-colacion-${gid}`)?.value) || 0;
+  const colHoras = colMin / 60;
+  DIAS_JORNADA.forEach((dia,i) => {
+    const act = document.getElementById(`cfg-dia-${gid}-${i}`)?.checked || false;
+    const ini = document.getElementById(`cfg-dia-ini-${gid}-${i}`)?.value || '';
+    const fin = document.getElementById(`cfg-dia-fin-${gid}-${i}`)?.value || '';
+    j[dia] = { activo: act, inicio: ini, fin: fin };
+    if(act && ini && fin){
+      const h = calcularHoras(ini, fin);
+      if(h) totalHoras += Math.max(0, h - colHoras);
+    }
+  });
+  const activos = DIAS_JORNADA.filter(d => j[d].activo);
+  const distribucion = activos.length ? activos.map(d => `${d.slice(0,3)} ${j[d].inicio}-${j[d].fin}`).join(', ') : 'Sin días asignados';
+  return { jornada_dias: j, horas_semanales: Math.round(totalHoras*10)/10, distribucion_jornada: distribucion };
 }
 
-/* ── GENERACIÓN ──────────────────────────────────────────── */
-let _generandoContratosMasivo = false;
+/* ── DESCARGA DEL EXCEL (por grupo(s) seleccionados, una fila por trabajador) ── */
+function descargarExcelGrupoMasivo(){
+  // Validar cada grupo antes de generar el Excel
+  for(const g of _configGruposActuales){
+    const tipo = document.getElementById(`cfg-tipo-${g.gid}`)?.value;
+    const ciudad = document.getElementById(`cfg-ciudad-${g.gid}`)?.value.trim();
+    const termino = document.getElementById(`cfg-termino-${g.gid}`)?.value;
+    const temporada = document.getElementById(`cfg-temporada-${g.gid}`)?.value.trim();
+    const colacion = document.getElementById(`cfg-colacion-${g.gid}`)?.value.trim();
+    if(!ciudad){ toast(`⚠️ Ingresa la ciudad de firma para "${g.cargo}"`, 'error'); return; }
+    if(tipo !== 'indefinido' && !termino){ toast(`⚠️ Ingresa la fecha de término para "${g.cargo}"`, 'error'); return; }
+    if(tipo === 'temporada' && !temporada){ toast(`⚠️ Ingresa el nombre de la temporada para "${g.cargo}"`, 'error'); return; }
+    if(!colacion){ toast(`⚠️ Ingresa la colación para "${g.cargo}"`, 'error'); return; }
+  }
 
-function generarContratosMasivo(){
-  if(_generandoContratosMasivo) return;
-  const seleccionados = Array.from(document.querySelectorAll('.cm-check-trab:checked')).map(c => c.value);
-  if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
-  _generandoContratosMasivo = true;
+  const loteId = 'lote_' + Date.now();
+  const lotes = JSON.parse(localStorage.getItem('lotes_contrato_masivo') || '{}');
+  const gruposConfig = {};
+  const filas = [];
+
+  _configGruposActuales.forEach(g => {
+    const tipo = document.getElementById(`cfg-tipo-${g.gid}`).value;
+    const { jornada_dias, horas_semanales, distribucion_jornada } = _leerJornadaGrupo(g.gid);
+    const cfg = {
+      tipo_contrato:  tipo,
+      ciudad_firma:   document.getElementById(`cfg-ciudad-${g.gid}`).value.trim(),
+      temporada:      tipo === 'temporada' ? document.getElementById(`cfg-temporada-${g.gid}`).value.trim() : '',
+      fecha_termino:  tipo !== 'indefinido' ? document.getElementById(`cfg-termino-${g.gid}`).value : '',
+      colacion:       document.getElementById(`cfg-colacion-${g.gid}`).value.trim(),
+      jornada_dias, horas_semanales, distribucion_jornada,
+    };
+    gruposConfig[g.key] = cfg;
+
+    const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[tipo];
+
+    g.trabajadores.forEach(t => {
+      filas.push({
+        RUT: t.rut,
+        'Nombre Completo': t.nombre,
+        'Empresa Contratista': getEmpresaEmpleadora(t.empresa_propia_id)?.razon_social || getEmpresaEmpleadora(t.empresa_propia_id)?.nombre || '',
+        'Empresa Mandante': g.mandanteNombre,
+        Faena: g.faena,
+        Cargo: g.cargo,
+        Nacionalidad: t.nacionalidad || '',
+        'Fecha de Ingreso': t.fecha_ingreso || '',
+        'Tipo de Contrato': tipoTxt,
+        'Fecha de Término': cfg.fecha_termino || '',
+        'Fecha de Firma': '',
+        'Forma de Pago': '',
+        Valor: '',
+        ...Object.fromEntries(EPP_ITEMS.map(item => [item, ''])),
+        'Otro (especificar)': '',
+        'Fecha entrega EPP': '',
+        'RIOHS Declarado': 'Sí',
+        'Lote (no editar)': loteId,
+        'Grupo (no editar)': g.key,
+      });
+    });
+  });
+
+  lotes[loteId] = { grupos: gruposConfig, creado: new Date().toISOString() };
+  localStorage.setItem('lotes_contrato_masivo', JSON.stringify(lotes));
+
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Contratos Masivo');
+  XLSX.writeFile(wb, `Contratos_Masivo_${new Date().toLocaleDateString('es-CL').replace(/\//g,'-')}.xlsx`);
+  toast('⬇️ Excel descargado — complétalo y vuelve a subirlo con "Importar Excel completado"', 'exito');
+  cerrarModalConfigGruposMasivo();
+}
+
+/* ── REIMPORTACIÓN DEL EXCEL COMPLETADO ──────────────────────────────── */
+function _excelFechaAISO(v){
+  if(!v) return '';
+  if(v instanceof Date) return v.toISOString().split('T')[0];
+  const s = v.toString().trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  const d = new Date(s);
+  if(!isNaN(d)) return d.toISOString().split('T')[0];
+  return '';
+}
+
+function importarExcelMasivo(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      if(!rows.length){ toast('⚠️ El archivo está vacío','error'); return; }
+      _procesarFilasImportacionMasiva(rows);
+    }catch(err){ toast('❌ Error leyendo el Excel: ' + err.message, 'error'); }
+  };
+  reader.readAsBinaryString(file);
+  event.target.value = '';
+}
+
+function _procesarFilasImportacionMasiva(rows){
+  cargarContratos();
+  const lotes = JSON.parse(localStorage.getItem('lotes_contrato_masivo') || '{}');
+  const errores = [];
+  const validas = [];
+
+  rows.forEach((row, idx) => {
+    const fila = idx + 2;
+    const rut = (row['RUT']||'').toString().trim();
+    const nombreExcel = (row['Nombre Completo']||'').toString().trim();
+    if(!rut){ errores.push({fila, nombre: nombreExcel||'—', mensaje:'Fila sin RUT, no se puede procesar'}); return; }
+
+    // Se recalcula todo por RUT — no se confía en lo que diga ninguna columna precargada
+    const t = trabajadores.find(x => x.rut === rut);
+    if(!t){ errores.push({fila, nombre: nombreExcel||rut, mensaje:'No se encontró un trabajador con este RUT en el sistema'}); return; }
+
+    const loteId = (row['Lote (no editar)']||'').toString().trim();
+    const grupoKey = (row['Grupo (no editar)']||'').toString().trim();
+    const cfgGrupo = lotes[loteId]?.grupos?.[grupoKey];
+    if(!cfgGrupo){ errores.push({fila, nombre:t.nombre, mensaje:'No se encontró la configuración del grupo — vuelve a descargar el Excel desde el sistema'}); return; }
+
+    const fechaFirmaISO = _excelFechaAISO(row['Fecha de Firma']);
+    if(!fechaFirmaISO){ errores.push({fila, nombre:t.nombre, mensaje:'Falta o es inválida la Fecha de Firma'}); return; }
+
+    const formaPagoRaw = (row['Forma de Pago']||'').toString().trim().toLowerCase();
+    const formaPago = formaPagoRaw.startsWith('diar') ? 'diaria' : formaPagoRaw.startsWith('mensual') ? 'mensual' : '';
+    if(!formaPago){ errores.push({fila, nombre:t.nombre, mensaje:'Forma de Pago debe ser "Mensual" o "Diaria"'}); return; }
+
+    const valor = parseInt(row['Valor']) || 0;
+    if(!valor){ errores.push({fila, nombre:t.nombre, mensaje:'Falta el Valor (monto) o no es numérico'}); return; }
+
+    const eppEntregados = EPP_ITEMS.filter(item => {
+      const v = (row[item]||'').toString().trim().toLowerCase();
+      return v === 'si' || v === 'sí' || v === 'x';
+    });
+    const otroTxt = (row['Otro (especificar)']||'').toString().trim();
+    if(otroTxt) eppEntregados.push('Otro');
+    const eppFechaEntrega = row['Fecha entrega EPP'] ? _excelFechaAISO(row['Fecha entrega EPP']) : '';
+
+    const riohsRaw = (row['RIOHS Declarado']||'').toString().trim().toLowerCase();
+    const riohsDeclarado = riohsRaw === '' || riohsRaw === 'si' || riohsRaw === 'sí' || riohsRaw === 'x';
+
+    validas.push({
+      fila, trabajador:t, cfgGrupo,
+      fecha_firma: fechaFirmaISO, forma_pago: formaPago, valor,
+      epp_entregados: eppEntregados, epp_otro: otroTxt, epp_fecha_entrega: eppFechaEntrega,
+      irl_fecha_induccion: fechaFirmaISO, // misma fecha que la firma, según lo acordado
+      irl_declarado: riohsDeclarado,
+    });
+  });
+
+  _importMasivoValidas = validas;
+  _mostrarResumenImportacionMasiva(validas, errores);
+}
+
+function _mostrarResumenImportacionMasiva(validas, errores){
+  const resumen = document.getElementById('avisos-masivo-resumen');
+  const lista = document.getElementById('avisos-masivo-lista');
+  const btnConfirmar = document.getElementById('btn-confirmar-import-masivo');
+
+  resumen.innerHTML = `<strong>${validas.length}</strong> contrato${validas.length!==1?'s':''} se generará${validas.length!==1?'n':''} correctamente.` +
+    (errores.length ? ` <span style="color:var(--danger);"><strong>${errores.length}</strong> fila${errores.length!==1?'s':''} con error NO se importará${errores.length!==1?'n':''}.</span>` : '');
+
+  lista.innerHTML = errores.length ? `
+    <div style="border:1px solid #FCA5A5;background:#FEF2F2;border-radius:8px;padding:10px;max-height:220px;overflow-y:auto;">
+      ${errores.map(e => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #FEE2E2;">
+        <strong>Fila ${e.fila}</strong> — ${e.nombre}: ${e.mensaje}
+      </div>`).join('')}
+    </div>` : '';
+
+  if(btnConfirmar) btnConfirmar.disabled = validas.length === 0;
+  document.getElementById('modal-avisos-masivo').style.display = 'flex';
+}
+
+function cerrarModalAvisosMasivo(){
+  document.getElementById('modal-avisos-masivo').style.display = 'none';
+}
+
+function confirmarImportacionMasiva(){
+  const validas = _importMasivoValidas;
+  if(!validas.length){ toast('⚠️ No hay contratos válidos para generar', 'error'); return; }
 
   cargarContratos();
-  const selTrabajador = document.getElementById('c-trabajador');
   const contenidos = [];
-  const datosEppCompartido = _leerFormularioEpp('cepp');
   let generados = 0;
 
-  seleccionados.forEach(idTrab => {
-    selTrabajador.value = idTrab;
+  validas.forEach(v => {
+    const t = v.trabajador;
+    const cfg = v.cfgGrupo;
+    const mandante = findMandante(t);
+    const emp = getEmpresaEmpleadora(t.empresa_propia_id);
 
-    const datos = obtenerDatosFormulario();
-    const existe = contratos.findIndex(c => c.trabajador_id === idTrab);
+    const datos = {
+      trabajador_id: t.id,
+      trabajador_rut: t.rut,
+      empresa_rut: t.empresa || t.empresa_rut || '',
+      empresa_propia_id: t.empresa_propia_id || '',
+      tipo: cfg.tipo_contrato,
+      ciudad_firma: cfg.ciudad_firma,
+      fecha_firma: v.fecha_firma,
+      funcion_cargo: t.funcion_cargo || '',
+      nombre_faena: t.faena_obra || '',
+      ubicacion_faena: [mandante?.direccion, mandante?.comuna].filter(Boolean).join(', '),
+      region: mandante?.region || '',
+      mandante_nombre: mandante?.nombre || '',
+      mandante_rut: mandante?.rut || '',
+      mandante_direccion: mandante?.direccion || '',
+      mandante_comuna: mandante?.comuna || '',
+      mandante_region: mandante?.region || '',
+      temporada: cfg.temporada || '',
+      fecha_inicio: t.fecha_ingreso || '',
+      fecha_termino: cfg.fecha_termino || '',
+      horas_semanales: cfg.horas_semanales,
+      distribucion_jornada: cfg.distribucion_jornada,
+      jornada_dias: cfg.jornada_dias,
+      colacion: cfg.colacion,
+      tipo_remuneracion: v.forma_pago,
+      sueldo_monto: v.valor,
+      sueldo_escrito: numeroALetras(v.valor).trim() + ' pesos',
+      beneficios: [],
+      estado: 'activo',
+      creado_en: new Date().toISOString(),
+    };
+
+    const existe = contratos.findIndex(c => c.trabajador_id === t.id);
     if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
-    else contratos.push({id: Date.now().toString() + '_' + idTrab, ...datos});
+    else contratos.push({id: Date.now().toString() + '_' + t.id, ...datos});
 
-    // Aplicar EPP/IRL compartido al trabajador (mismo dato para todo el grupo)
-    const t = trabajadores.find(x => x.id === idTrab);
-    if(t) Object.assign(t, datosEppCompartido);
+    Object.assign(t, {
+      epp_entregados: v.epp_entregados,
+      epp_otro: v.epp_otro,
+      epp_fecha_entrega: v.epp_fecha_entrega,
+      irl_fecha_induccion: v.irl_fecha_induccion,
+      irl_declarado: v.irl_declarado,
+    });
 
-    const contenidoHTML = generarPDFContrato(true);
-    if(contenidoHTML) contenidos.push(contenidoHTML);
+    const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[cfg.tipo_contrato] || cfg.tipo_contrato;
+    registrarDocumentoCarpeta({
+      trabajador_id:  t.id,
+      trabajador_rut: t.rut,
+      tipo:           'contrato',
+      subtipo:        cfg.tipo_contrato,
+      fecha_firma:    v.fecha_firma,
+      descripcion:    `Contrato ${tipoTxt} — ${t.faena_obra||''} (Masivo)`.trim(),
+    });
+
+    const { htmlCompleto } = construirDocumentoContrato(t, emp, mandante, datos);
+    if(htmlCompleto) contenidos.push(htmlCompleto);
     generados++;
   });
 
   guardarContratos();
   guardarLocal();
-  selTrabajador.value = '';
 
   const b = document.getElementById('badge-contratos');
   if(b) b.textContent = contratos.length;
 
-  cerrarModalPreviewMasivo();
+  cerrarModalAvisosMasivo();
   toast(`✅ ${generados} contrato${generados!==1?'s':''} generado${generados!==1?'s':''}`, 'exito');
 
   _abrirVentanaContratosMasivo(contenidos);
-  renderListaContratoMasivo();
-  _generandoContratosMasivo = false;
+  _masivoSeleccionados.clear();
+  renderPiramideMasivo();
+  _importMasivoValidas = [];
 }
 
-/* ── VENTANA DE IMPRESIÓN COMBINADA ──────────────────────── */
+
 function _abrirVentanaContratosMasivo(contenidos){
   if(!contenidos.length) return;
 
