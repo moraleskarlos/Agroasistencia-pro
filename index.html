@@ -667,20 +667,21 @@
   </div>
 </div>
 
-      <!-- SELECCIÓN MASIVA DE TRABAJADORES -->
+      <!-- SELECCIÓN MASIVA DE TRABAJADORES (pirámide) -->
       <div id="bloque-contrato-masivo" class="card" style="display:none;margin-bottom:14px;">
-        <div class="card-title"><i class="ti ti-users"></i> Selección de trabajadores</div>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-          <input type="text" id="cm-buscar" oninput="renderListaContratoMasivo()" placeholder="Buscar por RUT o nombre" style="flex:1;min-width:200px;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;cursor:pointer;">
-            <input type="checkbox" id="cm-mostrar-con-contrato" onchange="renderListaContratoMasivo()" style="width:auto;">
-            Mostrar también con contrato vigente
-          </label>
-          <button class="btn btn-secondary btn-sm" onclick="_cmSeleccionarTodos(true)">Todos</button>
-          <button class="btn btn-secondary btn-sm" onclick="_cmSeleccionarTodos(false)">Ninguno</button>
+        <div class="card-title"><i class="ti ti-sitemap"></i> Trabajadores sin contrato — agrupados por Mandante → Faena → Cargo</div>
+        <div id="piramide-masivo-vacio" style="display:none;padding:20px;text-align:center;color:var(--texto3);font-size:13px;">
+          Selecciona una Empresa Contratista arriba para ver sus trabajadores sin contrato.
         </div>
-        <div id="cm-lista-trabajadores" style="max-height:260px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
-        <div id="cm-contador" style="font-size:12px;color:var(--texto3);margin-top:8px;"></div>
+        <div id="piramide-masivo"></div>
+        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;">
+          <div id="masivo-contador" style="font-size:12px;color:var(--texto3);"></div>
+          <div style="display:flex;gap:8px;">
+            <input type="file" id="cm-excel-input" accept=".xlsx,.xls" style="display:none;" onchange="importarExcelMasivo(event)">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('cm-excel-input').click()"><i class="ti ti-upload"></i> Importar Excel completado</button>
+            <button class="btn btn-primary btn-sm" id="btn-config-descarga-masivo" onclick="abrirConfigDescargaMasivo()" disabled><i class="ti ti-download"></i> Configurar y descargar Excel</button>
+          </div>
+        </div>
       </div>
 
       <div class="g2" id="g2-contrato-cols" style="align-items:start;">
@@ -757,10 +758,6 @@
             <div id="epp-en-contrato"></div>
             <div style="display:flex;gap:8px;" id="botones-contrato-individual">
               <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="guardarContrato()"><i class="ti ti-device-floppy"></i> Guardar contrato</button>
-              <button class="btn btn-secondary" onclick="limpiarContrato()"><i class="ti ti-refresh"></i> Limpiar</button>
-            </div>
-            <div style="display:none;gap:8px;" id="botones-contrato-masivo">
-              <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="previsualizarContratosMasivo()"><i class="ti ti-eye"></i> Vista previa</button>
               <button class="btn btn-secondary" onclick="limpiarContrato()"><i class="ti ti-refresh"></i> Limpiar</button>
             </div>
             <div style="display:none;gap:8px;" id="botones-contrato-corregir">
@@ -2503,23 +2500,35 @@
       </div>
     </div>
   </div>
-  <!-- MODAL VISTA PREVIA CONTRATOS MASIVOS -->
-  <div id="modal-preview-contrato-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:14px;padding:24px;width:720px;max-width:94vw;max-height:86vh;overflow-y:auto;">
+  <!-- MODAL CONFIGURACIÓN DE GRUPOS — Contratos Masivo -->
+  <div id="modal-config-grupos-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:14px;padding:24px;width:820px;max-width:96vw;max-height:90vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div style="font-size:16px;font-weight:700;">Vista previa — Contratos masivos</div>
-        <button class="btn btn-secondary btn-sm" onclick="cerrarModalPreviewMasivo()"><i class="ti ti-x"></i></button>
+        <div style="font-size:16px;font-weight:700;">Configurar condiciones por grupo</div>
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalConfigGruposMasivo()"><i class="ti ti-x"></i></button>
       </div>
-      <div id="pcm-contador" style="font-size:12px;color:var(--texto3);margin-bottom:14px;"></div>
-      <div class="tabla-wrap">
-        <table class="tabla">
-          <thead><tr><th>Trabajador</th><th>RUT</th><th>Cargo</th><th>Faena</th><th>Sueldo</th><th>Término</th></tr></thead>
-          <tbody id="pcm-tbody"></tbody>
-        </table>
+      <div style="font-size:12px;color:var(--texto3);margin-bottom:14px;">
+        Estos datos son compartidos por todos los trabajadores de cada grupo (mismo horario, misma faena) y se completan una sola vez — no se vuelven a pedir en el Excel.
       </div>
+      <div id="config-grupos-contenido"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
-        <button class="btn btn-secondary btn-sm" onclick="cerrarModalPreviewMasivo()">Volver a editar</button>
-        <button class="btn btn-primary btn-sm" onclick="generarContratosMasivo()"><i class="ti ti-file-check"></i> Confirmar y generar</button>
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalConfigGruposMasivo()">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="descargarExcelGrupoMasivo()"><i class="ti ti-download"></i> Descargar Excel</button>
+      </div>
+    </div>
+  </div>
+  <!-- MODAL AVISOS DE IMPORTACIÓN — Contratos Masivo -->
+  <div id="modal-avisos-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:14px;padding:24px;width:720px;max-width:96vw;max-height:86vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:16px;font-weight:700;">Revisión antes de generar contratos</div>
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalAvisosMasivo()"><i class="ti ti-x"></i></button>
+      </div>
+      <div id="avisos-masivo-resumen" style="font-size:13px;margin-bottom:12px;"></div>
+      <div id="avisos-masivo-lista"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalAvisosMasivo()">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="btn-confirmar-import-masivo" onclick="confirmarImportacionMasiva()"><i class="ti ti-file-check"></i> Generar contratos válidos</button>
       </div>
     </div>
   </div>
