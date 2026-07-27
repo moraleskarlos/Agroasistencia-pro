@@ -1301,7 +1301,6 @@ function _tieneContratoVigente(rut){
 
 let _masivoSeleccionados = new Set();
 let _configGruposActuales = [];
-let _importMasivoValidas  = [];
 
 function _grupoIdSafe(key){ return 'grp_' + key.replace(/[^a-zA-Z0-9]/g, '_'); }
 
@@ -1416,7 +1415,7 @@ function _masivoActualizarContador(){
 }
 
 /* ── CONFIGURACIÓN POR GRUPO (una vez por grupo, no por trabajador) ─────── */
-function abrirConfigDescargaMasivo(){
+function abrirConfigGrupoMasivo(){
   if(!_masivoSeleccionados.size){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
 
   const idsSel = Array.from(_masivoSeleccionados);
@@ -1448,12 +1447,37 @@ function abrirConfigDescargaMasivo(){
         <div class="f-group"><label class="form-label">Colación (minutos)</label><input class="f-input" id="cfg-colacion-${gid}" placeholder="30"></div>
       </div>
       <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;margin-bottom:6px;">Jornada</div>
-      <div id="cfg-jornada-${gid}" style="border:1px solid var(--borde);border-radius:8px;overflow:hidden;"></div>
+      <div id="cfg-jornada-${gid}" style="border:1px solid var(--borde);border-radius:8px;overflow:hidden;margin-bottom:12px;"></div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;margin-bottom:6px;">Remuneración</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div class="f-group"><label class="form-label">Fecha de Firma</label><input class="f-input" type="date" id="cfg-firma-${gid}"></div>
+        <div class="f-group"><label class="form-label">Forma de Pago</label>
+          <select class="f-input" id="cfg-formapago-${gid}">
+            <option value="">— Seleccionar —</option>
+            <option value="mensual">Mensual</option>
+            <option value="diaria">Diaria (Jornal)</option>
+          </select>
+        </div>
+        <div class="f-group"><label class="form-label">Valor ($)</label><input class="f-input" type="number" id="cfg-valor-${gid}" placeholder="450000"></div>
+      </div>
+
+      <div id="cfg-epp-${gid}"></div>
     </div>`;
   }).join('');
 
   _configGruposActuales = grupos.map(g => ({...g, gid:_grupoIdSafe(g.key)}));
-  _configGruposActuales.forEach(g => _renderJornadaDiasGrupo(g.gid));
+  _configGruposActuales.forEach(g => {
+    _renderJornadaDiasGrupo(g.gid);
+    const eppCont = document.getElementById(`cfg-epp-${g.gid}`);
+    if(eppCont){
+      eppCont.innerHTML = _htmlFormularioEpp(`cfg-${g.gid}`, {irl_declarado:true});
+      // La fecha de inducción RIOHS/IRL usa la misma Fecha de Firma del grupo — se
+      // oculta el campo propio de _htmlFormularioEpp para no pedirla dos veces.
+      const indInput = document.getElementById(`cfg-${g.gid}-irl-fecha-induccion`);
+      if(indInput) indInput.closest('.form-group').style.display = 'none';
+    }
+  });
 
   document.getElementById('modal-config-grupos-masivo').style.display = 'flex';
 }
@@ -1509,257 +1533,118 @@ function _leerJornadaGrupo(gid){
   return { jornada_dias: j, horas_semanales: Math.round(totalHoras*10)/10, distribucion_jornada: distribucion };
 }
 
-/* ── DESCARGA DEL EXCEL (por grupo(s) seleccionados, una fila por trabajador) ── */
-function descargarExcelGrupoMasivo(){
-  // Validar cada grupo antes de generar el Excel
+/* ── GENERACIÓN DIRECTA DE CONTRATOS (sin Excel de por medio) ───────────── */
+function generarContratosGrupoMasivo(){
+  // Validar cada grupo antes de generar
   for(const g of _configGruposActuales){
     const tipo = document.getElementById(`cfg-tipo-${g.gid}`)?.value;
     const ciudad = document.getElementById(`cfg-ciudad-${g.gid}`)?.value.trim();
     const termino = document.getElementById(`cfg-termino-${g.gid}`)?.value;
     const temporada = document.getElementById(`cfg-temporada-${g.gid}`)?.value.trim();
     const colacion = document.getElementById(`cfg-colacion-${g.gid}`)?.value.trim();
+    const firma = document.getElementById(`cfg-firma-${g.gid}`)?.value;
+    const formaPago = document.getElementById(`cfg-formapago-${g.gid}`)?.value;
+    const valor = document.getElementById(`cfg-valor-${g.gid}`)?.value;
     if(!ciudad){ toast(`⚠️ Ingresa la ciudad de firma para "${g.cargo}"`, 'error'); return; }
     if(tipo !== 'indefinido' && !termino){ toast(`⚠️ Ingresa la fecha de término para "${g.cargo}"`, 'error'); return; }
     if(tipo === 'temporada' && !temporada){ toast(`⚠️ Ingresa el nombre de la temporada para "${g.cargo}"`, 'error'); return; }
     if(!colacion){ toast(`⚠️ Ingresa la colación para "${g.cargo}"`, 'error'); return; }
+    if(!firma){ toast(`⚠️ Ingresa la fecha de firma para "${g.cargo}"`, 'error'); return; }
+    if(!formaPago){ toast(`⚠️ Selecciona la forma de pago para "${g.cargo}"`, 'error'); return; }
+    if(!valor || parseInt(valor) <= 0){ toast(`⚠️ Ingresa el valor de la remuneración para "${g.cargo}"`, 'error'); return; }
   }
-
-  const loteId = 'lote_' + Date.now();
-  const lotes = JSON.parse(localStorage.getItem('lotes_contrato_masivo') || '{}');
-  const gruposConfig = {};
-  const filas = [];
-
-  _configGruposActuales.forEach(g => {
-    const tipo = document.getElementById(`cfg-tipo-${g.gid}`).value;
-    const { jornada_dias, horas_semanales, distribucion_jornada } = _leerJornadaGrupo(g.gid);
-    const cfg = {
-      tipo_contrato:  tipo,
-      ciudad_firma:   document.getElementById(`cfg-ciudad-${g.gid}`).value.trim(),
-      temporada:      tipo === 'temporada' ? document.getElementById(`cfg-temporada-${g.gid}`).value.trim() : '',
-      fecha_termino:  tipo !== 'indefinido' ? document.getElementById(`cfg-termino-${g.gid}`).value : '',
-      colacion:       document.getElementById(`cfg-colacion-${g.gid}`).value.trim(),
-      jornada_dias, horas_semanales, distribucion_jornada,
-    };
-    gruposConfig[g.key] = cfg;
-
-    const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[tipo];
-
-    g.trabajadores.forEach(t => {
-      filas.push({
-        RUT: t.rut,
-        'Nombre Completo': t.nombre,
-        'Empresa Contratista': getEmpresaEmpleadora(t.empresa_propia_id)?.razon_social || getEmpresaEmpleadora(t.empresa_propia_id)?.nombre || '',
-        'Empresa Mandante': g.mandanteNombre,
-        Faena: g.faena,
-        Cargo: g.cargo,
-        Nacionalidad: t.nacionalidad || '',
-        'Fecha de Ingreso': t.fecha_ingreso || '',
-        'Tipo de Contrato': tipoTxt,
-        'Fecha de Término': cfg.fecha_termino || '',
-        'Fecha de Firma': '',
-        'Forma de Pago': '',
-        Valor: '',
-        ...Object.fromEntries(EPP_ITEMS.map(item => [item, ''])),
-        'Otro (especificar)': '',
-        'Fecha entrega EPP': '',
-        'RIOHS Declarado': 'Sí',
-        'Lote (no editar)': loteId,
-        'Grupo (no editar)': g.key,
-      });
-    });
-  });
-
-  lotes[loteId] = { grupos: gruposConfig, creado: new Date().toISOString() };
-  localStorage.setItem('lotes_contrato_masivo', JSON.stringify(lotes));
-
-  const ws = XLSX.utils.json_to_sheet(filas);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Contratos Masivo');
-  XLSX.writeFile(wb, `Contratos_Masivo_${new Date().toLocaleDateString('es-CL').replace(/\//g,'-')}.xlsx`);
-  toast('⬇️ Excel descargado — complétalo y vuelve a subirlo con "Importar Excel completado"', 'exito');
-  cerrarModalConfigGruposMasivo();
-}
-
-/* ── REIMPORTACIÓN DEL EXCEL COMPLETADO ──────────────────────────────── */
-function _excelFechaAISO(v){
-  if(!v) return '';
-  if(v instanceof Date) return v.toISOString().split('T')[0];
-  const s = v.toString().trim();
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
-  m = s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
-  const d = new Date(s);
-  if(!isNaN(d)) return d.toISOString().split('T')[0];
-  return '';
-}
-
-function importarExcelMasivo(event){
-  const file = event.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-      if(!rows.length){ toast('⚠️ El archivo está vacío','error'); return; }
-      _procesarFilasImportacionMasiva(rows);
-    }catch(err){ toast('❌ Error leyendo el Excel: ' + err.message, 'error'); }
-  };
-  reader.readAsBinaryString(file);
-  event.target.value = '';
-}
-
-function _procesarFilasImportacionMasiva(rows){
-  cargarContratos();
-  const lotes = JSON.parse(localStorage.getItem('lotes_contrato_masivo') || '{}');
-  const errores = [];
-  const validas = [];
-
-  rows.forEach((row, idx) => {
-    const fila = idx + 2;
-    const rut = (row['RUT']||'').toString().trim();
-    const nombreExcel = (row['Nombre Completo']||'').toString().trim();
-    if(!rut){ errores.push({fila, nombre: nombreExcel||'—', mensaje:'Fila sin RUT, no se puede procesar'}); return; }
-
-    // Se recalcula todo por RUT — no se confía en lo que diga ninguna columna precargada
-    const t = trabajadores.find(x => x.rut === rut);
-    if(!t){ errores.push({fila, nombre: nombreExcel||rut, mensaje:'No se encontró un trabajador con este RUT en el sistema'}); return; }
-
-    const loteId = (row['Lote (no editar)']||'').toString().trim();
-    const grupoKey = (row['Grupo (no editar)']||'').toString().trim();
-    const cfgGrupo = lotes[loteId]?.grupos?.[grupoKey];
-    if(!cfgGrupo){ errores.push({fila, nombre:t.nombre, mensaje:'No se encontró la configuración del grupo — vuelve a descargar el Excel desde el sistema'}); return; }
-
-    const fechaFirmaISO = _excelFechaAISO(row['Fecha de Firma']);
-    if(!fechaFirmaISO){ errores.push({fila, nombre:t.nombre, mensaje:'Falta o es inválida la Fecha de Firma'}); return; }
-
-    const formaPagoRaw = (row['Forma de Pago']||'').toString().trim().toLowerCase();
-    const formaPago = formaPagoRaw.startsWith('diar') ? 'diaria' : formaPagoRaw.startsWith('mensual') ? 'mensual' : '';
-    if(!formaPago){ errores.push({fila, nombre:t.nombre, mensaje:'Forma de Pago debe ser "Mensual" o "Diaria"'}); return; }
-
-    const valor = parseInt(row['Valor']) || 0;
-    if(!valor){ errores.push({fila, nombre:t.nombre, mensaje:'Falta el Valor (monto) o no es numérico'}); return; }
-
-    const eppEntregados = EPP_ITEMS.filter(item => {
-      const v = (row[item]||'').toString().trim().toLowerCase();
-      return v === 'si' || v === 'sí' || v === 'x';
-    });
-    const otroTxt = (row['Otro (especificar)']||'').toString().trim();
-    if(otroTxt) eppEntregados.push('Otro');
-    const eppFechaEntrega = row['Fecha entrega EPP'] ? _excelFechaAISO(row['Fecha entrega EPP']) : '';
-
-    const riohsRaw = (row['RIOHS Declarado']||'').toString().trim().toLowerCase();
-    const riohsDeclarado = riohsRaw === '' || riohsRaw === 'si' || riohsRaw === 'sí' || riohsRaw === 'x';
-
-    validas.push({
-      fila, trabajador:t, cfgGrupo,
-      fecha_firma: fechaFirmaISO, forma_pago: formaPago, valor,
-      epp_entregados: eppEntregados, epp_otro: otroTxt, epp_fecha_entrega: eppFechaEntrega,
-      irl_fecha_induccion: fechaFirmaISO, // misma fecha que la firma, según lo acordado
-      irl_declarado: riohsDeclarado,
-    });
-  });
-
-  _importMasivoValidas = validas;
-  _mostrarResumenImportacionMasiva(validas, errores);
-}
-
-function _mostrarResumenImportacionMasiva(validas, errores){
-  const resumen = document.getElementById('avisos-masivo-resumen');
-  const lista = document.getElementById('avisos-masivo-lista');
-  const btnConfirmar = document.getElementById('btn-confirmar-import-masivo');
-
-  resumen.innerHTML = `<strong>${validas.length}</strong> contrato${validas.length!==1?'s':''} se generará${validas.length!==1?'n':''} correctamente.` +
-    (errores.length ? ` <span style="color:var(--danger);"><strong>${errores.length}</strong> fila${errores.length!==1?'s':''} con error NO se importará${errores.length!==1?'n':''}.</span>` : '');
-
-  lista.innerHTML = errores.length ? `
-    <div style="border:1px solid #FCA5A5;background:#FEF2F2;border-radius:8px;padding:10px;max-height:220px;overflow-y:auto;">
-      ${errores.map(e => `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #FEE2E2;">
-        <strong>Fila ${e.fila}</strong> — ${e.nombre}: ${e.mensaje}
-      </div>`).join('')}
-    </div>` : '';
-
-  if(btnConfirmar) btnConfirmar.disabled = validas.length === 0;
-  document.getElementById('modal-avisos-masivo').style.display = 'flex';
-}
-
-function cerrarModalAvisosMasivo(){
-  document.getElementById('modal-avisos-masivo').style.display = 'none';
-}
-
-function confirmarImportacionMasiva(){
-  const validas = _importMasivoValidas;
-  if(!validas.length){ toast('⚠️ No hay contratos válidos para generar', 'error'); return; }
 
   cargarContratos();
   const contenidos = [];
   let generados = 0;
 
-  validas.forEach(v => {
-    const t = v.trabajador;
-    const cfg = v.cfgGrupo;
-    const mandante = findMandante(t);
-    const emp = getEmpresaEmpleadora(t.empresa_propia_id);
+  _configGruposActuales.forEach(g => {
+    const gid = g.gid;
+    const tipo = document.getElementById(`cfg-tipo-${gid}`).value;
+    const { jornada_dias, horas_semanales, distribucion_jornada } = _leerJornadaGrupo(gid);
+    const fechaFirma = document.getElementById(`cfg-firma-${gid}`).value;
+    const eppDatos = _leerFormularioEpp(`cfg-${gid}`);
 
-    const datos = {
-      trabajador_id: t.id,
-      trabajador_rut: t.rut,
-      empresa_rut: t.empresa || t.empresa_rut || '',
-      empresa_propia_id: t.empresa_propia_id || '',
-      tipo: cfg.tipo_contrato,
-      ciudad_firma: cfg.ciudad_firma,
-      fecha_firma: v.fecha_firma,
-      funcion_cargo: t.funcion_cargo || '',
-      nombre_faena: t.faena_obra || '',
-      ubicacion_faena: [mandante?.direccion, mandante?.comuna].filter(Boolean).join(', '),
-      region: mandante?.region || '',
-      mandante_nombre: mandante?.nombre || '',
-      mandante_rut: mandante?.rut || '',
-      mandante_direccion: mandante?.direccion || '',
-      mandante_comuna: mandante?.comuna || '',
-      mandante_region: mandante?.region || '',
-      temporada: cfg.temporada || '',
-      fecha_inicio: t.fecha_ingreso || '',
-      fecha_termino: cfg.fecha_termino || '',
-      horas_semanales: cfg.horas_semanales,
-      distribucion_jornada: cfg.distribucion_jornada,
-      jornada_dias: cfg.jornada_dias,
-      colacion: cfg.colacion,
-      tipo_remuneracion: v.forma_pago,
-      sueldo_monto: v.valor,
-      sueldo_escrito: numeroALetras(v.valor).trim() + ' pesos',
-      beneficios: [],
-      estado: 'activo',
-      creado_en: new Date().toISOString(),
+    const cfg = {
+      tipo_contrato:  tipo,
+      ciudad_firma:   document.getElementById(`cfg-ciudad-${gid}`).value.trim(),
+      temporada:      tipo === 'temporada' ? document.getElementById(`cfg-temporada-${gid}`).value.trim() : '',
+      fecha_termino:  tipo !== 'indefinido' ? document.getElementById(`cfg-termino-${gid}`).value : '',
+      colacion:       document.getElementById(`cfg-colacion-${gid}`).value.trim(),
+      jornada_dias, horas_semanales, distribucion_jornada,
+      fecha_firma:    fechaFirma,
+      forma_pago:     document.getElementById(`cfg-formapago-${gid}`).value,
+      valor:          parseInt(document.getElementById(`cfg-valor-${gid}`).value) || 0,
+      epp_entregados: eppDatos.epp_entregados,
+      epp_otro:       eppDatos.epp_otro,
+      epp_fecha_entrega: eppDatos.epp_fecha_entrega,
+      irl_fecha_induccion: fechaFirma, // misma fecha que la firma, según lo acordado
+      irl_declarado:  eppDatos.irl_declarado,
     };
 
-    const existe = contratos.findIndex(c => c.trabajador_id === t.id);
-    if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
-    else contratos.push({id: Date.now().toString() + '_' + t.id, ...datos});
-
-    Object.assign(t, {
-      epp_entregados: v.epp_entregados,
-      epp_otro: v.epp_otro,
-      epp_fecha_entrega: v.epp_fecha_entrega,
-      irl_fecha_induccion: v.irl_fecha_induccion,
-      irl_declarado: v.irl_declarado,
-    });
-
     const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[cfg.tipo_contrato] || cfg.tipo_contrato;
-    registrarDocumentoCarpeta({
-      trabajador_id:  t.id,
-      trabajador_rut: t.rut,
-      tipo:           'contrato',
-      subtipo:        cfg.tipo_contrato,
-      fecha_firma:    v.fecha_firma,
-      descripcion:    `Contrato ${tipoTxt} — ${t.faena_obra||''} (Masivo)`.trim(),
-    });
 
-    const { htmlCompleto } = construirDocumentoContrato(t, emp, mandante, datos);
-    if(htmlCompleto) contenidos.push(htmlCompleto);
-    generados++;
+    g.trabajadores.forEach(t => {
+      const mandante = findMandante(t);
+      const emp = getEmpresaEmpleadora(t.empresa_propia_id);
+
+      const datos = {
+        trabajador_id: t.id,
+        trabajador_rut: t.rut,
+        empresa_rut: t.empresa || t.empresa_rut || '',
+        empresa_propia_id: t.empresa_propia_id || '',
+        tipo: cfg.tipo_contrato,
+        ciudad_firma: cfg.ciudad_firma,
+        fecha_firma: cfg.fecha_firma,
+        funcion_cargo: t.funcion_cargo || '',
+        nombre_faena: t.faena_obra || '',
+        ubicacion_faena: [mandante?.direccion, mandante?.comuna].filter(Boolean).join(', '),
+        region: mandante?.region || '',
+        mandante_nombre: mandante?.nombre || '',
+        mandante_rut: mandante?.rut || '',
+        mandante_direccion: mandante?.direccion || '',
+        mandante_comuna: mandante?.comuna || '',
+        mandante_region: mandante?.region || '',
+        temporada: cfg.temporada || '',
+        fecha_inicio: t.fecha_ingreso || '',
+        fecha_termino: cfg.fecha_termino || '',
+        horas_semanales: cfg.horas_semanales,
+        distribucion_jornada: cfg.distribucion_jornada,
+        jornada_dias: cfg.jornada_dias,
+        colacion: cfg.colacion,
+        tipo_remuneracion: cfg.forma_pago,
+        sueldo_monto: cfg.valor,
+        sueldo_escrito: numeroALetras(cfg.valor).trim() + ' pesos',
+        beneficios: [],
+        estado: 'activo',
+        creado_en: new Date().toISOString(),
+      };
+
+      const existe = contratos.findIndex(c => c.trabajador_id === t.id);
+      if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
+      else contratos.push({id: Date.now().toString() + '_' + t.id, ...datos});
+
+      Object.assign(t, {
+        epp_entregados: cfg.epp_entregados,
+        epp_otro: cfg.epp_otro,
+        epp_fecha_entrega: cfg.epp_fecha_entrega,
+        irl_fecha_induccion: cfg.irl_fecha_induccion,
+        irl_declarado: cfg.irl_declarado,
+      });
+
+      registrarDocumentoCarpeta({
+        trabajador_id:  t.id,
+        trabajador_rut: t.rut,
+        tipo:           'contrato',
+        subtipo:        cfg.tipo_contrato,
+        fecha_firma:    cfg.fecha_firma,
+        descripcion:    `Contrato ${tipoTxt} — ${t.faena_obra||''} (Masivo)`.trim(),
+      });
+
+      const { htmlCompleto } = construirDocumentoContrato(t, emp, mandante, datos);
+      if(htmlCompleto) contenidos.push(htmlCompleto);
+      generados++;
+    });
   });
 
   guardarContratos();
@@ -1768,14 +1653,14 @@ function confirmarImportacionMasiva(){
   const b = document.getElementById('badge-contratos');
   if(b) b.textContent = contratos.length;
 
-  cerrarModalAvisosMasivo();
+  cerrarModalConfigGruposMasivo();
   toast(`✅ ${generados} contrato${generados!==1?'s':''} generado${generados!==1?'s':''}`, 'exito');
 
   _abrirVentanaContratosMasivo(contenidos);
   _masivoSeleccionados.clear();
   renderPiramideMasivo();
-  _importMasivoValidas = [];
 }
+
 
 
 function _abrirVentanaContratosMasivo(contenidos){
