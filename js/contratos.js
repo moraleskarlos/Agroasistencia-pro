@@ -1426,6 +1426,10 @@ function abrirConfigGrupoMasivo(){
   const cont = document.getElementById('config-grupos-contenido');
   cont.innerHTML = grupos.map(g => {
     const gid = _grupoIdSafe(g.key);
+    const mandanteObj = findMandante(g.trabajadores[0]);
+    const vigenciaTxt = mandanteObj?.vigencia_contrato
+      ? `Vigencia del contrato con ${g.mandanteNombre}: hasta ${fmtFecha(mandanteObj.vigencia_contrato)}`
+      : '';
     return `
     <div style="border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:14px;">
       <div style="font-size:13px;font-weight:700;margin-bottom:10px;">${g.mandanteNombre} — ${g.faena} — ${g.cargo} (${g.trabajadores.length} trabajador${g.trabajadores.length!==1?'es':''})</div>
@@ -1439,19 +1443,21 @@ function abrirConfigGrupoMasivo(){
         </div>
         <div class="f-group"><label class="form-label">Ciudad de firma</label><input class="f-input" id="cfg-ciudad-${gid}" placeholder="Ej: Santiago"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
         <div class="f-group" id="cfg-campo-temporada-${gid}"><label class="form-label">Temporada</label><input class="f-input" id="cfg-temporada-${gid}" placeholder="Ej: Temporada 2026"></div>
         <div class="f-group" id="cfg-campo-termino-${gid}"><label class="form-label">Fecha de término</label><input class="f-input" type="date" id="cfg-termino-${gid}"></div>
       </div>
+      ${vigenciaTxt ? `<div style="font-size:11px;color:var(--texto3);margin-bottom:8px;"><i class="ti ti-info-circle"></i> ${vigenciaTxt}</div>` : ''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-        <div class="f-group"><label class="form-label">Colación (minutos)</label><input class="f-input" id="cfg-colacion-${gid}" placeholder="30"></div>
+        <div class="f-group"><label class="form-label">Colación (minutos)</label><input class="f-input" id="cfg-colacion-${gid}" placeholder="30" onchange="_actualizarHorasGrupo('${gid}')"></div>
+        <div class="f-group"><label class="form-label">Horas semanales (auto)</label><input class="f-input" id="cfg-horas-${gid}" readonly style="background:var(--gris-bg);"></div>
       </div>
       <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;margin-bottom:6px;">Jornada</div>
       <div id="cfg-jornada-${gid}" style="border:1px solid var(--borde);border-radius:8px;overflow:hidden;margin-bottom:12px;"></div>
 
       <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;margin-bottom:6px;">Remuneración</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
-        <div class="f-group"><label class="form-label">Fecha de Firma</label><input class="f-input" type="date" id="cfg-firma-${gid}"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px;">
+        <div class="f-group"><label class="form-label">Fecha de Firma</label><input class="f-input" type="date" id="cfg-firma-${gid}" onchange="_actualizarAvisoFirmaGrupo('${gid}')"></div>
         <div class="f-group"><label class="form-label">Forma de Pago</label>
           <select class="f-input" id="cfg-formapago-${gid}">
             <option value="">— Seleccionar —</option>
@@ -1461,6 +1467,7 @@ function abrirConfigGrupoMasivo(){
         </div>
         <div class="f-group"><label class="form-label">Valor ($)</label><input class="f-input" type="number" id="cfg-valor-${gid}" placeholder="450000"></div>
       </div>
+      <div id="cfg-aviso-firma-${gid}" style="display:none;font-size:11px;color:var(--danger);background:#FEF2F2;border-radius:6px;padding:6px 10px;margin-bottom:8px;"></div>
 
       <div id="cfg-epp-${gid}"></div>
     </div>`;
@@ -1472,10 +1479,27 @@ function abrirConfigGrupoMasivo(){
     const eppCont = document.getElementById(`cfg-epp-${g.gid}`);
     if(eppCont){
       eppCont.innerHTML = _htmlFormularioEpp(`cfg-${g.gid}`, {irl_declarado:true});
-      // La fecha de inducción RIOHS/IRL usa la misma Fecha de Firma del grupo — se
-      // oculta el campo propio de _htmlFormularioEpp para no pedirla dos veces.
+      // La fecha de inducción RIOHS/IRL y la fecha de entrega EPP usan la misma
+      // Fecha de Firma del grupo — se ocultan los campos propios de
+      // _htmlFormularioEpp para no pedirlas dos veces.
       const indInput = document.getElementById(`cfg-${g.gid}-irl-fecha-induccion`);
       if(indInput) indInput.closest('.form-group').style.display = 'none';
+      const eppFechaInput = document.getElementById(`cfg-${g.gid}-epp-fecha-entrega`);
+      if(eppFechaInput) eppFechaInput.closest('.form-group').style.display = 'none';
+      // Selector de Tipo de Inducción RIOHS/IRL (formulario oficial)
+      if(indInput){
+        const tipoInduccionHTML = `
+          <div class="f-group" style="margin-bottom:10px;">
+            <label class="form-label">Tipo de Inducción</label>
+            <select class="f-input" id="cfg-${g.gid}-irl-tipo">
+              <option value="nueva">Persona trabajadora nueva</option>
+              <option value="ausencia_prolongada">Persona trabajadora con ausencia prolongada</option>
+              <option value="reubicada">Persona trabajadora reubicada en nuevo cargo</option>
+              <option value="cambio_proceso">Por cambio de proceso, tecnología, materiales o sustancias</option>
+            </select>
+          </div>`;
+        indInput.closest('.form-grid').insertAdjacentHTML('beforebegin', tipoInduccionHTML);
+      }
     }
   });
 
@@ -1492,6 +1516,7 @@ function _onCambioTipoConfigGrupo(gid){
   const campoTermino = document.getElementById(`cfg-campo-termino-${gid}`);
   if(campoTemp) campoTemp.style.display = tipo === 'temporada' ? '' : 'none';
   if(campoTermino) campoTermino.style.display = tipo === 'indefinido' ? 'none' : '';
+  _actualizarAvisoFirmaGrupo(gid);
 }
 
 /* Misma estructura visual que renderJornadaDias() de Individual, con ids propios por grupo */
@@ -1503,14 +1528,20 @@ function _renderJornadaDiasGrupo(gid){
     const ini = i < 5 ? '08:00' : '';
     const fin = i < 5 ? '18:00' : '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:${i<6?'1px solid var(--borde)':'none'};">
-      <input type="checkbox" id="cfg-dia-${gid}-${i}" ${act?'checked':''} style="width:16px;height:16px;accent-color:var(--verde);">
+      <input type="checkbox" id="cfg-dia-${gid}-${i}" ${act?'checked':''} onchange="_actualizarHorasGrupo('${gid}')" style="width:16px;height:16px;accent-color:var(--verde);">
       <label style="flex:1;font-size:12px;">${dia}</label>
-      <input type="time" id="cfg-dia-ini-${gid}-${i}" value="${ini}" style="width:90px;padding:3px 6px;font-size:11px;">
+      <input type="time" id="cfg-dia-ini-${gid}-${i}" value="${ini}" onchange="_actualizarHorasGrupo('${gid}')" style="width:90px;padding:3px 6px;font-size:11px;">
       <span style="font-size:11px;">–</span>
-      <input type="time" id="cfg-dia-fin-${gid}-${i}" value="${fin}" style="width:90px;padding:3px 6px;font-size:11px;">
+      <input type="time" id="cfg-dia-fin-${gid}-${i}" value="${fin}" onchange="_actualizarHorasGrupo('${gid}')" style="width:90px;padding:3px 6px;font-size:11px;">
     </div>`;
   }).join('');
   _onCambioTipoConfigGrupo(gid);
+  _actualizarHorasGrupo(gid);
+}
+
+function _actualizarHorasGrupo(gid){
+  const horasEl = document.getElementById(`cfg-horas-${gid}`);
+  if(horasEl) horasEl.value = _leerJornadaGrupo(gid).horas_semanales;
 }
 
 function _leerJornadaGrupo(gid){
@@ -1533,6 +1564,36 @@ function _leerJornadaGrupo(gid){
   return { jornada_dias: j, horas_semanales: Math.round(totalHoras*10)/10, distribucion_jornada: distribucion };
 }
 
+/* Art. 9 Código del Trabajo: 5 días para contratos de Temporada (obra/faena <30 días),
+   15 días para Plazo Fijo/Indefinido, contados desde el ingreso real del trabajador. */
+function _actualizarAvisoFirmaGrupo(gid){
+  const g = _configGruposActuales.find(x => x.gid === gid);
+  const avisoEl = document.getElementById(`cfg-aviso-firma-${gid}`);
+  if(!g || !avisoEl) return;
+
+  const firma = document.getElementById(`cfg-firma-${gid}`)?.value;
+  const tipo = document.getElementById(`cfg-tipo-${gid}`)?.value;
+  if(!firma){ avisoEl.style.display = 'none'; return; }
+
+  const limite = tipo === 'temporada' ? 5 : 15;
+  const fFirma = new Date(firma + 'T00:00:00');
+  let peor = null, peorDias = 0;
+
+  g.trabajadores.forEach(t => {
+    if(!t.fecha_ingreso) return;
+    const fIngreso = new Date(t.fecha_ingreso + 'T00:00:00');
+    const dias = Math.round((fFirma - fIngreso) / 86400000);
+    if(dias > limite && dias > peorDias){ peorDias = dias; peor = t; }
+  });
+
+  if(peor){
+    avisoEl.style.display = 'block';
+    avisoEl.textContent = `⚠️ ${peor.nombre} ingresó el ${fmtFecha(peor.fecha_ingreso)} — la ley exige firmar dentro de ${limite} días desde el ingreso, y ya pasaron ${peorDias}.`;
+  } else {
+    avisoEl.style.display = 'none';
+  }
+}
+
 /* ── GENERACIÓN DIRECTA DE CONTRATOS (sin Excel de por medio) ───────────── */
 function generarContratosGrupoMasivo(){
   // Validar cada grupo antes de generar
@@ -1552,6 +1613,14 @@ function generarContratosGrupoMasivo(){
     if(!firma){ toast(`⚠️ Ingresa la fecha de firma para "${g.cargo}"`, 'error'); return; }
     if(!formaPago){ toast(`⚠️ Selecciona la forma de pago para "${g.cargo}"`, 'error'); return; }
     if(!valor || parseInt(valor) <= 0){ toast(`⚠️ Ingresa el valor de la remuneración para "${g.cargo}"`, 'error'); return; }
+
+    if(termino){
+      const mandanteObj = findMandante(g.trabajadores[0]);
+      if(mandanteObj?.vigencia_contrato && termino > mandanteObj.vigencia_contrato){
+        toast(`⚠️ La fecha de término para "${g.cargo}" supera la vigencia del contrato con ${g.mandanteNombre} (vence el ${fmtFecha(mandanteObj.vigencia_contrato)})`, 'error');
+        return;
+      }
+    }
   }
 
   cargarContratos();
@@ -1577,8 +1646,9 @@ function generarContratosGrupoMasivo(){
       valor:          parseInt(document.getElementById(`cfg-valor-${gid}`).value) || 0,
       epp_entregados: eppDatos.epp_entregados,
       epp_otro:       eppDatos.epp_otro,
-      epp_fecha_entrega: eppDatos.epp_fecha_entrega,
+      epp_fecha_entrega: fechaFirma, // misma fecha que la firma, según lo acordado
       irl_fecha_induccion: fechaFirma, // misma fecha que la firma, según lo acordado
+      irl_tipo:       document.getElementById(`cfg-${gid}-irl-tipo`)?.value || '',
       irl_declarado:  eppDatos.irl_declarado,
     };
 
@@ -1629,6 +1699,7 @@ function generarContratosGrupoMasivo(){
         epp_otro: cfg.epp_otro,
         epp_fecha_entrega: cfg.epp_fecha_entrega,
         irl_fecha_induccion: cfg.irl_fecha_induccion,
+        irl_tipo: cfg.irl_tipo,
         irl_declarado: cfg.irl_declarado,
       });
 
