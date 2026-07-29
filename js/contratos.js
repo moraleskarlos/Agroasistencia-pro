@@ -1248,6 +1248,7 @@ function renderListaContratos(){
     const mandante = findMandante(t);
     const tipoTxt = c.tipo === 'temporada' ? 'Temporada' : c.tipo === 'indefinido' ? 'Indefinido' : 'Plazo fijo';
     const fechaFirma = c.fecha_firma ? new Date(c.fecha_firma).toLocaleDateString('es-CL') : '—';
+    const numTxt = c.numero_contrato ? `Nº ${c.numero_contrato}` : 'S/N';
 
     return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;
       border:1px solid var(--borde);border-radius:var(--radius);margin-bottom:8px;background:#fff;">
@@ -1256,16 +1257,16 @@ function renderListaContratos(){
         <i class="ti ti-file-description" style="color:var(--azul);font-size:18px;"></i>
       </div>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;">${t?.nombre || 'Trabajador eliminado'}</div>
+        <div style="font-size:13px;font-weight:600;">${t?.nombre || 'Trabajador eliminado'} <span style="font-weight:400;color:var(--texto3);font-size:11px;">${numTxt}</span></div>
         <div style="font-size:11px;color:var(--texto2);">
           ${t?.rut || c.trabajador_rut} · ${tipoTxt} · ${mandante?.nombre || '—'} · Firmado ${fechaFirma}
         </div>
       </div>
       <button class="btn btn-secondary btn-sm" onclick="cerrarModalListaContratos();
-        document.getElementById('c-trabajador').value='${t?.id||''}';precargarContrato();">
+        _seleccionarTrabajadorContratoVisual('${t?.id||''}');">
         <i class="ti ti-edit"></i> Editar
       </button>
-      <button class="btn btn-primary btn-sm" onclick="document.getElementById('c-trabajador').value='${t?.id||''}';generarPDFContrato();">
+      <button class="btn btn-primary btn-sm" onclick="_seleccionarTrabajadorContratoVisual('${t?.id||''}');generarPDFContrato();">
         <i class="ti ti-file-type-pdf"></i> PDF
       </button>
     </div>`;
