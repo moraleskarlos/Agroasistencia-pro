@@ -2,20 +2,30 @@
 
 function initAsistencia(){
   document.getElementById('asist-fecha').value = new Date().toISOString().split('T')[0];
-  switchTabAsistencia('registro');
+  const manualFecha = document.getElementById('manual-fecha');
+  if(manualFecha) manualFecha.value = new Date().toISOString().split('T')[0];
+  switchTabAsistencia('dia');
   cargarAsistencia();
 }
 
 function switchTabAsistencia(tab){
-  const esRegistro = tab === 'registro';
-  document.getElementById('tab-asist-registro').style.borderBottomColor = esRegistro ? 'var(--azul)' : 'transparent';
-  document.getElementById('tab-asist-registro').style.color = esRegistro ? 'var(--azul)' : 'var(--texto2)';
-  document.getElementById('tab-asist-reportes').style.borderBottomColor = esRegistro ? 'transparent' : 'var(--azul)';
-  document.getElementById('tab-asist-reportes').style.color = esRegistro ? 'var(--texto2)' : 'var(--azul)';
-  document.getElementById('sub-tab-asist-registro').style.display = esRegistro ? '' : 'none';
-  document.getElementById('sub-tab-asist-reportes').style.display = esRegistro ? 'none' : '';
+  const esDia = tab === 'dia';
+  document.getElementById('tab-asist-dia').style.borderBottomColor = esDia ? 'var(--azul)' : 'transparent';
+  document.getElementById('tab-asist-dia').style.color = esDia ? 'var(--azul)' : 'var(--texto2)';
+  document.getElementById('tab-asist-manual').style.borderBottomColor = esDia ? 'transparent' : 'var(--azul)';
+  document.getElementById('tab-asist-manual').style.color = esDia ? 'var(--texto2)' : 'var(--azul)';
+  document.getElementById('sub-tab-asist-dia').style.display = esDia ? '' : 'none';
+  document.getElementById('sub-tab-asist-manual').style.display = esDia ? 'none' : '';
+}
 
-  if(!esRegistro){
+/* Muestra/oculta el bloque plegable de "Ver rango de fechas" (ex-Reportes),
+   dentro de la misma pestaña Asistencia del Día. */
+function toggleRangoFechasAsistencia(){
+  const bloque = document.getElementById('bloque-rango-fechas-asist');
+  if(!bloque) return;
+  const abierto = bloque.style.display !== 'none';
+  bloque.style.display = abierto ? 'none' : 'block';
+  if(!abierto){
     if(typeof poblarSelects === 'function') poblarSelects();
     const selRep = document.getElementById('rep-asist-empresa');
     const selReg = document.getElementById('asist-empresa');
@@ -424,4 +434,170 @@ function exportarReporteAsistenciaExcel(){
   XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
   XLSX.writeFile(wb, `Reporte_Asistencia_${inicio}_a_${fin}.xlsx`);
   toast('⬇️ Excel exportado', 'exito');
+}
+
+/* ── EXPORTAR PDF (Asistencia del Día) — mismo patrón de ventana de impresión
+   que ya usamos en Contratos y QR, sin agregar librerías nuevas ── */
+function exportarAsistenciaPDF(){
+  const filtro = document.getElementById('asist-empresa').value;
+  const fecha  = document.getElementById('asist-fecha').value;
+  const buscar = (document.getElementById('asist-buscar')?.value || '').toLowerCase().trim();
+  const clave  = 'asistencia_' + fecha;
+  const data   = JSON.parse(localStorage.getItem(clave) || '[]');
+
+  let lista = trabajadores.filter(t => t.estado === 'activo');
+  if(filtro) lista = lista.filter(t => (t.mandante_id === filtro || t.empresa_rut === filtro || t.empresa === filtro));
+  if(buscar) lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
+
+  if(!lista.length){ toast('⚠️ Sin trabajadores para exportar', 'error'); return; }
+
+  const filasHTML = lista.map(t => {
+    const r = data.find(x => x.rut === t.rut);
+    const horasTxt = r?.horas_trabajadas != null ? r.horas_trabajadas.toFixed(1)+' h' : '—';
+    const estado = !r ? 'Pendiente' : !r.hora_salida ? 'Activo' : 'Cerrado';
+    return `<tr>
+      <td>${t.nombre||'—'}</td><td>${t.rut}</td>
+      <td>${r?.hora_entrada||'—'}</td><td>${r?.hora_salida||'—'}</td>
+      <td>${horasTxt}</td><td>${r?.jornada||'—'}</td><td>${estado}</td>
+    </tr>`;
+  }).join('');
+
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Asistencia del Día — ${fecha}</title>
+    <style>
+      body{margin:0;padding:20px;font-family:'Segoe UI',sans-serif;color:#1E293B}
+      h2{font-size:16px;color:#0f2942;margin-bottom:4px}
+      p{font-size:12px;color:#64748B;margin-bottom:16px}
+      table{width:100%;border-collapse:collapse;font-size:12px}
+      th,td{border:1px solid #E2E8F0;padding:6px 8px;text-align:left}
+      th{background:#F1F5F9;}
+    </style></head><body>
+    <h2>Asistencia del Día</h2>
+    <p>${fecha} · ${lista.length} trabajador${lista.length!==1?'es':''}</p>
+    <table><thead><tr>
+      <th>Trabajador</th><th>RUT</th><th>Ingreso</th><th>Salida</th><th>Total Horas</th><th>Jornada</th><th>Estado</th>
+    </tr></thead><tbody>${filasHTML}</tbody></table>
+    <script>setTimeout(()=>window.print(),300);<\/script>
+    </body></html>`);
+  win.document.close();
+}
+
+/* ══════════════════════════════════════════
+   REGISTRO MANUAL (contingencia — sin app)
+   ══════════════════════════════════════════ */
+let _manualRutSeleccionado = null;
+
+function buscarTrabajadorManual(){
+  const buscar = (document.getElementById('manual-buscar')?.value || '').toLowerCase().trim();
+  const cont = document.getElementById('manual-resultados');
+  if(!cont) return;
+
+  if(!buscar){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
+
+  const resultados = trabajadores
+    .filter(t => t.estado === 'activo')
+    .filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar))
+    .slice(0, 8);
+
+  if(!resultados.length){
+    cont.style.display = 'block';
+    cont.innerHTML = `<div style="padding:10px;font-size:12px;color:var(--texto3);">Sin resultados</div>`;
+    return;
+  }
+
+  cont.style.display = 'block';
+  cont.innerHTML = resultados.map(t => `
+    <div onclick="seleccionarTrabajadorManual('${t.rut}')"
+      style="padding:8px 10px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--borde);"
+      onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      ${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span>
+    </div>`).join('');
+}
+
+function seleccionarTrabajadorManual(rut){
+  _manualRutSeleccionado = rut;
+  document.getElementById('manual-buscar').value = '';
+  document.getElementById('manual-resultados').style.display = 'none';
+  _cargarFormularioManual();
+}
+
+/* Carga en el formulario la marcación existente (si hay) del trabajador
+   seleccionado para la fecha elegida — se usa al seleccionar y al cambiar fecha. */
+function _cargarFormularioManual(){
+  const rut = _manualRutSeleccionado;
+  if(!rut) return;
+  const t = trabajadores.find(x => x.rut === rut);
+  if(!t) return;
+
+  const fecha = document.getElementById('manual-fecha').value || new Date().toISOString().split('T')[0];
+  const data  = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
+  const r     = data.find(x => x.rut === rut);
+
+  document.getElementById('manual-trabajador-nombre').textContent = `${t.nombre} · ${t.rut}`;
+  document.getElementById('manual-hora-entrada').value = r?.hora_entrada || '';
+  document.getElementById('manual-hora-salida').value  = r?.hora_salida  || '';
+  document.getElementById('manual-form-horas').style.display = 'block';
+}
+
+function _manualFechaCambio(){
+  if(_manualRutSeleccionado) _cargarFormularioManual();
+}
+
+function guardarMarcacionManual(){
+  const rut = _manualRutSeleccionado;
+  if(!rut){ toast('⚠️ Busca y selecciona un trabajador', 'error'); return; }
+
+  const t = trabajadores.find(x => x.rut === rut);
+  if(!t){ toast('⚠️ Trabajador no encontrado', 'error'); return; }
+
+  const fecha  = document.getElementById('manual-fecha').value;
+  if(!fecha){ toast('⚠️ Selecciona una fecha', 'error'); return; }
+
+  const entrada = document.getElementById('manual-hora-entrada').value;
+  const salida  = document.getElementById('manual-hora-salida').value;
+  if(!entrada){ toast('⚠️ Ingresa al menos la hora de entrada', 'error'); return; }
+
+  const horas = salida ? calcularHoras(entrada, salida) : null;
+  const { jornada, valor } = calcularJornada(horas);
+
+  const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre) ? cfg.admin_nombre.split(' ')[0] : 'Admin';
+  const clave = 'asistencia_' + fecha;
+  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+  const idx   = data.findIndex(x => x.rut === rut);
+
+  const marcacion = {
+    rut, fecha,
+    hora_entrada: entrada,
+    hora_salida: salida || null,
+    horas_trabajadas: horas,
+    jornada: salida ? jornada : null,
+    jornada_valor: salida ? valor : null,
+    registrado_por: registradoPor,
+  };
+
+  if(idx >= 0) data[idx] = { ...data[idx], ...marcacion };
+  else data.push(marcacion);
+
+  localStorage.setItem(clave, JSON.stringify(data));
+  toast(`✅ Marcación guardada — ${t.nombre}`, 'exito');
+
+  // Si la fecha coincide con la de Asistencia del Día, refresca esa vista también
+  if(document.getElementById('asist-fecha').value === fecha) cargarAsistencia();
+}
+
+function eliminarMarcacionManual(){
+  const rut = _manualRutSeleccionado;
+  if(!rut) return;
+  const fecha = document.getElementById('manual-fecha').value;
+  const clave = 'asistencia_' + fecha;
+  const data  = JSON.parse(localStorage.getItem(clave) || '[]').filter(x => x.rut !== rut);
+  localStorage.setItem(clave, JSON.stringify(data));
+
+  document.getElementById('manual-hora-entrada').value = '';
+  document.getElementById('manual-hora-salida').value  = '';
+  toast('🗑️ Marcación eliminada', 'exito');
+
+  if(document.getElementById('asist-fecha').value === fecha) cargarAsistencia();
 }
