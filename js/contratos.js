@@ -3,11 +3,43 @@
 function cargarContratos(){
   try{ contratos = JSON.parse(localStorage.getItem(LOCAL_C))  || []; } catch{ contratos = []; }
   try{ anexos    = JSON.parse(localStorage.getItem(LOCAL_AN)) || []; } catch{ anexos    = []; }
+  _migrarNumerosContratoRetroactivo();
 }
 
 function guardarContratos(){
   localStorage.setItem(LOCAL_C,  JSON.stringify(contratos));
   localStorage.setItem(LOCAL_AN, JSON.stringify(anexos));
+}
+
+/* Nº de Contrato correlativo, independiente por Empresa Contratista (cada
+   empresa tiene su propio RUT, aunque compartan dueño) — se guarda aparte en
+   localStorage, no en el objeto contrato, para no perder el conteo si un
+   contrato se borra. */
+function _siguienteNumeroContrato(epId){
+  const key = 'contrato_numero_contador';
+  const contador = JSON.parse(localStorage.getItem(key) || '{}');
+  const ep = epId || 'sin-empresa';
+  contador[ep] = (contador[ep] || 0) + 1;
+  localStorage.setItem(key, JSON.stringify(contador));
+  return contador[ep];
+}
+
+/* Asigna Nº de Contrato a los contratos creados antes de este cambio, que no
+   tienen numero_contrato — en el orden en que ya están guardados (orden de
+   creación), agrupados por Empresa Contratista. Idempotente: solo toca los
+   que todavía no tienen número, así que es seguro llamarla siempre al cargar. */
+function _migrarNumerosContratoRetroactivo(){
+  const pendientes = contratos.filter(c => !c.numero_contrato);
+  if(!pendientes.length) return;
+  const key = 'contrato_numero_contador';
+  const contador = JSON.parse(localStorage.getItem(key) || '{}');
+  pendientes.forEach(c => {
+    const ep = c.empresa_propia_id || 'sin-empresa';
+    contador[ep] = (contador[ep] || 0) + 1;
+    c.numero_contrato = contador[ep];
+  });
+  localStorage.setItem(key, JSON.stringify(contador));
+  guardarContratos();
 }
 
 function renderJornadaDias(jornadaGuardada){
@@ -364,7 +396,7 @@ function guardarContrato(){
     if(existe >= 0){
       contratos[existe] = {...contratos[existe], ...datos};
     } else {
-      contratos.push({id: Date.now().toString(), ...datos});
+      contratos.push({id: Date.now().toString(), numero_contrato: _siguienteNumeroContrato(datos.empresa_propia_id), ...datos});
     }
   }
 
@@ -1692,7 +1724,7 @@ function generarContratosGrupoMasivo(){
 
       const existe = contratos.findIndex(c => c.trabajador_id === t.id);
       if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
-      else contratos.push({id: Date.now().toString() + '_' + t.id, ...datos});
+      else contratos.push({id: Date.now().toString() + '_' + t.id, numero_contrato: _siguienteNumeroContrato(datos.empresa_propia_id), ...datos});
 
       Object.assign(t, {
         epp_entregados: cfg.epp_entregados,
