@@ -1851,36 +1851,41 @@
         </div>
 
         <div style="display:flex;gap:0;border-bottom:1px solid var(--borde);margin-bottom:16px;">
-          <button id="tab-asist-registro" onclick="switchTabAsistencia('registro')"
+          <button id="tab-asist-dia" onclick="switchTabAsistencia('dia')"
             style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
             cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);">
-            <i class="ti ti-calendar-check"></i> Registro
+            <i class="ti ti-calendar-check"></i> Asistencia del Día
           </button>
-          <button id="tab-asist-reportes" onclick="switchTabAsistencia('reportes')"
+          <button id="tab-asist-manual" onclick="switchTabAsistencia('manual')"
             style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
             cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
-            <i class="ti ti-report"></i> Reportes
+            <i class="ti ti-edit"></i> Registro Manual
           </button>
         </div>
 
-        <!-- SUBMÓDULO REGISTRO (diario) -->
-        <div id="sub-tab-asist-registro">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+        <!-- SUBMÓDULO ASISTENCIA DEL DÍA (centro de control en vivo) -->
+        <div id="sub-tab-asist-dia">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
           <input type="date" id="asist-fecha" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()">
           <select id="asist-empresa" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()"><option value="">Todos los mandantes</option></select>
           <input type="text" id="asist-buscar" oninput="cargarAsistencia()" placeholder="Buscar nombre o RUT..." style="padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
-          <button class="btn btn-secondary" onclick="exportarAsistenciaExcel()"><i class="ti ti-download"></i> Excel</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleRangoFechasAsistencia()"><i class="ti ti-calendar-stats"></i> Ver rango de fechas</button>
         </div>
-        <div class="g4" style="margin-bottom:16px;">
-          <div class="kpi azul"><div class="kpi-label">Total trabajadores</div><div class="kpi-value" id="asist-total">0</div><div class="kpi-sub">registrados</div></div>
-          <div class="kpi verde"><div class="kpi-label">Ingresos activos</div><div class="kpi-value" id="asist-presentes">0</div><div class="kpi-sub">sin salida aún</div></div>
-          <div class="kpi azul"><div class="kpi-label">Salidas</div><div class="kpi-value" id="asist-media">0</div><div class="kpi-sub">jornada cerrada</div></div>
-          <div class="kpi amarillo"><div class="kpi-label">Salida anticipada</div><div class="kpi-value" id="asist-anticipada">0</div><div class="kpi-sub">menos de 5 horas</div></div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--gris-bg);border-radius:8px;margin-bottom:14px;font-size:13px;font-weight:600;">
+          <span>👥 <span id="asist-total">0</span> Trabajadores</span>
+          <span style="color:#065F46;">🟢 <span id="asist-presentes">0</span> Activos</span>
+          <span style="color:#475569;">⚫ <span id="asist-media">0</span> Cerrados</span>
+          <span style="color:#92400E;">🟠 <span id="asist-anticipada">0</span> Salidas anticipadas</span>
         </div>
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <div class="card-title" style="margin:0;"><i class="ti ti-calendar-check"></i> Registro del día</div>
-            <button class="btn btn-dark btn-sm" onclick="cierreMasivoTurno()"><i class="ti ti-door-exit"></i> Cierre masivo turno</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+            <div class="card-title" style="margin:0;"><i class="ti ti-calendar-check"></i> Asistencia del Día</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-refresh"></i> Actualizar</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaExcel()"><i class="ti ti-download"></i> Excel</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>
+              <button class="btn btn-dark btn-sm" onclick="cierreMasivoTurno()"><i class="ti ti-door-exit"></i> Cierre masivo turno</button>
+            </div>
           </div>
           <div class="tabla-wrap">
             <table class="tabla"><thead>
@@ -1889,15 +1894,15 @@
   <th style="width:30px;">
     <input type="checkbox" id="check-all" onchange="seleccionarTodosAsist(this.checked)" style="accent-color:var(--verde);width:16px;height:16px;">
   </th>
-  <th>Trabajador</th>
-  <th>RUT</th>
-  <th>Registrado por</th>
-  <th>Ingreso</th>
-  <th>Salida</th>
-  <th>Total Horas</th>
-  <th>Jornada</th>
-  <th>Estado</th>
-  <th>Editar</th>
+  <th style="width:22%;">Trabajador</th>
+  <th style="width:12%;">RUT</th>
+  <th style="width:9%;">Registrado por</th>
+  <th style="width:11%;">Ingreso</th>
+  <th style="width:11%;">Salida</th>
+  <th style="width:10%;">Total Horas</th>
+  <th style="width:9%;">Jornada</th>
+  <th style="width:8%;">Estado</th>
+  <th style="width:8%;">Acción</th>
 </tr>
 
 
@@ -1908,11 +1913,11 @@
             <tbody id="tbody-asistencia"><tr><td colspan="10" style="text-align:center;padding:24px;color:var(--texto3);">Selecciona una fecha para ver la asistencia</td></tr></tbody></table>
           </div>
         </div>
-        </div><!-- /sub-tab-asist-registro -->
 
-        <!-- SUBMÓDULO REPORTES (rango de fechas) -->
-        <div id="sub-tab-asist-reportes" style="display:none;">
+        <!-- RANGO DE FECHAS (plegable, ex-Reportes) -->
+        <div id="bloque-rango-fechas-asist" style="display:none;margin-top:16px;">
           <div class="card" style="margin-bottom:14px;">
+            <div class="card-title"><i class="ti ti-calendar-stats"></i> Ver rango de fechas</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
               <button class="btn btn-secondary btn-sm" onclick="rangoRapidoAsistencia('hoy')">Hoy</button>
               <button class="btn btn-secondary btn-sm" onclick="rangoRapidoAsistencia('ayer')">Ayer</button>
@@ -1964,7 +1969,39 @@
               </table>
             </div>
           </div>
-        </div><!-- /sub-tab-asist-reportes -->
+        </div><!-- /bloque-rango-fechas-asist -->
+        </div><!-- /sub-tab-asist-dia -->
+
+        <!-- SUBMÓDULO REGISTRO MANUAL (contingencia) -->
+        <div id="sub-tab-asist-manual" style="display:none;">
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;background:var(--warn-bg,#FEF3C7);color:#92400E;border-radius:8px;margin-bottom:16px;font-size:13px;">
+            <i class="ti ti-alert-triangle" style="font-size:18px;flex-shrink:0;margin-top:1px;"></i>
+            <div>Utilice esta opción únicamente cuando no sea posible registrar la asistencia mediante la aplicación móvil.</div>
+          </div>
+          <div class="card" style="max-width:520px;">
+            <div class="card-title"><i class="ti ti-edit"></i> Cargar marcación manual</div>
+            <div class="form-group">
+              <label>Fecha</label>
+              <input type="date" id="manual-fecha" class="f-input" onchange="_manualFechaCambio()">
+            </div>
+            <div class="form-group">
+              <label>Buscar trabajador</label>
+              <input type="text" id="manual-buscar" class="f-input" placeholder="Nombre o RUT..." oninput="buscarTrabajadorManual()" autocomplete="off">
+              <div id="manual-resultados" style="border:1px solid var(--borde);border-radius:8px;margin-top:4px;max-height:180px;overflow-y:auto;display:none;"></div>
+            </div>
+            <div id="manual-form-horas" style="display:none;">
+              <div style="font-size:13px;font-weight:700;margin:10px 0 8px;" id="manual-trabajador-nombre"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label>Hora entrada</label><input type="time" id="manual-hora-entrada" class="f-input"></div>
+                <div class="form-group"><label>Hora salida</label><input type="time" id="manual-hora-salida" class="f-input"></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px;">
+                <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="guardarMarcacionManual()"><i class="ti ti-check"></i> Guardar</button>
+                <button class="btn btn-secondary" onclick="eliminarMarcacionManual()"><i class="ti ti-trash"></i> Eliminar</button>
+              </div>
+            </div>
+          </div>
+        </div><!-- /sub-tab-asist-manual -->
       </div>
 
       <!-- EXPORTAR -->
