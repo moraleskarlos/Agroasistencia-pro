@@ -129,17 +129,12 @@ function poblarSelectTrabajadoresContrato(){
   if(!sel) return;
   const val = sel.value;
 
-  if(_modoContratoActual === 'corregir'){
-    const conContrato = trabajadores.filter(t => contratos.some(c => c.trabajador_id === t.id));
-    sel.innerHTML = '<option value="">— Selecciona el contrato a corregir —</option>' +
-      conContrato.map(t => `<option value="${t.id}">${t.nombre} — ${t.rut}</option>`).join('');
-  } else {
-    sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>' +
-      trabajadores.map(t => {
-        const yaTiene = contratos.some(c => c.trabajador_id === t.id);
-        return `<option value="${t.id}">${yaTiene ? '✓ ' : ''}${t.nombre} — ${t.rut}</option>`;
-      }).join('');
-  }
+  sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>' +
+    trabajadores.map(t => {
+      const yaTiene = contratos.some(c => c.trabajador_id === t.id);
+      return `<option value="${t.id}">${yaTiene ? '✓ ' : ''}${t.nombre} — ${t.rut}</option>`;
+    }).join('');
+
   if(val) sel.value = val;
   _actualizarContadorContratos();
   _renderListaVisualTrabajadorContrato();
@@ -153,9 +148,7 @@ function _renderListaVisualTrabajadorContrato(){
   const valActual = document.getElementById('c-trabajador')?.value || '';
   const epFiltro  = document.getElementById('c-empresa-propia')?.value || '';
 
-  let lista = (_modoContratoActual === 'corregir')
-    ? trabajadores.filter(t => contratos.some(c => c.trabajador_id === t.id))
-    : trabajadores.slice();
+  let lista = trabajadores.slice();
 
   if(epFiltro){
     lista = lista.filter(t => (t.empresa_propia_id || '') === epFiltro);
@@ -1878,10 +1871,10 @@ function cambiarModoEpp(modo){
 }
 
 /* Plantilla compartida del formulario de EPP/IRL (usa un prefijo de ids para no chocar entre individual/masivo) */
-function _htmlFormularioEpp(prefix, datos){
+function _htmlFormularioEpp(prefix, datos, soloEpp){
   datos = datos || {};
   const entregados = datos.epp_entregados || [];
-  return `
+  const bloqueEpp = `
     <div class="form-section"><i class="ti ti-shield-check"></i> Elementos de Protección Personal (EPP)</div>
     <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;">
       ${EPP_ITEMS.map(item => `
@@ -1900,8 +1893,11 @@ function _htmlFormularioEpp(prefix, datos){
         <label>Fecha de entrega EPP</label>
         <input type="date" id="${prefix}-epp-fecha-entrega" value="${datos.epp_fecha_entrega||''}">
       </div>
-    </div>
+    </div>`;
 
+  if(soloEpp) return bloqueEpp; // pestaña EPP standalone: solo re-entrega de EPP, sin RIOHS/IRL (ya se declara al crear el contrato)
+
+  return bloqueEpp + `
     <div class="form-section"><i class="ti ti-notebook"></i> RIOHS / Inducción (IRL)</div>
     <div class="form-grid" style="margin-bottom:14px;">
       <div class="form-group">
@@ -1916,13 +1912,20 @@ function _htmlFormularioEpp(prefix, datos){
 }
 
 function _leerFormularioEpp(prefix){
-  return {
-    epp_entregados:       Array.from(document.querySelectorAll(`.${prefix}-epp-check:checked`)).map(c => c.value),
-    epp_otro:             document.getElementById(`${prefix}-epp-otro-detalle`)?.value.trim() || '',
-    epp_fecha_entrega:    document.getElementById(`${prefix}-epp-fecha-entrega`)?.value || null,
-    irl_fecha_induccion:  document.getElementById(`${prefix}-irl-fecha-induccion`)?.value || null,
-    irl_declarado:        document.getElementById(`${prefix}-irl-declarado`)?.checked || false,
+  const datos = {
+    epp_entregados:    Array.from(document.querySelectorAll(`.${prefix}-epp-check:checked`)).map(c => c.value),
+    epp_otro:          document.getElementById(`${prefix}-epp-otro-detalle`)?.value.trim() || '',
+    epp_fecha_entrega: document.getElementById(`${prefix}-epp-fecha-entrega`)?.value || null,
   };
+  // Los campos RIOHS/IRL solo existen cuando el formulario se generó sin soloEpp
+  // (Contrato Individual/Masivo) — si no existen, no se incluyen, para no borrar
+  // por accidente la declaración ya hecha al crear el contrato.
+  const campoInduccion = document.getElementById(`${prefix}-irl-fecha-induccion`);
+  if(campoInduccion){
+    datos.irl_fecha_induccion = campoInduccion.value || null;
+    datos.irl_declarado = document.getElementById(`${prefix}-irl-declarado`)?.checked || false;
+  }
+  return datos;
 }
 
 /* ── INDIVIDUAL ──────────────────────────────────────────── */
@@ -1934,9 +1937,9 @@ function cargarEppTrabajador(){
 
   const t = trabajadores.find(x => x.rut === rut);
   cont.style.display = 'block';
-  cont.innerHTML = _htmlFormularioEpp('eppi', t) + `
+  cont.innerHTML = _htmlFormularioEpp('eppi', t, true) + `
     <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="guardarEppIndividual()">
-      <i class="ti ti-device-floppy"></i> Guardar EPP / IRL
+      <i class="ti ti-device-floppy"></i> Guardar EPP
     </button>`;
 }
 
@@ -1948,7 +1951,7 @@ function guardarEppIndividual(){
 
   Object.assign(t, _leerFormularioEpp('eppi'));
   guardarLocal();
-  toast(`✅ EPP / IRL guardado para ${t.nombre}`, 'exito');
+  toast(`✅ EPP guardado para ${t.nombre}`, 'exito');
 }
 
 /* ── MASIVO ──────────────────────────────────────────────── */
@@ -1974,7 +1977,7 @@ function renderListaEppMasivo(){
   // Mostrar el formulario compartido debajo de la lista (una sola vez)
   const contForm = document.getElementById('epp-form-masivo');
   if(contForm && !contForm.innerHTML){
-    contForm.innerHTML = _htmlFormularioEpp('eppm', {}) + `
+    contForm.innerHTML = _htmlFormularioEpp('eppm', {}, true) + `
       <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="guardarEppMasivo()">
         <i class="ti ti-device-floppy"></i> Aplicar a seleccionados
       </button>`;
