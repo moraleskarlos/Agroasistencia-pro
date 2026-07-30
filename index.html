@@ -29,7 +29,7 @@
       <button class="sb-item" onclick="irA('qr',this)"><i class="ti ti-qrcode"></i><span>Generar QR</span></button>
       <button class="sb-item" onclick="irA('contratos',this)"><i class="ti ti-file-text"></i><span>Contratos</span><span class="sb-badge" id="badge-contratos">0</span></button>
       <div class="sb-section">Operaciones</div>
-      <button class="sb-item" onclick="irA('gestion-laboral',this)"><i class="ti ti-clipboard-list"></i><span>Gestión Laboral</span></button>
+      <button class="sb-item" onclick="irA('gestion-laboral',this)"><i class="ti ti-clipboard-list"></i><span>Haberes, Descuentos y Ausencias</span></button>
       <button class="sb-item" onclick="irA('remuneraciones',this)"><i class="ti ti-calculator"></i><span>Remuneraciones</span></button>
       <div class="sb-section">Reportes</div>
       <button class="sb-item" onclick="irA('asistencia',this)"><i class="ti ti-calendar-stats"></i><span>Asistencia</span></button>
@@ -1082,15 +1082,18 @@
             <div class="sec-title">Haberes, Descuentos y Ausencias</div>
             <div class="sec-sub">Faltas y permisos, haberes variables, descuentos y jornada especial</div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input type="month" id="gl-filtro-periodo" class="btn btn-secondary" style="font-size:13px;" onchange="switchTabGL(_tabGLActivo)">
-            <select id="gl-filtro-mandante" class="btn btn-secondary" style="font-size:13px;" onchange="switchTabGL(_tabGLActivo)"><option value="">Todos los mandantes</option></select>
+          <div style="display:flex;gap:8px;align-items:end;">
+            <div class="f-group" style="margin:0;"><label class="form-label">Revisar mes</label><input type="month" id="gl-filtro-periodo" class="btn btn-secondary" style="font-size:13px;" onchange="switchTabGL(_tabGLActivo)"></div>
+            <div class="f-group" style="margin:0;"><label class="form-label">Elegir empresa</label><select id="gl-filtro-mandante" class="btn btn-secondary" style="font-size:13px;" onchange="switchTabGL(_tabGLActivo)"><option value="">Todas las Empresas Mandante</option></select></div>
           </div>
         </div>
 
         <!-- KPIs (dinámicos según pestaña activa) -->
         <div class="g4" id="gl-kpis-wrap" style="margin-bottom:16px;">
-          <div class="kpi azul" id="gl-kpi-novedades" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Faltas y Permisos</div><div class="kpi-value" style="font-size:18px;">0</div><div class="kpi-sub" style="font-size:10px;">período actual</div></div>
+          <div class="kpi azul" id="gl-kpi-goce" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Permiso con goce</div><div class="kpi-value" style="font-size:18px;">0</div><div class="kpi-sub" style="font-size:10px;">trabajadores</div></div>
+          <div class="kpi amarillo" id="gl-kpi-singoce" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Permiso sin goce</div><div class="kpi-value" style="font-size:18px;">0</div><div class="kpi-sub" style="font-size:10px;">trabajadores</div></div>
+          <div class="kpi verde" id="gl-kpi-licencia" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Licencia médica</div><div class="kpi-value" style="font-size:18px;">0</div><div class="kpi-sub" style="font-size:10px;">trabajadores</div></div>
+          <div class="kpi rojo" id="gl-kpi-inasistencia" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Inasistencia</div><div class="kpi-value" style="font-size:18px;">0</div><div class="kpi-sub" style="font-size:10px;">trabajadores</div></div>
           <div class="kpi verde" id="gl-kpi-haberes" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Haberes Variables</div><div class="kpi-value" style="font-size:18px;">$0</div><div class="kpi-sub" style="font-size:10px;">haberes variables</div></div>
           <div class="kpi rojo" id="gl-kpi-descuentos" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Descuentos</div><div class="kpi-value" style="font-size:18px;">$0</div><div class="kpi-sub" style="font-size:10px;">descuentos período</div></div>
           <div class="kpi amarillo" id="gl-kpi-hextra" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Horas Extra</div><div class="kpi-value" style="font-size:18px;">0.0 h</div><div class="kpi-sub" style="font-size:10px;">horas extra</div></div>
