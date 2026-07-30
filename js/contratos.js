@@ -112,9 +112,9 @@ function initContratos(rutPreseleccionado){
   actualizarBadgesContratos();
   if(!rutPreseleccionado){
     limpiarContrato();
-    switchTabContratos('contratos');
+    switchTabContratos('ct-individual');
   } else {
-    switchTabContratos('contratos');
+    switchTabContratos('ct-individual');
     const t   = trabajadores.find(x => x.rut === rutPreseleccionado);
     const sel = document.getElementById('c-trabajador');
     if(sel && t){ sel.value = t.id; precargarContrato(); }
@@ -217,9 +217,9 @@ function _actualizarContadorContratos(){
   const conContrato = trabajadores.filter(t => contratos.some(c => c.trabajador_id === t.id)).length;
   const sinContrato = trabajadores.length - conContrato;
   el.innerHTML = `
-    <span style="cursor:pointer;color:#065f46;font-weight:600;" onclick="switchTabContratos('corregir')">${conContrato} con contrato</span>
+    <span style="cursor:pointer;color:#065f46;font-weight:600;" onclick="switchTabContratos('ct-emitidos')">${conContrato} con contrato</span>
     <span style="color:var(--texto3);"> · </span>
-    <span style="cursor:pointer;color:#92400e;font-weight:600;" onclick="switchTabContratos('contratos')">${sinContrato} sin contrato</span>`;
+    <span style="cursor:pointer;color:#92400e;font-weight:600;" onclick="switchTabContratos('ct-individual')">${sinContrato} sin contrato</span>`;
 }
 
 function precargarContrato(){
@@ -230,11 +230,11 @@ function precargarContrato(){
   const t = trabajadores.find(x => x.rut === id || x.id === id);
   if(!t) return;
 
-  if(_modoContratoActual === 'individual' && contratos.some(c => c.trabajador_id === t.id)){
-    toast(`⚠️ ${t.nombre} ya tiene contrato — considera usar "Corregir Contrato" o un Anexo en su lugar`, 'error');
+  if(contratos.some(c => c.trabajador_id === t.id)){
+    toast(`⚠️ ${t.nombre} ya tiene contrato — se sobrescribirá al guardar. Para un cambio puntual usa "Rectificar" en Contratos Emitidos, o un Anexo si es una condición laboral nueva`, 'error');
   }
 
-  if(eppCont && _modoContratoActual !== 'masivo'){
+  if(eppCont){
     eppCont.innerHTML = _htmlFormularioEpp('cepp', t);
   }
 
@@ -250,7 +250,7 @@ function precargarContrato(){
   const contratoPrevio = (typeof contratos !== 'undefined' ? contratos : []).find(c => c.trabajador_id === t.id);
   const epIdTrabajador = contratoPrevio?.empresa_propia_id || t.empresa_propia_id || '';
   const selEmpresaPropia = document.getElementById('c-empresa-propia');
-  if(selEmpresaPropia && epIdTrabajador && _modoContratoActual !== 'masivo') selEmpresaPropia.value = epIdTrabajador;
+  if(selEmpresaPropia && epIdTrabajador) selEmpresaPropia.value = epIdTrabajador;
 
   // Precargar datos bloqueados — EMPRESA CONTRATISTA (desde select de empresa propia)
   const epId = document.getElementById('c-empresa-propia')?.value;
@@ -407,46 +407,6 @@ function guardarContrato(){
   toast('✅ Contrato guardado correctamente','exito');
   limpiarContrato();
   _renderListaVisualTrabajadorContrato();
-}
-
-function guardarCorreccionContrato(){
-  const id = document.getElementById('c-trabajador').value;
-  if(!id){ toast('⚠️ Selecciona el contrato a corregir','error'); return; }
-
-  const t = trabajadores.find(x => x.rut === id || x.id === id);
-  if(!t){ toast('⚠️ Trabajador no encontrado','error'); return; }
-
-  cargarContratos();
-  const existe = contratos.findIndex(c => c.trabajador_id === (t.id));
-  if(existe < 0){ toast('⚠️ Este trabajador no tiene un contrato registrado para corregir','error'); return; }
-
-  const cargo = document.getElementById('c-cargo').value.trim();
-  if(!cargo){ toast('⚠️ Ingresa la función/cargo','error'); return; }
-  const faena = document.getElementById('c-faena').value.trim();
-  if(!faena){ toast('⚠️ Ingresa el nombre de la faena','error'); return; }
-  const termino = document.getElementById('c-fecha-termino').value;
-  if(!termino){ toast('⚠️ Ingresa la fecha de término','error'); return; }
-
-  const datos = obtenerDatosFormulario();
-  contratos[existe] = {...contratos[existe], ...datos};
-  guardarContratos();
-
-  Object.assign(t, _leerFormularioEpp('cepp'));
-  guardarLocal();
-
-  const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[datos.tipo] || datos.tipo;
-  registrarDocumentoCarpeta({
-    trabajador_id:  t.id,
-    trabajador_rut: t.rut,
-    tipo:           'correccion_contrato',
-    subtipo:        datos.tipo,
-    fecha_firma:    datos.fecha_firma || '',
-    descripcion:    `Corrección de datos del contrato ${tipoTxt} — ${datos.nombre_faena || ''}`.trim(),
-  });
-
-  toast('✅ Corrección guardada — quedó registrada en la Carpeta Laboral', 'exito');
-  actualizarPrevia();
-  poblarSelectTrabajadoresContrato();
 }
 
 function limpiarContrato(){
@@ -1164,10 +1124,11 @@ function generarPDFContrato(soloContenido){
 
 function switchTabContratos(tab){
   tabContratosActivo = tab;
-  const tabs = { contratos:'tab-contratos', anexos:'tab-anexos', epp:'tab-epp', corregir:'tab-corregir' };
-  // 'corregir' reutiliza el mismo panel visual que 'contratos' (mismo formulario)
-  const subs = { contratos:'sub-tab-contratos', anexos:'sub-tab-anexos', epp:'sub-tab-epp', corregir:'sub-tab-contratos' };
+  const tabs = { 'ct-individual':'tab-ct-individual', 'ct-masivo':'tab-ct-masivo', 'ct-emitidos':'tab-ct-emitidos', anexos:'tab-anexos', epp:'tab-epp' };
+  const subs = { 'ct-individual':'sub-tab-ct-individual', 'ct-masivo':'sub-tab-ct-masivo', 'ct-emitidos':'sub-tab-ct-emitidos', anexos:'sub-tab-anexos', epp:'sub-tab-epp' };
   const hdrBtns = document.getElementById('contratos-header-btns');
+  const bloqueEmpresa = document.getElementById('bloque-empresa-compartida');
+  const campoTipo = document.getElementById('campo-tipo-contrato-individual');
 
   Object.keys(tabs).forEach(key => {
     const btn = document.getElementById(tabs[key]);
@@ -1176,27 +1137,24 @@ function switchTabContratos(tab){
     btn.style.borderBottomColor = activo ? 'var(--azul)' : 'transparent';
     btn.style.color = activo ? 'var(--azul)' : 'var(--texto2)';
   });
-  // Mostrar/ocultar los paneles (sin duplicar 'sub-tab-contratos' al ocultarlo dos veces)
-  document.getElementById('sub-tab-contratos').style.display = (tab === 'contratos' || tab === 'corregir') ? '' : 'none';
-  document.getElementById('sub-tab-anexos').style.display    = (tab === 'anexos') ? '' : 'none';
-  document.getElementById('sub-tab-epp').style.display       = (tab === 'epp') ? '' : 'none';
+  Object.keys(subs).forEach(key => {
+    const el = document.getElementById(subs[key]);
+    if(el) el.style.display = (key === tab) ? '' : 'none';
+  });
 
-  if(hdrBtns) hdrBtns.style.display = (tab === 'contratos') ? 'flex' : 'none';
+  if(hdrBtns) hdrBtns.style.display = (tab === 'ct-individual') ? 'flex' : 'none';
+  if(bloqueEmpresa) bloqueEmpresa.style.display = (tab === 'ct-individual' || tab === 'ct-masivo') ? 'block' : 'none';
+  if(campoTipo) campoTipo.style.display = (tab === 'ct-individual') ? '' : 'none';
 
+  if(tab === 'ct-individual') _initTabContratoIndividual();
+  if(tab === 'ct-masivo')     _initTabContratoMasivo();
+  if(tab === 'ct-emitidos')   _initTabContratosEmitidos();
   if(tab === 'anexos'){
     poblarSelectAnexoTrabajador();
     actualizarBadgesContratos();
     cambiarModoAnexo('individual');
   }
-  if(tab === 'epp'){
-    initEppTab();
-  }
-  if(tab === 'contratos'){
-    cambiarModoContrato('individual');
-  }
-  if(tab === 'corregir'){
-    cambiarModoContrato('corregir');
-  }
+  if(tab === 'epp') initEppTab();
 }
 
 function actualizarBadgesContratos(){
@@ -1206,118 +1164,207 @@ function actualizarBadgesContratos(){
   if(ba) ba.textContent = (anexos||[]).length;
 }
 
-function verListaContratos(){
-  document.getElementById('modal-lista-contratos').style.display = 'flex';
-  document.getElementById('buscar-contrato').value = '';
-  renderListaContratos();
+/* ════════════════════════════════════════════════════════
+   CONTRATOS EMITIDOS
+   ════════════════════════════════════════════════════════ */
+function _initTabContratosEmitidos(){
+  const selEmp = document.getElementById('ce-f-empresa');
+  const selReal = document.getElementById('c-empresa-propia');
+  if(selEmp && selReal){
+    const val = selEmp.value;
+    selEmp.innerHTML = '<option value="">Todas</option>' + selReal.innerHTML.replace(/<option value="">[^<]*<\/option>/, '');
+    if(val) selEmp.value = val;
+  }
+
+  const selMandante = document.getElementById('ce-f-mandante');
+  if(selMandante){
+    const val = selMandante.value;
+    const mandantes = [];
+    (contratos||[]).forEach(c => {
+      const t = trabajadores.find(x => x.id === c.trabajador_id);
+      const m = t && findMandante(t);
+      if(m && !mandantes.some(x => x.id === m.id)) mandantes.push(m);
+    });
+    mandantes.sort((a,b) => a.nombre.localeCompare(b.nombre));
+    selMandante.innerHTML = '<option value="">Todos</option>' + mandantes.map(m => `<option value="${m.id}">${m.nombre}</option>`).join('');
+    if(val) selMandante.value = val;
+  }
+
+  renderContratosEmitidos();
 }
 
-function cerrarModalListaContratos(){
-  document.getElementById('modal-lista-contratos').style.display = 'none';
+/* Etiquetas de estado combinables — se calculan solas, nada se guarda a mano */
+function _estadoTagsContrato(c, t){
+  const tags = [];
+  const hoy = new Date().toISOString().split('T')[0];
+  if(c.tipo === 'indefinido' || !c.fecha_termino || c.fecha_termino >= hoy) tags.push({txt:'Vigente', bg:'#D1FAE5', fg:'#065F46'});
+  else tags.push({txt:'Vencido', bg:'#FEE2E2', fg:'#991B1B'});
+
+  const yaRectificado = (carpeta||[]).some(d => d.trabajador_id === c.trabajador_id && d.tipo === 'rectificacion_contrato');
+  if(yaRectificado) tags.push({txt:'Rectificado', bg:'#FEF3C7', fg:'#92400E'});
+
+  const tieneAnexo = (anexos||[]).some(a => a.contrato_id === c.id || a.trabajador_id === c.trabajador_id);
+  if(tieneAnexo) tags.push({txt:'Con Anexo', bg:'#DBEAFE', fg:'#1D4ED8'});
+
+  return tags;
 }
 
-function renderListaContratos(){
-  const buscar = (document.getElementById('buscar-contrato')?.value || '').toLowerCase().replace(/\./g,'');
-  const cont   = document.getElementById('lista-contratos-modal');
+function renderContratosEmitidos(){
+  const fEmpresa  = document.getElementById('ce-f-empresa')?.value || '';
+  const fMandante = document.getElementById('ce-f-mandante')?.value || '';
+  const fTipo     = document.getElementById('ce-f-tipo')?.value || '';
+  const fEstado   = document.getElementById('ce-f-estado')?.value || '';
+  const fBuscar   = (document.getElementById('ce-f-buscar')?.value || '').toLowerCase().trim();
+  const fInicio   = document.getElementById('ce-f-inicio')?.value || '';
+  const fTermino  = document.getElementById('ce-f-termino')?.value || '';
 
-  const lista = (contratos||[]).map(c => {
+  let lista = (contratos||[]).map(c => {
     const t = trabajadores.find(x => x.id === c.trabajador_id || x.rut === c.trabajador_rut);
-    return { c, t };
-  }).filter(({t}) => {
-    if(!buscar) return true;
-    const rutLimp = (t?.rut||'').replace(/\./g,'').toLowerCase();
-    return (t?.nombre||'').toLowerCase().includes(buscar) || rutLimp.includes(buscar);
-  }).sort((a,b) => (a.t?.nombre||'').localeCompare(b.t?.nombre||''));
+    const mandante = t ? findMandante(t) : null;
+    return { c, t, mandante, tags: _estadoTagsContrato(c, t||{}) };
+  });
 
+  if(fEmpresa)  lista = lista.filter(({c}) => (c.empresa_propia_id||'') === fEmpresa);
+  if(fMandante) lista = lista.filter(({mandante}) => mandante?.id === fMandante);
+  if(fTipo)     lista = lista.filter(({c}) => c.tipo === fTipo);
+  if(fEstado)   lista = lista.filter(({tags}) => tags.some(tg =>
+    (fEstado==='vigente' && tg.txt==='Vigente') || (fEstado==='vencido' && tg.txt==='Vencido') ||
+    (fEstado==='rectificado' && tg.txt==='Rectificado') || (fEstado==='con_anexo' && tg.txt==='Con Anexo')));
+  if(fBuscar)   lista = lista.filter(({t}) => t?.nombre?.toLowerCase().includes(fBuscar) || t?.rut?.toLowerCase().includes(fBuscar));
+  if(fInicio)   lista = lista.filter(({c}) => !c.fecha_inicio || c.fecha_inicio >= fInicio);
+  if(fTermino)  lista = lista.filter(({c}) => !c.fecha_termino || c.fecha_termino <= fTermino);
+
+  lista.sort((a,b) => (b.c.creado_en||'').localeCompare(a.c.creado_en||''));
+
+  const badge = document.getElementById('badge-tab-contratos');
+  if(badge) badge.textContent = contratos.length;
+
+  const tbody = document.getElementById('tbody-contratos-emitidos');
   if(!lista.length){
-    cont.innerHTML = `<div style="text-align:center;padding:40px;color:var(--texto3);">
-      <i class="ti ti-file-off" style="font-size:36px;display:block;margin-bottom:10px;opacity:0.4;"></i>
-      ${buscar ? 'Sin resultados para esa búsqueda' : 'Aún no se han generado contratos'}
-    </div>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--texto3);">Sin contratos que coincidan con el filtro</td></tr>`;
     return;
   }
 
-  cont.innerHTML = lista.map(({c,t}) => {
-    const mandante = findMandante(t);
-    const tipoTxt = c.tipo === 'temporada' ? 'Temporada' : c.tipo === 'indefinido' ? 'Indefinido' : 'Plazo fijo';
-    const fechaFirma = c.fecha_firma ? new Date(c.fecha_firma).toLocaleDateString('es-CL') : '—';
-    const numTxt = c.numero_contrato ? `Nº ${c.numero_contrato}` : 'S/N';
+  const fmt = v => v ? new Date(v).toLocaleDateString('es-CL') : '—';
+  const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' };
 
-    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;
-      border:1px solid var(--borde);border-radius:var(--radius);margin-bottom:8px;background:#fff;">
-      <div style="width:38px;height:38px;border-radius:8px;background:var(--gris-bg);
-        display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="ti ti-file-description" style="color:var(--azul);font-size:18px;"></i>
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;">${t?.nombre || 'Trabajador eliminado'} <span style="font-weight:400;color:var(--texto3);font-size:11px;">${numTxt}</span></div>
-        <div style="font-size:11px;color:var(--texto2);">
-          ${t?.rut || c.trabajador_rut} · ${tipoTxt} · ${mandante?.nombre || '—'} · Firmado ${fechaFirma}
-        </div>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="cerrarModalListaContratos();
-        _seleccionarTrabajadorContratoVisual('${t?.id||''}');">
-        <i class="ti ti-edit"></i> Editar
-      </button>
-      <button class="btn btn-primary btn-sm" onclick="_seleccionarTrabajadorContratoVisual('${t?.id||''}');generarPDFContrato();">
-        <i class="ti ti-file-type-pdf"></i> PDF
-      </button>
-    </div>`;
-  }).join('');
+  tbody.innerHTML = lista.map(({c,t,mandante,tags}) => `
+    <tr>
+      <td>${c.numero_contrato ? 'Nº '+c.numero_contrato : 'S/N'}</td>
+      <td>${fmt(c.creado_en)}</td>
+      <td>${fmt(c.fecha_firma)}</td>
+      <td>${t?.nombre || 'Trabajador eliminado'}</td>
+      <td>${getEmpresaEmpleadora(c.empresa_propia_id)?.nombre || '—'}</td>
+      <td>${mandante?.nombre || '—'}</td>
+      <td>${tipoTxt[c.tipo] || c.tipo}</td>
+      <td>${fmt(c.fecha_inicio)}</td>
+      <td>${c.tipo==='indefinido' ? '—' : fmt(c.fecha_termino)}</td>
+      <td>${tags.map(tg => `<span style="background:${tg.bg};color:${tg.fg};font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;margin-right:3px;white-space:nowrap;">${tg.txt}</span>`).join('')}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm" title="Ver PDF" onclick="_seleccionarTrabajadorContratoVisual('${t?.id||''}');generarPDFContrato();"><i class="ti ti-file-type-pdf"></i></button>
+        <button class="btn btn-secondary btn-sm" title="Rectificar" onclick="abrirRectificacion('${c.id}')"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-secondary btn-sm" title="Crear Anexo" onclick="switchTabContratos('anexos')"><i class="ti ti-paperclip"></i></button>
+        <button class="btn btn-secondary btn-sm" title="Carpeta Laboral" onclick="verPerfilTrabajador('${t?.rut||''}')"><i class="ti ti-folder"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+/* ── RECTIFICACIÓN ADMINISTRATIVA ─────────────────────────
+   Solo campos propios del contrato — RUT/Nombre no se corrigen aquí
+   porque pertenecen al registro del Trabajador (Registro Personal). */
+let _rectContratoId = null;
+
+const RECT_CAMPOS_TXT = {
+  funcion_cargo:    'Cargo',
+  nombre_faena:     'Faena',
+  sueldo_monto:     'Sueldo',
+  tipo_remuneracion:'Forma de pago',
+  fecha_firma:      'Fecha de firma',
+  fecha_termino:    'Fecha de término',
+  ciudad_firma:     'Ciudad de firma',
+};
+
+function abrirRectificacion(contratoId){
+  const c = contratos.find(x => x.id === contratoId);
+  if(!c){ toast('⚠️ Contrato no encontrado', 'error'); return; }
+  const t = trabajadores.find(x => x.id === c.trabajador_id);
+
+  _rectContratoId = contratoId;
+  document.getElementById('rect-trabajador-nombre').textContent = `${t?.nombre||'—'} · ${t?.rut||c.trabajador_rut}`;
+  document.getElementById('rect-valor-nuevo').value = '';
+  document.getElementById('rect-motivo').value = '';
+  document.getElementById('rect-campo').value = 'funcion_cargo';
+  _cargarValorAnteriorRectificacion();
+  document.getElementById('modal-rectificacion').style.display = 'flex';
+}
+
+function cerrarModalRectificacion(){
+  document.getElementById('modal-rectificacion').style.display = 'none';
+  _rectContratoId = null;
+}
+
+function _cargarValorAnteriorRectificacion(){
+  const c = contratos.find(x => x.id === _rectContratoId);
+  if(!c) return;
+  const campo = document.getElementById('rect-campo').value;
+  const tipoTxt = { mensual:'Mensual', diaria:'Diaria (Jornal)' };
+  let valor = c[campo];
+  if(campo === 'tipo_remuneracion') valor = tipoTxt[valor] || valor;
+  if(campo === 'sueldo_monto') valor = valor ? '$' + Number(valor).toLocaleString('es-CL') : '';
+  if((campo === 'fecha_firma' || campo === 'fecha_termino') && valor) valor = new Date(valor).toLocaleDateString('es-CL');
+  document.getElementById('rect-valor-anterior').value = valor || '—';
+}
+
+function guardarRectificacion(){
+  const c = contratos.find(x => x.id === _rectContratoId);
+  if(!c){ toast('⚠️ Contrato no encontrado', 'error'); return; }
+
+  const campo = document.getElementById('rect-campo').value;
+  const valorAnteriorTxt = document.getElementById('rect-valor-anterior').value;
+  const valorNuevo = document.getElementById('rect-valor-nuevo').value.trim();
+  const motivo = document.getElementById('rect-motivo').value.trim();
+
+  if(!valorNuevo){ toast('⚠️ Ingresa el nuevo valor', 'error'); return; }
+  if(!motivo){ toast('⚠️ Ingresa el motivo de la rectificación', 'error'); return; }
+
+  cargarContratos();
+  const idx = contratos.findIndex(x => x.id === _rectContratoId);
+  if(idx < 0){ toast('⚠️ Contrato no encontrado', 'error'); return; }
+
+  // Sueldo se guarda como número; el resto como texto tal cual se ingresó
+  contratos[idx][campo] = (campo === 'sueldo_monto') ? (parseInt(valorNuevo.replace(/\D/g,'')) || 0) : valorNuevo;
+  guardarContratos();
+
+  const t = trabajadores.find(x => x.id === c.trabajador_id);
+  registrarDocumentoCarpeta({
+    trabajador_id:  c.trabajador_id,
+    trabajador_rut: c.trabajador_rut,
+    tipo:           'rectificacion_contrato',
+    subtipo:        campo,
+    fecha_firma:    new Date().toISOString().split('T')[0],
+    descripcion:    `Rectificación — ${RECT_CAMPOS_TXT[campo]||campo}: "${valorAnteriorTxt}" → "${valorNuevo}". Motivo: ${motivo}`,
+  });
+
+  toast(`✅ Rectificación guardada para ${t?.nombre||''}`, 'exito');
+  cerrarModalRectificacion();
+  renderContratosEmitidos();
 }
 
 /* ════════════════════════════════════════════════════════
    CONTRATOS MASIVOS
    ════════════════════════════════════════════════════════ */
-let _modoContratoActual = 'individual';
 
-function cambiarModoContrato(modo){
-  _modoContratoActual = modo;
-  const esMasivo   = modo === 'masivo';
-  const esCorregir = modo === 'corregir';
-  const esIndividual = modo === 'individual';
-
-  document.getElementById('btn-modo-individual').className = esIndividual ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
-  document.getElementById('btn-modo-masivo').className     = esMasivo     ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
-
-  const bloqueToggle = document.getElementById('bloque-toggle-individual-masivo');
-  if(bloqueToggle) bloqueToggle.style.display = esCorregir ? 'none' : 'flex';
-
-  document.getElementById('campo-c-trabajador-individual').style.display = esMasivo ? 'none' : '';
-  document.getElementById('bloque-contrato-masivo').style.display       = esMasivo ? 'block' : 'none';
-  document.getElementById('bloque-precargados-individual').style.display= esMasivo ? 'none' : '';
-  document.getElementById('g2-contrato-cols').style.display             = esMasivo ? 'none' : 'grid';
-  document.getElementById('g2-contrato-cols').style.gridTemplateColumns = '1fr 1fr';
-
-  document.getElementById('botones-contrato-individual').style.display = (esIndividual) ? 'flex' : 'none';
-  const botonesCorregir = document.getElementById('botones-contrato-corregir');
-  if(botonesCorregir) botonesCorregir.style.display = esCorregir ? 'flex' : 'none';
-
-  const btnHeader = document.getElementById('btn-generar-pdf-header');
-  if(btnHeader) btnHeader.style.display = esMasivo ? 'none' : '';
-  const btnVerDoc = document.getElementById('btn-ver-doc-individual');
-  if(btnVerDoc) btnVerDoc.style.display = esMasivo ? 'none' : '';
-
-  // Aviso fijo del modo Corregir
-  const avisoCorregir = document.getElementById('aviso-corregir-contrato');
-  if(avisoCorregir) avisoCorregir.style.display = esCorregir ? 'block' : 'none';
-
-  // Label del selector cambia según el modo
-  const lblSelector = document.getElementById('lbl-c-trabajador-select');
-  if(lblSelector) lblSelector.textContent = esCorregir ? 'Selecciona el contrato a corregir' : 'Seleccionar trabajador';
-
-  // Cargo y horas ya no se editan de forma compartida en Masivo — cada grupo
-  // define su propia jornada/cargo en la pirámide, no en un formulario único.
-  const cCargo = document.getElementById('c-cargo');
-  const cHoras = document.getElementById('c-horas');
-  if(cCargo){ cCargo.readOnly = true; cCargo.style.background = 'var(--gris-bg)'; cCargo.placeholder = 'Se carga al seleccionar trabajador'; }
-  if(cHoras){ cHoras.readOnly = true; cHoras.style.background = 'var(--gris-bg)'; }
-
+/* Se llama al abrir la pestaña "Contrato Individual" */
+function _initTabContratoIndividual(){
   document.getElementById('c-trabajador').value = '';
   limpiarPreview();
+  poblarSelectTrabajadoresContrato();
+}
 
-  poblarSelectTrabajadoresContrato(); // repuebla según el modo (todos con check, o solo los que tienen contrato)
-  if(esMasivo){ _masivoSeleccionados.clear(); renderPiramideMasivo(); }
+/* Se llama al abrir la pestaña "Contratos Masivos" */
+function _initTabContratoMasivo(){
+  _masivoSeleccionados.clear();
+  renderPiramideMasivo();
 }
 
 /* Un trabajador tiene contrato vigente si existe un documento tipo 'contrato' en su carpeta laboral */
