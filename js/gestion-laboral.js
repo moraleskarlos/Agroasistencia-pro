@@ -53,7 +53,7 @@ function _poblarSelectsGL(){
     const val = el.value;
     const esMandante = id.includes('mandante');
     if(esMandante){
-      el.innerHTML = '<option value="">Todos los mandantes</option>'
+      el.innerHTML = '<option value="">Todas las Empresas Mandante</option>'
         + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
     } else if(id === 'gl-nov-filtro-trab'){
       el.innerHTML = '<option value="">Todos los trabajadores</option>'
@@ -100,20 +100,26 @@ function _renderKPIsGL(){
   const totalDes = desPer.reduce((s,d) => s + (parseFloat(d.monto)||0), 0);
   const totalHex = jorPer.filter(j => j.tipo === 'hora_extra').reduce((s,j) => s + (parseFloat(j.horas)||0), 0);
 
-  _setKPI('gl-kpi-novedades',  novPer.length,                           'faltas y permisos');
+  // Trabajadores DISTINTOS por tipo de novedad — no cantidad de días/registros
+  const contarTrabajadores = tipo => new Set(novPer.filter(n => n.tipo === tipo).map(n => n.trabajador_rut)).size;
+
+  _setKPI('gl-kpi-goce',        contarTrabajadores('permiso_goce'),      'trabajadores');
+  _setKPI('gl-kpi-singoce',     contarTrabajadores('permiso_sin_goce'),  'trabajadores');
+  _setKPI('gl-kpi-licencia',    contarTrabajadores('licencia_medica'),   'trabajadores');
+  _setKPI('gl-kpi-inasistencia',contarTrabajadores('ausencia_injustificada'), 'trabajadores');
   _setKPI('gl-kpi-haberes',    '$'+totalHab.toLocaleString('es-CL'),    'haberes variables');
   _setKPI('gl-kpi-descuentos', '$'+totalDes.toLocaleString('es-CL'),    'descuentos período');
   _setKPI('gl-kpi-hextra',     totalHex.toFixed(1)+' h',                'horas extra');
 
-  // Solo se muestra la tarjeta relacionada con la pestaña activa — el resto
-  // queda oculto, para no mezclar información de otros submódulos.
+  // Solo se muestran las tarjetas relacionadas con la pestaña activa — el
+  // resto queda oculto, para no mezclar información de otros submódulos.
   const visibles = {
-    'gl-novedades':  ['gl-kpi-novedades'],
+    'gl-novedades':  ['gl-kpi-goce','gl-kpi-singoce','gl-kpi-licencia','gl-kpi-inasistencia'],
     'gl-haberes':    ['gl-kpi-haberes'],
     'gl-descuentos': ['gl-kpi-descuentos'],
     'gl-jornada':    ['gl-kpi-hextra'],
   }[_tabGLActivo] || [];
-  ['gl-kpi-novedades','gl-kpi-haberes','gl-kpi-descuentos','gl-kpi-hextra'].forEach(id => {
+  ['gl-kpi-goce','gl-kpi-singoce','gl-kpi-licencia','gl-kpi-inasistencia','gl-kpi-haberes','gl-kpi-descuentos','gl-kpi-hextra'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = visibles.includes(id) ? '' : 'none';
   });
@@ -242,31 +248,42 @@ function _reabrirDetalleSiCorresponde(){
 }
 
 function _htmlDetalleNovedad(f){
-  const ausenciasHtml = f.sinClasif.map(a => `
-    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde);">
-      <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(a.fecha)}</span>
-      <span class="badge badge-amarillo">⚠️ Sin clasificar</span>
-      <span style="font-size:12px;color:var(--texto3);flex:1;">Detectada desde Asistencia</span>
-      <button class="btn btn-secondary btn-sm" onclick="clasificarAusencia('${a.rut}','${a.fecha}')">
-        <i class="ti ti-tag"></i> Clasificar
-      </button>
-    </div>`).join('');
+  // Una sola lista, ordenada por fecha — cada fecha se queda en su lugar y
+  // muestra su propio estado (pendiente o ya clasificada), sin saltar de una
+  // sección a otra al clasificarla.
+  const combinado = [
+    ...f.sinClasif.map(a => ({ orden: a.fecha, tipoFila: 'pendiente', a })),
+    ...f.novsRut.map(n   => ({ orden: n.fecha_inicio, tipoFila: 'novedad', n })),
+  ].sort((x,y) => x.orden.localeCompare(y.orden));
 
-  const novsHtml = f.novsRut.map(n => `
-    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde);">
+  if(!combinado.length){
+    return '<div style="max-width:900px;"><div style="color:var(--texto3);font-size:13px;padding:8px 0;">Sin movimientos este período</div></div>';
+  }
+
+  const filasHtml = combinado.map(item => {
+    if(item.tipoFila === 'pendiente'){
+      const a = item.a;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde);">
+        <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(a.fecha)}</span>
+        <span class="badge badge-amarillo">⚠️ Sin clasificar</span>
+        <span style="font-size:12px;color:var(--texto3);flex:1;">Detectada desde Asistencia</span>
+        <button class="btn btn-secondary btn-sm" onclick="clasificarAusencia('${a.rut}','${a.fecha}')">
+          <i class="ti ti-tag"></i> Clasificar
+        </button>
+      </div>`;
+    }
+    const n = item.n;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde);">
       <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(n.fecha_inicio)}${n.fecha_fin&&n.fecha_fin!==n.fecha_inicio?' → '+_fmtFecha(n.fecha_fin):''}</span>
       ${_badgeNovedad(n.tipo)}
       <span style="font-size:12px;color:var(--texto2);flex:1;">${n.observacion||'—'}</span>
       <span class="badge ${n.aprobado?'badge-verde':'badge-gris'}">${n.aprobado?'Aprobada':'Pendiente'}</span>
       ${!n.aprobado?`<button class="btn btn-primary btn-sm" onclick="aprobarNovedad('${n.id}')"><i class="ti ti-check"></i></button>`:''}
       <button class="btn btn-danger btn-sm" onclick="eliminarNovedad('${n.id}')"><i class="ti ti-trash"></i></button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
-  const vacio = !ausenciasHtml && !novsHtml
-    ? '<div style="color:var(--texto3);font-size:13px;padding:8px 0;">Sin movimientos este período</div>'
-    : '';
-
-  return `<div style="max-width:900px;">${ausenciasHtml}${novsHtml}${vacio}</div>`;
+  return `<div style="max-width:900px;">${filasHtml}</div>`;
 }
 
 function _leerAusenciasAsistencia(periodo, ruts){
@@ -302,7 +319,7 @@ function clasificarAusencia(rut, fecha){
   const iniFecha= document.getElementById('gl-nov-fecha-inicio');
   const finFecha= document.getElementById('gl-nov-fecha-fin');
   if(sel)      sel.value      = rut;
-  if(selTipo)  selTipo.value  = 'ausencia_injustificada';
+  if(selTipo)  selTipo.value  = '';
   if(iniFecha) iniFecha.value = fecha;
   if(finFecha) finFecha.value = fecha;
   document.getElementById('gl-nov-form-wrap').style.display = 'block';
