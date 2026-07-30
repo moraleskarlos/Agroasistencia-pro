@@ -100,10 +100,23 @@ function _renderKPIsGL(){
   const totalDes = desPer.reduce((s,d) => s + (parseFloat(d.monto)||0), 0);
   const totalHex = jorPer.filter(j => j.tipo === 'hora_extra').reduce((s,j) => s + (parseFloat(j.horas)||0), 0);
 
-  _setKPI('gl-kpi-novedades',  novPer.length,                           'novedades período');
+  _setKPI('gl-kpi-novedades',  novPer.length,                           'faltas y permisos');
   _setKPI('gl-kpi-haberes',    '$'+totalHab.toLocaleString('es-CL'),    'haberes variables');
   _setKPI('gl-kpi-descuentos', '$'+totalDes.toLocaleString('es-CL'),    'descuentos período');
   _setKPI('gl-kpi-hextra',     totalHex.toFixed(1)+' h',                'horas extra');
+
+  // Solo se muestra la tarjeta relacionada con la pestaña activa — el resto
+  // queda oculto, para no mezclar información de otros submódulos.
+  const visibles = {
+    'gl-novedades':  ['gl-kpi-novedades'],
+    'gl-haberes':    ['gl-kpi-haberes'],
+    'gl-descuentos': ['gl-kpi-descuentos'],
+    'gl-jornada':    ['gl-kpi-hextra'],
+  }[_tabGLActivo] || [];
+  ['gl-kpi-novedades','gl-kpi-haberes','gl-kpi-descuentos','gl-kpi-hextra'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = visibles.includes(id) ? '' : 'none';
+  });
 }
 
 function _setKPI(id, val, sub){
@@ -133,10 +146,22 @@ function renderNovedades(){
   const filas = rutsMostrar.map(rut => {
     const t           = trabajadores.find(x => x.rut === rut);
     if(!t) return null;
-    const ausRut      = ausencias.filter(a => a.rut === rut);
+    // Nunca deben aparecer ausencias en fechas anteriores al ingreso real del
+    // trabajador — no debería existir historial laboral antes de esa fecha.
+    const ausRut      = ausencias.filter(a => a.rut === rut && (!t.fecha_ingreso || a.fecha >= t.fecha_ingreso));
     const novsRut     = novsPer.filter(n => n.trabajador_rut === rut);
-    const fechasClasif= novsRut.map(n => n.fecha_inicio);
-    const sinClasif   = ausRut.filter(a => !fechasClasif.includes(a.fecha));
+    // Un día está "clasificado" si cae dentro del rango [fecha_inicio, fecha_fin]
+    // de CUALQUIER novedad del trabajador — no solo si coincide con el primer día.
+    const diasClasif  = new Set();
+    novsRut.forEach(n => {
+      let d = n.fecha_inicio;
+      const fin = n.fecha_fin || n.fecha_inicio;
+      while(d <= fin){
+        diasClasif.add(d);
+        d = _sumarDiaISO(d);
+      }
+    });
+    const sinClasif   = ausRut.filter(a => !diasClasif.has(a.fecha));
 
     // Filtro por tipo
     if(filtroTipo === 'sin_clasificar' && sinClasif.length === 0) return null;
@@ -174,7 +199,7 @@ function renderNovedades(){
       <td style="text-align:center;font-size:13px;font-weight:500;">${f.totalDias > 0 ? f.totalDias+' día'+(f.totalDias>1?'s':'') : '—'}</td>
       <td>
         <button class="btn btn-secondary btn-sm" onclick="toggleDetalleNovedad('${f.rut}')">
-          <i class="ti ti-chevron-down"></i> Ver detalle
+          <i class="ti ti-chevron-down"></i> Revisar
         </button>
       </td>
     </tr>
@@ -186,7 +211,11 @@ function renderNovedades(){
       </td>
     </tr>`;
   }).join('');
+
+  _reabrirDetalleSiCorresponde();
 }
+
+let _detalleAbiertoRut = null;
 
 function toggleDetalleNovedad(rut){
   const rid  = rut.replace(/\W/g,'');
@@ -196,6 +225,20 @@ function toggleDetalleNovedad(rut){
   const abierto = fila.style.display !== 'none';
   fila.style.display = abierto ? 'none' : 'table-row';
   if(btn) btn.className = abierto ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
+  _detalleAbiertoRut = abierto ? null : rut;
+}
+
+/* Reabre el detalle del trabajador que se estaba revisando antes de que la
+   tabla se reconstruyera (ej. tras guardar/aprobar/eliminar una novedad),
+   para no perder el contexto en el que estaba el usuario. */
+function _reabrirDetalleSiCorresponde(){
+  if(!_detalleAbiertoRut) return;
+  const rid  = _detalleAbiertoRut.replace(/\W/g,'');
+  const fila = document.getElementById(`detalle-${rid}`);
+  const btn  = document.querySelector(`#fila-res-${rid} button i`);
+  if(!fila) return;
+  fila.style.display = 'table-row';
+  if(btn) btn.className = 'ti ti-chevron-up';
 }
 
 function _htmlDetalleNovedad(f){
@@ -661,6 +704,14 @@ function _calcDias(inicio, fin){
   const d1 = new Date(inicio+'T12:00:00');
   const d2 = new Date(fin+'T12:00:00');
   return Math.max(1, Math.round((d2-d1)/(1000*60*60*24))+1);
+}
+
+/* Suma un día a una fecha ISO (YYYY-MM-DD) — usado para recorrer el rango
+   completo de una novedad al calcular qué días ya quedaron clasificados. */
+function _sumarDiaISO(fechaISO){
+  const d = new Date(fechaISO + 'T12:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
 }
 
 function _fmtFecha(v){
