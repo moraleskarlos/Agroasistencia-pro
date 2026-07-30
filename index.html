@@ -595,22 +595,31 @@
     <div id="p-contratos" class="pagina">
       <div class="sec-header">
         <div>
-          <div class="sec-title"><i class="ti ti-file-description" style="margin-right:8px;color:var(--verde-dark);"></i>Contratos</div>
-          <div class="sec-sub">Contratos de trabajo y anexos de modificación</div>
+          <div class="sec-title"><i class="ti ti-file-description" style="margin-right:8px;color:var(--verde-dark);"></i>Contratos y Anexos</div>
+          <div class="sec-sub">Generación y administración de contratos de trabajo y anexos.</div>
         </div>
         <div style="display:flex;gap:8px;" id="contratos-header-btns">
-          <button class="btn btn-secondary" onclick="verListaContratos()"><i class="ti ti-list"></i> Ver contratos generados</button>
           <button class="btn btn-primary" id="btn-generar-pdf-header" onclick="generarPDFContrato()"><i class="ti ti-file-type-pdf"></i> Generar PDF</button>
         </div>
       </div>
 
       <!-- TABS -->
-      <div style="display:flex;gap:0;border-bottom:2px solid var(--borde);margin-bottom:16px;">
-        <button id="tab-contratos" onclick="switchTabContratos('contratos')"
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--borde);margin-bottom:16px;flex-wrap:wrap;">
+        <button id="tab-ct-individual" onclick="switchTabContratos('ct-individual')"
           style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
           cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);">
-          <i class="ti ti-file-description"></i> Contratos
-          <span id="badge-tab-contratos" style="background:var(--azul);color:#fff;border-radius:99px;
+          <i class="ti ti-user"></i> Contrato Individual
+        </button>
+        <button id="tab-ct-masivo" onclick="switchTabContratos('ct-masivo')"
+          style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
+          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+          <i class="ti ti-users"></i> Contratos Masivos
+        </button>
+        <button id="tab-ct-emitidos" onclick="switchTabContratos('ct-emitidos')"
+          style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
+          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+          <i class="ti ti-list"></i> Contratos Emitidos
+          <span id="badge-tab-contratos" style="background:var(--gris-bg);color:var(--texto2);border-radius:99px;
             padding:1px 7px;font-size:11px;margin-left:6px;">0</span>
         </button>
         <button id="tab-anexos" onclick="switchTabContratos('anexos')"
@@ -623,60 +632,27 @@
         <button id="tab-epp" onclick="switchTabContratos('epp')"
           style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
           cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
-          <i class="ti ti-shield-check"></i> EPP / IRL
-        </button>
-        <button id="tab-corregir" onclick="switchTabContratos('corregir')"
-          style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
-          <i class="ti ti-edit"></i> Corregir Contrato
+          <i class="ti ti-shield-check"></i> EPP
         </button>
       </div>
 
-      <!-- SUBMÓDULO CONTRATOS -->
-      <div id="sub-tab-contratos">
-
-      <div id="bloque-toggle-individual-masivo" style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
-        <div style="display:flex;gap:4px;">
-          <button id="btn-modo-individual" class="btn btn-primary btn-sm" onclick="cambiarModoContrato('individual')">
-            <i class="ti ti-user"></i> Individual
-          </button>
-          <button id="btn-modo-masivo" class="btn btn-secondary btn-sm" onclick="cambiarModoContrato('masivo')">
-            <i class="ti ti-users"></i> Masivo
-          </button>
+      <!-- SELECTOR COMPARTIDO: Empresa Empleadora (Individual + Masivo) -->
+      <div id="bloque-empresa-compartida" class="card" style="margin-bottom:14px;">
+        <div class="g2">
+          <div class="f-group" id="campo-tipo-contrato-individual"><label class="form-label">Tipo de contrato</label><select class="f-input" id="c-tipo" onchange="cambiarTipoContrato()"><option value="temporada">Contrato de temporada</option><option value="indefinido">Contrato indefinido</option><option value="plazo_fijo">Contrato a plazo fijo</option></select></div>
+          <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="onCambioEmpresaFiltroContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
         </div>
-        <div id="contratos-contador" style="font-size:12px;"></div>
       </div>
 
-      <!-- Aviso fijo del modo Corregir -->
-      <div id="aviso-corregir-contrato" style="display:none;background:#FFFBEB;border:1px solid #FDE68A;
-        border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400E;">
-        <i class="ti ti-alert-triangle"></i> <strong>Solo para corregir errores de ingreso.</strong>
-        Si necesitas cambiar sueldo, cargo, faena o cualquier condición ya pactada con el trabajador, usa un <strong>Anexo</strong> en su lugar.
-      </div>
+      <!-- SUBMÓDULO CONTRATO INDIVIDUAL -->
+      <div id="sub-tab-ct-individual">
 
       <div class="card" style="margin-bottom:14px;">
-  <div class="g2">
-    <div class="f-group"><label class="form-label">Tipo de contrato</label><select class="f-input" id="c-tipo" onchange="cambiarTipoContrato()"><option value="temporada">Contrato de temporada</option><option value="indefinido">Contrato indefinido</option><option value="plazo_fijo">Contrato a plazo fijo</option></select></div>
-     <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="onCambioEmpresaFiltroContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
-  </div>
-  <div class="f-group" id="campo-c-trabajador-individual" style="margin-top:12px;">
-    <label class="form-label" id="lbl-c-trabajador-select">Seleccionar trabajador</label>
-    <select class="f-input" id="c-trabajador" onchange="precargarContrato()" style="display:none;"><option value="">— Seleccionar trabajador —</option></select>
-    <input type="text" id="ct-buscar-visual" oninput="_renderListaVisualTrabajadorContrato()" placeholder="Buscar por RUT o nombre..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
-    <div id="lista-visual-trabajador-contrato" style="max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
-  </div>
-</div>
-
-      <!-- SELECCIÓN MASIVA DE TRABAJADORES (pirámide) -->
-      <div id="bloque-contrato-masivo" class="card" style="display:none;margin-bottom:14px;">
-        <div class="card-title"><i class="ti ti-sitemap"></i> Trabajadores sin contrato — agrupados por Mandante → Faena → Cargo</div>
-        <div id="piramide-masivo-vacio" style="display:none;padding:20px;text-align:center;color:var(--texto3);font-size:13px;">
-          Selecciona una Empresa Contratista arriba para ver sus trabajadores sin contrato.
-        </div>
-        <div id="piramide-masivo"></div>
-        <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;">
-          <div id="masivo-contador" style="font-size:12px;color:var(--texto3);"></div>
-          <button class="btn btn-primary btn-sm" id="btn-config-descarga-masivo" onclick="abrirConfigGrupoMasivo()" disabled><i class="ti ti-settings"></i> Configurar y generar contratos</button>
+        <div class="f-group" id="campo-c-trabajador-individual">
+          <label class="form-label" id="lbl-c-trabajador-select">Seleccionar trabajador</label>
+          <select class="f-input" id="c-trabajador" onchange="precargarContrato()" style="display:none;"><option value="">— Seleccionar trabajador —</option></select>
+          <input type="text" id="ct-buscar-visual" oninput="_renderListaVisualTrabajadorContrato()" placeholder="Buscar por RUT o nombre..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
+          <div id="lista-visual-trabajador-contrato" style="max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
         </div>
       </div>
 
@@ -756,10 +732,6 @@
               <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="guardarContrato()"><i class="ti ti-device-floppy"></i> Guardar contrato</button>
               <button class="btn btn-secondary" onclick="limpiarContrato()"><i class="ti ti-refresh"></i> Limpiar</button>
             </div>
-            <div style="display:none;gap:8px;" id="botones-contrato-corregir">
-              <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="guardarCorreccionContrato()"><i class="ti ti-device-floppy"></i> Guardar corrección</button>
-              <button class="btn btn-secondary" onclick="limpiarContrato()"><i class="ti ti-refresh"></i> Limpiar</button>
-            </div>
           </div>
         </div>
         <div>
@@ -770,7 +742,51 @@
           </div>
         </div>
       </div>
-      </div><!-- /sub-tab-contratos -->
+      </div><!-- /sub-tab-ct-individual -->
+
+      <!-- SUBMÓDULO CONTRATOS MASIVOS -->
+      <div id="sub-tab-ct-masivo" style="display:none;">
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title"><i class="ti ti-sitemap"></i> Trabajadores sin contrato — agrupados por Mandante → Faena → Cargo</div>
+          <div id="piramide-masivo-vacio" style="display:none;padding:20px;text-align:center;color:var(--texto3);font-size:13px;">
+            Selecciona una Empresa Contratista arriba para ver sus trabajadores sin contrato.
+          </div>
+          <div id="piramide-masivo"></div>
+          <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;">
+            <div id="masivo-contador" style="font-size:12px;color:var(--texto3);"></div>
+            <button class="btn btn-primary btn-sm" id="btn-config-descarga-masivo" onclick="abrirConfigGrupoMasivo()" disabled><i class="ti ti-settings"></i> Configurar y generar contratos</button>
+          </div>
+        </div>
+      </div><!-- /sub-tab-ct-masivo -->
+
+      <!-- SUBMÓDULO CONTRATOS EMITIDOS -->
+      <div id="sub-tab-ct-emitidos" style="display:none;">
+        <div class="card" style="margin-bottom:14px;">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">
+            <div class="f-group" style="margin:0;"><label class="form-label">Empresa</label><select class="f-input" id="ce-f-empresa" onchange="renderContratosEmitidos()"><option value="">Todas</option></select></div>
+            <div class="f-group" style="margin:0;"><label class="form-label">Mandante</label><select class="f-input" id="ce-f-mandante" onchange="renderContratosEmitidos()"><option value="">Todos</option></select></div>
+            <div class="f-group" style="margin:0;"><label class="form-label">Tipo de contrato</label><select class="f-input" id="ce-f-tipo" onchange="renderContratosEmitidos()"><option value="">Todos</option><option value="temporada">Temporada</option><option value="plazo_fijo">Plazo Fijo</option><option value="indefinido">Indefinido</option></select></div>
+            <div class="f-group" style="margin:0;"><label class="form-label">Estado</label><select class="f-input" id="ce-f-estado" onchange="renderContratosEmitidos()"><option value="">Todos</option><option value="vigente">Vigente</option><option value="vencido">Vencido</option><option value="rectificado">Rectificado</option><option value="con_anexo">Con Anexo</option></select></div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;">
+            <div class="f-group" style="margin:0;"><label class="form-label">Trabajador / RUT</label><input class="f-input" id="ce-f-buscar" oninput="renderContratosEmitidos()" placeholder="Nombre o RUT..."></div>
+            <div class="f-group" style="margin:0;"><label class="form-label">Fecha inicio desde</label><input class="f-input" type="date" id="ce-f-inicio" onchange="renderContratosEmitidos()"></div>
+            <div class="f-group" style="margin:0;"><label class="form-label">Fecha término hasta</label><input class="f-input" type="date" id="ce-f-termino" onchange="renderContratosEmitidos()"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-table"></i> Contratos Emitidos</div>
+          <div class="tabla-wrap">
+            <table class="tabla">
+              <thead><tr>
+                <th>Nº</th><th>Fecha creación</th><th>Fecha firma</th><th>Trabajador</th><th>Empresa</th>
+                <th>Mandante</th><th>Tipo</th><th>Inicio</th><th>Término</th><th>Estado</th><th>Acciones</th>
+              </tr></thead>
+              <tbody id="tbody-contratos-emitidos"><tr><td colspan="11" style="text-align:center;padding:24px;color:var(--texto3);">Sin contratos generados</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /sub-tab-ct-emitidos -->
 
       <!-- SUBMÓDULO ANEXOS -->
       <div id="sub-tab-anexos" style="display:none;">
@@ -2220,19 +2236,45 @@
 </div>
 
 <!-- MODAL LISTA DE CONTRATOS -->
-<div id="modal-lista-contratos" style="display:none;position:fixed;inset:0;z-index:1002;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:760px;
-    max-height:85vh;box-shadow:var(--shadow-md);display:flex;flex-direction:column;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0;">
-      <div style="font-size:16px;font-weight:700;"><i class="ti ti-list" style="margin-right:8px;color:var(--azul);"></i>Contratos generados</div>
-      <button class="btn btn-secondary btn-sm" onclick="cerrarModalListaContratos()"><i class="ti ti-x"></i></button>
+<!-- MODAL RECTIFICACIÓN ADMINISTRATIVA -->
+<div id="modal-rectificacion" style="display:none;position:fixed;inset:0;z-index:1002;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;box-shadow:var(--shadow-md);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-size:16px;font-weight:700;"><i class="ti ti-edit" style="margin-right:8px;color:var(--azul);"></i>Rectificación Administrativa</div>
+      <button class="btn btn-secondary btn-sm" onclick="cerrarModalRectificacion()"><i class="ti ti-x"></i></button>
     </div>
-    <div class="form-group" style="margin-bottom:14px;flex-shrink:0;">
-      <input type="text" id="buscar-contrato" placeholder="Buscar por trabajador o RUT..."
-        oninput="renderListaContratos()" style="width:100%;padding:10px 12px;border-radius:var(--radius);
-        border:1px solid var(--borde);font-size:13px;">
+    <div style="font-size:12px;color:var(--texto3);margin-bottom:14px;">
+      Solo para corregir errores materiales de digitación (sueldo, cargo, fechas). Si necesitas cambiar una condición laboral pactada, usa un <strong>Anexo</strong> en su lugar.
     </div>
-    <div id="lista-contratos-modal" style="overflow-y:auto;flex:1;"></div>
+    <div id="rect-trabajador-nombre" style="font-size:13px;font-weight:600;margin-bottom:12px;"></div>
+    <div class="form-group">
+      <label>Campo a modificar</label>
+      <select id="rect-campo" onchange="_cargarValorAnteriorRectificacion()">
+        <option value="funcion_cargo">Cargo</option>
+        <option value="nombre_faena">Faena</option>
+        <option value="sueldo_monto">Sueldo</option>
+        <option value="tipo_remuneracion">Forma de pago</option>
+        <option value="fecha_firma">Fecha de firma</option>
+        <option value="fecha_termino">Fecha de término</option>
+        <option value="ciudad_firma">Ciudad de firma</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Valor anterior</label>
+      <input type="text" id="rect-valor-anterior" readonly style="background:var(--gris-bg);color:var(--texto2);">
+    </div>
+    <div class="form-group">
+      <label>Nuevo valor</label>
+      <input type="text" id="rect-valor-nuevo">
+    </div>
+    <div class="form-group">
+      <label>Motivo de la rectificación</label>
+      <textarea id="rect-motivo" rows="2" placeholder="Ej: Error de digitación al ingresar el sueldo"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="cerrarModalRectificacion()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="guardarRectificacion()"><i class="ti ti-device-floppy"></i> Guardar rectificación</button>
+    </div>
   </div>
 </div>
 
