@@ -284,6 +284,9 @@ const ANX_CATALOG = {
 
 /* ───────── Formulario dinámico según catálogo ───────── */
 
+/* ───────── Modo Individual / Masivo ───────── */
+let modoAnexoActual = 'individual';
+
 function onCambioTipoAnexo(){
   const tipo = document.getElementById('anexo-tipo').value;
   const zona = document.getElementById('anexo-campos-variables');
@@ -484,24 +487,30 @@ function _folioAnexo(t){
   return Math.abs(hash).toString(36).toUpperCase().slice(0,8);
 }
 
-/* Arma el contexto (trabajador/empresa/contrato) desde el formulario en vivo */
+/* Arma el contexto (trabajador/empresa/contrato) para un trabajador puntual, dado el
+   tipo/valores/fecha/ciudad/obs ya leídos del formulario (compartidos en modo Masivo). */
+function _construirContextoAnexoParaId(id, tipo, valores, fechaVig, ciudad, obs){
+  if(!id || !tipo) return null;
+  const t    = trabajadores.find(x => x.id === id);
+  const epId = document.getElementById('anexo-empresa-propia')?.value || t?.empresa_propia_id || '';
+  const emp  = getEmpresaEmpleadora(epId);
+  const cont = contratos.find(c => c.trabajador_id === id || c.trabajador_rut === t?.rut);
+  return { t, emp, cont, tipo, valores, fechaVig, ciudad, obs };
+}
+
+/* Arma el contexto desde el formulario en vivo, para el trabajador seleccionado
+   en modo Individual. */
 function _contextoAnexoDesdeForm(){
   const id  = document.getElementById('anexo-trabajador-select')?.value;
   const tipo = document.getElementById('anexo-tipo')?.value;
   if(!id || !tipo) return null;
 
-  const t    = trabajadores.find(x => x.id === id);
-  const epId = document.getElementById('anexo-empresa-propia')?.value || t?.empresa_propia_id || '';
-  const emp  = getEmpresaEmpleadora(epId);
-  const cont = contratos.find(c => c.trabajador_id === id || c.trabajador_rut === t?.rut);
-
-  return {
-    t, emp, cont, tipo,
-    valores:  leerValoresAnexo(tipo),
-    fechaVig: document.getElementById('anexo-fecha-vigencia')?.value,
-    ciudad:   document.getElementById('anexo-ciudad')?.value?.trim(),
-    obs:      document.getElementById('anexo-observaciones')?.value?.trim(),
-  };
+  return _construirContextoAnexoParaId(
+    id, tipo, leerValoresAnexo(tipo),
+    document.getElementById('anexo-fecha-vigencia')?.value,
+    document.getElementById('anexo-ciudad')?.value?.trim(),
+    document.getElementById('anexo-observaciones')?.value?.trim(),
+  );
 }
 
 /* ───────── Vista previa en vivo ───────── */
@@ -510,20 +519,27 @@ function actualizarPreviaAnexo(){
   const p = document.getElementById('anexo-preview');
   if(!p) return;
 
-  const ctx = _contextoAnexoDesdeForm();
+  const ctx = (modoAnexoActual === 'masivo') ? _contextoAnexoMasivoRepresentativo() : _contextoAnexoDesdeForm();
   if(!ctx){
     p.innerHTML = `<div style="text-align:center;padding:24px;color:var(--texto3);font-size:13px;">
-      Selecciona trabajador y tipo de anexo
+      ${modoAnexoActual === 'masivo' ? 'Selecciona el tipo de anexo y marca al menos un trabajador' : 'Selecciona trabajador y tipo de anexo'}
     </div>`;
     return;
   }
 
   const docHTML = construirDocumentoAnexo(ctx);
+  const nota = (modoAnexoActual === 'masivo')
+    ? `<div style="background:#FFFBEB;border-bottom:1px solid #FDE68A;color:#92400E;font-size:11.5px;padding:7px 12px;text-align:center;">
+        Vista previa de <strong>${ctx.t?.nombre}</strong> (1 de ${_anexoSeleccionados().length} seleccionados) —
+        el resto usa los mismos datos del anexo con su propia información personal y de contrato.
+      </div>`
+    : '';
 
   p.innerHTML = `
     <div style="background:#0f2942;color:#fff;padding:9px 12px;border-radius:var(--radius) var(--radius) 0 0;font-size:12px;font-weight:600;text-align:center;">
       Vista previa del documento
     </div>
+    ${nota}
     <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 var(--radius) var(--radius);
       max-height:520px;overflow-y:auto;background:#fff;padding:20px;">
       <style>#anexo-preview .doc-wrap{max-width:none;font-size:9.5pt;line-height:1.55;}</style>
@@ -708,6 +724,164 @@ function generarPDFAnexoPorId(id){
   _abrirVentanaAnexo(docHTML, `Anexo — ${a.tipo_texto} — ${t?.nombre}`, { ...ctx, folio: a.folio || _folioAnexo(t) });
 }
 
+/* ───────── Modo Individual / Masivo ───────── */
+
+function cambiarModoAnexo(modo){
+  modoAnexoActual = modo;
+
+  const btnInd = document.getElementById('btn-modo-anexo-individual');
+  const btnMas = document.getElementById('btn-modo-anexo-masivo');
+  if(btnInd) btnInd.className = 'btn btn-sm ' + (modo === 'individual' ? 'btn-primary' : 'btn-secondary');
+  if(btnMas) btnMas.className = 'btn btn-sm ' + (modo === 'masivo' ? 'btn-primary' : 'btn-secondary');
+
+  const ctrlMasivo = document.getElementById('anexo-controles-masivo');
+  if(ctrlMasivo) ctrlMasivo.style.display = (modo === 'masivo') ? 'flex' : 'none';
+
+  const botonesInd = document.getElementById('botones-anexo-individual');
+  const botonesMas = document.getElementById('botones-anexo-masivo');
+  if(botonesInd) botonesInd.style.display = (modo === 'individual') ? '' : 'none';
+  if(botonesMas) botonesMas.style.display = (modo === 'masivo') ? 'flex' : 'none';
+
+  const previewBtn = document.getElementById('anexo-preview-btn-pdf');
+  if(previewBtn) previewBtn.style.display = (modo === 'individual') ? '' : 'none';
+
+  _renderListaVisualTrabajadorAnexo();
+  actualizarPreviaAnexo();
+}
+
+/* Trabajadores actualmente marcados en modo Masivo */
+function _anexoSeleccionados(){
+  return Array.from(document.querySelectorAll('.am-check-trab:checked'))
+    .map(chk => trabajadores.find(t => t.id === chk.value))
+    .filter(Boolean);
+}
+
+function _amActualizarContador(){
+  const n = _anexoSeleccionados().length;
+  const contador = document.getElementById('anexo-contador-masivo');
+  if(contador) contador.textContent = n ? `${n} trabajador${n!==1?'es':''} seleccionado${n!==1?'s':''}` : '';
+  actualizarPreviaAnexo();
+}
+
+function _amSeleccionarTodos(val){
+  document.querySelectorAll('.am-check-trab').forEach(c => c.checked = val);
+  _amActualizarContador();
+}
+
+/* Contexto representativo para la Vista Previa en modo Masivo: el primer trabajador marcado */
+function _contextoAnexoMasivoRepresentativo(){
+  const tipo = document.getElementById('anexo-tipo')?.value;
+  const seleccionados = _anexoSeleccionados();
+  if(!tipo || !seleccionados.length) return null;
+
+  return _construirContextoAnexoParaId(
+    seleccionados[0].id, tipo, leerValoresAnexo(tipo),
+    document.getElementById('anexo-fecha-vigencia')?.value,
+    document.getElementById('anexo-ciudad')?.value?.trim(),
+    document.getElementById('anexo-observaciones')?.value?.trim(),
+  );
+}
+
+/* Genera un anexo por cada trabajador marcado, con los mismos datos compartidos,
+   y los combina en un solo documento imprimible con salto de página entre cada uno. */
+function generarAnexosMasivo(){
+  const tipo     = document.getElementById('anexo-tipo').value;
+  const fechaVig = document.getElementById('anexo-fecha-vigencia').value;
+
+  if(!tipo)    { toast('⚠️ Selecciona el tipo de anexo','error'); return; }
+  if(!fechaVig){ toast('⚠️ Ingresa la fecha de vigencia','error'); return; }
+
+  const seleccionados = _anexoSeleccionados();
+  if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador','error'); return; }
+
+  const valores = leerValoresAnexo(tipo);
+  const detalle = ANX_CATALOG[tipo].detalle(valores);
+  if(!detalle){ toast('⚠️ Completa los campos del anexo','error'); return; }
+
+  const ciudad = document.getElementById('anexo-ciudad')?.value.trim() || '';
+  const obs    = document.getElementById('anexo-observaciones')?.value.trim() || '';
+
+  if(!confirm(`Se generará el anexo "${TIPOS_ANEXO[tipo]}" para ${seleccionados.length} trabajador${seleccionados.length!==1?'es':''}. ¿Continuar?`)) return;
+
+  const contenidos = [];
+
+  seleccionados.forEach(t => {
+    const ctx = _construirContextoAnexoParaId(t.id, tipo, valores, fechaVig, ciudad, obs);
+
+    const nuevoAnexo = {
+      id:             Date.now().toString() + '_' + t.id,
+      trabajador_rut: t.rut,
+      trabajador_id:  t.id,
+      tipo,
+      tipo_texto:     TIPOS_ANEXO[tipo],
+      detalle,
+      valores,
+      fecha_vigencia: fechaVig,
+      ciudad,
+      observaciones:  obs,
+      fecha_creacion: new Date().toISOString(),
+      nuevo_sueldo:   tipo === 'cambio_remuneracion' ? (parseFloat(valores['anx-nuevo-sueldo'] || 0) || null) : null,
+    };
+    anexos.push(nuevoAnexo);
+
+    registrarDocumentoCarpeta({
+      trabajador_id:  t.id,
+      trabajador_rut: t.rut,
+      tipo:           'anexo',
+      subtipo:        tipo,
+      folio:          _folioAnexo(t),
+      fecha_firma:    fechaVig,
+      descripcion:    `Anexo — ${TIPOS_ANEXO[tipo]}`,
+    });
+
+    const folioLinea = `Doc. N° ${_folioAnexo(t)} · ${t.nombre} · RUT ${t.rut} · Emitido el ${new Date().toLocaleDateString('es-CL')}`;
+    contenidos.push(construirDocumentoAnexo({ ...ctx, folioLinea }));
+  });
+
+  guardarLocal();
+  actualizarBadgesContratos();
+
+  toast(`✅ ${seleccionados.length} anexo${seleccionados.length!==1?'s':''} generado${seleccionados.length!==1?'s':''}`, 'exito');
+
+  _abrirVentanaAnexosMasivo(contenidos, tipo);
+
+  document.querySelectorAll('.am-check-trab').forEach(c => c.checked = false);
+  _amActualizarContador();
+  _renderListaVisualTrabajadorAnexo();
+}
+
+function _abrirVentanaAnexosMasivo(contenidos, tipo){
+  if(!contenidos.length) return;
+  const cuerpo = contenidos
+    .map((c, i) => i === 0 ? c : `<div style="page-break-before:always;">${c}</div>`)
+    .join('\n');
+
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html lang="es"><head>
+  <meta charset="UTF-8">
+  <title>Anexos masivos — ${TIPOS_ANEXO[tipo]} (${contenidos.length})</title>
+  <style>${ANEXO_DOC_CSS}
+    .no-print{ margin-bottom:24px; }
+    @media print{ .no-print{display:none !important;} }
+  </style>
+</head><body>
+<div class="doc-wrap">
+<div class="no-print" style="display:flex;gap:10px;align-items:center;">
+  <button onclick="window.print()" style="padding:10px 24px;background:#0f2942;color:#fff;
+    border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">
+    🖨️ Imprimir / Guardar PDF
+  </button>
+  <button onclick="window.close()" style="padding:10px 16px;background:#f1f5f9;
+    border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:13px;">
+    Cerrar
+  </button>
+</div>
+${cuerpo}
+</div>
+</body></html>`);
+  win.document.close();
+}
+
 /* ───────── Selección de trabajador (lista visual) ───────── */
 
 function poblarSelectAnexoTrabajador(){
@@ -758,6 +932,7 @@ function _renderListaVisualTrabajadorAnexo(){
   const buscar    = (document.getElementById('anx-buscar-visual')?.value || '').toLowerCase().trim();
   const valActual = document.getElementById('anexo-trabajador-select')?.value || '';
   const epFiltro  = document.getElementById('anexo-empresa-propia')?.value || '';
+  const marcados  = new Set(_anexoSeleccionados().map(t => t.id)); // conservar checks marcados al refiltrar
 
   let lista = trabajadores.filter(t => t.estado === 'activo');
   if(epFiltro){
@@ -773,6 +948,22 @@ function _renderListaVisualTrabajadorAnexo(){
     return;
   }
 
+  if(modoAnexoActual === 'masivo'){
+    cont.innerHTML = lista.map(t => {
+      const tieneAnexo = (anexos||[]).some(a => a.trabajador_rut === t.rut);
+      return `<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
+          border-bottom:1px solid var(--borde);">
+        <span style="font-size:13px;font-weight:500;flex:1;">${t.nombre}</span>
+        <span style="font-size:12px;font-family:monospace;color:var(--texto3);">${t.rut}</span>
+        <span style="font-size:11px;font-weight:600;color:${tieneAnexo?'#16a34a':'var(--texto3)'};">${tieneAnexo?'con anexo previo':''}</span>
+        <input type="checkbox" class="am-check-trab" value="${t.id}" ${marcados.has(t.id)?'checked':''}
+          onchange="_amActualizarContador()" style="width:auto;flex-shrink:0;">
+      </label>`;
+    }).join('');
+    _amActualizarContador();
+    return;
+  }
+
   cont.innerHTML = lista.map(t => {
     const tieneAnexo   = (anexos||[]).some(a => a.trabajador_rut === t.rut);
     const seleccionado = valActual === t.id;
@@ -781,9 +972,10 @@ function _renderListaVisualTrabajadorAnexo(){
         border-bottom:1px solid var(--borde);background:${seleccionado?'#EFF6FF':'#fff'};"
         onmouseover="this.style.background='${seleccionado?'#EFF6FF':'#f8fafc'}'"
         onmouseout="this.style.background='${seleccionado?'#EFF6FF':'#fff'}'">
-      <span style="width:22px;height:22px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-        font-weight:700;font-size:13px;color:#fff;background:${tieneAnexo?'#16a34a':'#dc2626'};">
-        ${tieneAnexo ? '✓' : '✕'}
+      <span style="width:18px;height:18px;border-radius:50%;flex-shrink:0;box-sizing:border-box;
+        border:2px solid ${seleccionado?'#2563eb':'#cbd5e1'};background:${seleccionado?'#2563eb':'#fff'};
+        display:flex;align-items:center;justify-content:center;">
+        ${seleccionado ? '<span style="width:6px;height:6px;border-radius:50%;background:#fff;"></span>' : ''}
       </span>
       <span style="font-size:13px;font-weight:500;flex:1;">${t.nombre}</span>
       <span style="font-size:12px;font-family:monospace;color:var(--texto3);">${t.rut}</span>
