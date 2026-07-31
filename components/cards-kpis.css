@@ -1,0 +1,206 @@
+/* ══════════════════════════════════════════════════
+   AGROCONTRATISTA — DESIGN SYSTEM 1.0
+   assets/css/components/cards-kpis.css
+   Componente: Cards / Tarjetas de Métricas (KPIs)
+   Depende de: base/variables.css
+
+   ── Hallazgos de auditoría (Fase 1, aplicados aquí) ──
+   1. .card-title y .kpi-label usaban 11px (bajo el piso mínimo
+      de 12px) + var(--texto2)/var(--texto3), con contraste de
+      hasta 2.56:1 en el caso de .kpi-label — mismo patrón
+      crítico ya corregido en encabezados de tabla.
+   2. .card y .kpi usaban var(--borde) #E2E8F0 (contraste 1.23:1)
+      como contorno de contenedor. El Manual asigna explícitamente
+      Cards a --borde-estructural (contraste ≈3.0:1, WCAG 1.4.11).
+   3. .chart-lbl (10px) y .chart-val (10px) también estaban bajo
+      el piso mínimo del sistema.
+   4. Colores de acento en .kpi.verde/.kpi.rojo usaban tokens que
+      ya no existen en el nuevo sistema (--verde-dark, --danger)
+      → migrados a --color-exito y --color-peligro.
+   ══════════════════════════════════════════════════ */
+
+/* ── Card base ─────────────────────────────────── */
+
+.card {
+  background: var(--blanco);
+
+  /* ✅ HALLAZGO 2 CORREGIDO — Contorno de contenedor
+     Antes: var(--borde) #E2E8F0 → contraste 1.23:1 (invisible)
+     Ahora: var(--borde-estructural) #8896AC → contraste ≈3.0:1 */
+  border: 1px solid var(--borde-estructural);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+
+  /* NOTA: mismo gap de tokens de elevación que en topbar.css —
+     pendiente incorporar --shadow-sm/--shadow-md al Manual. */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ✅ HALLAZGO 1 CORREGIDO — Título de tarjeta
+   Antes: 11px + var(--texto2) → contraste 4.76:1 (al límite)
+   Ahora: var(--fs-titulo-secundario) 13px (coincide exactamente
+   con el nivel "Título Secundario / Card" del Manual) +
+   var(--texto-secundario) → contraste 7.58:1 */
+.card-title {
+  font-size: var(--fs-titulo-secundario);
+  font-weight: var(--fw-semibold);
+  color: var(--texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Grillas de layout ─────────────────────────── */
+
+.g2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.g3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.g4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.g2 > *,
+.g3 > *,
+.g4 > * {
+  min-width: 0;
+}
+
+/* ── KPIs ──────────────────────────────────────── */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.kpi {
+  background: var(--blanco);
+
+  /* ✅ HALLAZGO 2 CORREGIDO — mismo caso que .card */
+  border: 1px solid var(--borde-estructural);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ✅ HALLAZGO 1 CORREGIDO — Etiqueta de KPI
+   Antes: 11px + var(--texto3) #94A3B8 → contraste 2.56:1 (reprobado,
+   mismo patrón crítico que los encabezados de tabla)
+   Ahora: var(--fs-label) 12px + var(--texto-secundario) → 7.58:1 */
+.kpi-label {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  color: var(--texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Valor numérico: se mantenía en px fijo, sin relación con la
+   escala en rem definida para accesibilidad de zoom. */
+.kpi-value {
+  font-size: 1.75rem; /* 28px */
+  font-weight: var(--fw-bold);
+  color: var(--texto-principal);
+  margin: var(--space-1) 0 var(--space-1);
+  letter-spacing: -1px;
+}
+
+.kpi-sub {
+  font-size: var(--fs-label);
+  color: var(--texto-secundario);
+}
+
+/* ✅ HALLAZGO 4 CORREGIDO — Acentos de color por estado
+   --verde-dark y --danger ya no existen en el sistema 1.0;
+   se reutilizan los tokens equivalentes ya aprobados en la
+   paleta, ambos con contraste amplio sobre blanco a 28px/bold
+   (categoría "texto grande" de WCAG, mínimo 3:1). */
+.kpi.verde .kpi-value {
+  color: var(--color-exito); /* contraste 5.48:1 */
+}
+
+.kpi.rojo .kpi-value {
+  color: var(--color-peligro); /* contraste 8.31:1 */
+}
+
+/* Pendiente: acentos azul/ámbar aún no tienen token propio en
+   el Manual 1.0. Se mantienen como valores fijos; ambos pasan
+   el umbral de 3:1 exigido para texto grande (28px/bold), pero
+   quedan marcados para definirse formalmente si se reutilizan
+   en algún contexto de texto más pequeño. */
+.kpi.azul .kpi-value {
+  color: #2563eb; /* contraste 5.17:1 */
+}
+
+.kpi.amarillo .kpi-value {
+  color: #d97706; /* contraste 3.19:1 — el más ajustado, monitorear */
+}
+
+/* ── Barras de progreso / resumen ──────────────── */
+
+.barra-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-label);
+  color: var(--texto-secundario);
+  margin-bottom: var(--space-1);
+}
+
+.barra-header span:last-child {
+  font-weight: var(--fw-semibold);
+  color: var(--texto-principal);
+}
+
+/* ── Gráfico de barras (asistencia semanal) ───────── */
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: 80px;
+  padding-bottom: var(--space-1);
+}
+
+.chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chart-bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.4s ease;
+  min-height: 3px;
+}
+
+/* ✅ HALLAZGO 3 CORREGIDO — Etiquetas de gráfico
+   Antes: 10px + var(--texto3) → contraste 2.56:1 (reprobado)
+   Ahora: var(--fs-label) 12px + var(--texto-secundario) → 7.58:1 */
+.chart-lbl {
+  font-size: var(--fs-label);
+  color: var(--texto-secundario);
+}
+
+.chart-val {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  color: var(--texto-secundario);
+}
