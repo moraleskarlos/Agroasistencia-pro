@@ -1,6 +1,9 @@
 /* ════════════════════════════════════════════════════════
-   GESTION-LABORAL.JS — Novedades, Haberes, Descuentos, Jornada
-   AgroContratista · Versión 1.0
+   GESTION-LABORAL.JS — Novedades, Bonificaciones, Descuentos, Horas Extras
+   AgroContratista · Versión 1.1
+   (Bonificaciones: primer submódulo reestructurado bajo el patrón
+   "Revisar información / Registrar" — ver ESPECIFICACION_GESTION_LABORAL_2.0.md.
+   El resto de los submódulos solo recibió cambio de nombre por ahora.)
    ════════════════════════════════════════════════════════ */
 
 const LOCAL_NOV  = 'agro_novedades';
@@ -24,9 +27,41 @@ function guardarJornadaEspecial(){ localStorage.setItem(LOCAL_JOR, JSON.stringif
 /* ── INIT DEL MÓDULO ───────────────────────────────────── */
 let _tabGLActivo = 'gl-novedades';
 
+/* Instancias del Buscador de Trabajador usadas por Bonificaciones —
+   se guardan en variables de módulo para poder llamar a .reset()
+   desde otras funciones (ej. al cambiar de empresa o guardar). */
+let _btHabRevisar    = null;
+let _btHabRegistrar  = null;
+
 function initGestionLaboral(){
   cargarGestionLaboral();
   _poblarSelectsGL();
+
+  _btHabRevisar = initBuscadorTrabajador({
+    inputId:    'gl-hab-rev-trabajador-input',
+    dropdownId: 'gl-hab-rev-trabajador-dropdown',
+    hiddenId:   'gl-hab-rev-trabajador',
+    permiteVacio: true, // "todos los trabajadores" es una opción válida
+    getRuts: () => _rutsFiltrados(document.getElementById('gl-hab-rev-empresa')?.value || ''),
+    onSelect: renderHaberes,
+    onClear:  renderHaberes,
+  });
+
+  _btHabRegistrar = initBuscadorTrabajador({
+    inputId:    'gl-hab-reg-trabajador-input',
+    dropdownId: 'gl-hab-reg-trabajador-dropdown',
+    hiddenId:   'gl-hab-reg-trabajador',
+    permiteVacio: false,
+    getRuts: () => _rutsFiltrados(document.getElementById('gl-hab-reg-empresa')?.value || ''),
+  });
+
+  // Si cambia la empresa de "Registrar Bonificación", se limpia la
+  // selección de trabajador (puede que ya no pertenezca a la empresa
+  // nueva) — cascada empresa → trabajador.
+  document.getElementById('gl-hab-reg-empresa')?.addEventListener('change', () => _btHabRegistrar?.reset());
+  // Igual para "Revisar información de Bonificaciones".
+  document.getElementById('gl-hab-rev-empresa')?.addEventListener('change', () => { _btHabRevisar?.reset(); renderHaberes(); });
+
   switchTabGL(_tabGLActivo);
 }
 
@@ -47,7 +82,9 @@ function switchTabGL(tab){
 }
 
 function _poblarSelectsGL(){
-  const selects = ['gl-filtro-mandante','gl-nov-trabajador','gl-nov-filtro-trab','gl-hab-trabajador','gl-des-trabajador','gl-jor-trabajador'];
+  // gl-hab-trabajador ya no existe: Bonificaciones usa el Buscador de
+  // Trabajador (ver _poblarEmpresasBonificaciones + initBuscadorTrabajador).
+  const selects = ['gl-filtro-mandante','gl-nov-trabajador','gl-nov-filtro-trab','gl-des-trabajador','gl-jor-trabajador'];
   selects.forEach(id => {
     const el = document.getElementById(id); if(!el) return;
     const val = el.value;
@@ -72,6 +109,41 @@ function _poblarSelectsGL(){
   const anio  = hoy.getFullYear();
   const elPer = document.getElementById('gl-filtro-periodo');
   if(elPer && !elPer.value) elPer.value = `${anio}-${mes}`;
+
+  // Mes por defecto del selector "Revisar información de Bonificaciones"
+  const elPerHab = document.getElementById('gl-hab-fecha-mes');
+  if(elPerHab && !elPerHab.value) elPerHab.value = `${anio}-${mes}`;
+
+  _poblarEmpresasBonificaciones();
+}
+
+/* Empresas del submódulo Bonificaciones — se manejan aparte de
+   gl-filtro-mandante porque este submódulo ya no depende del filtro
+   global de la página (es autocontenido: "Revisar" y "Registrar"
+   tienen cada uno su propio selector de empresa). */
+function _poblarEmpresasBonificaciones(){
+  const revSel = document.getElementById('gl-hab-rev-empresa');
+  if(revSel){
+    const val = revSel.value;
+    revSel.innerHTML = '<option value="">Todas las Empresas Mandante</option>'
+      + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+    if(val) revSel.value = val;
+  }
+
+  const regSel = document.getElementById('gl-hab-reg-empresa');
+  if(regSel){
+    const val = regSel.value;
+    if(empresas.length === 1){
+      // Una sola empresa mandante: se deja preseleccionada, sin obligar
+      // a un clic sobre algo que no es realmente una decisión.
+      regSel.innerHTML = `<option value="${empresas[0].id}">${empresas[0].nombre}</option>`;
+      regSel.value = empresas[0].id;
+    } else {
+      regSel.innerHTML = '<option value="">— Seleccionar empresa —</option>'
+        + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+      if(val) regSel.value = val;
+    }
+  }
 }
 
 function _getPeriodo(){
@@ -92,9 +164,20 @@ function _renderKPIsGL(){
   const ruts = trabsFiltro.map(t => t.rut);
 
   const novPer  = novedades.filter(n        => n.periodo === periodo && ruts.includes(n.trabajador_rut));
-  const habPer  = haberes_variables.filter(h => h.periodo === periodo && ruts.includes(h.trabajador_rut));
   const desPer  = descuentos.filter(d       => d.periodo === periodo && ruts.includes(d.trabajador_rut));
   const jorPer  = jornada_especial.filter(j => j.periodo === periodo && ruts.includes(j.trabajador_rut));
+
+  // Bonificaciones ya no depende del filtro global "Revisar mes / Elegir
+  // empresa" de arriba — usa su propio rango (Día/Mes/Rango) y su propio
+  // selector de empresa, para que el KPI y la tabla de la pestaña siempre
+  // muestren el mismo período.
+  const { inicio: habIni, fin: habFin } = _glHabGetRango();
+  const mandanteHab = document.getElementById('gl-hab-rev-empresa')?.value || '';
+  const rutsHab      = _rutsFiltrados(mandanteHab);
+  const habPer  = haberes_variables.filter(h =>
+    rutsHab.includes(h.trabajador_rut) &&
+    (!habIni || !habFin || (h.fecha >= habIni && h.fecha <= habFin))
+  );
 
   const totalHab = habPer.reduce((s,h) => s + (parseFloat(h.monto)||0), 0);
   const totalDes = desPer.reduce((s,d) => s + (parseFloat(d.monto)||0), 0);
@@ -107,7 +190,7 @@ function _renderKPIsGL(){
   _setKPI('gl-kpi-singoce',     contarTrabajadores('permiso_sin_goce'),  'trabajadores');
   _setKPI('gl-kpi-licencia',    contarTrabajadores('licencia_medica'),   'trabajadores');
   _setKPI('gl-kpi-inasistencia',contarTrabajadores('ausencia_injustificada'), 'trabajadores');
-  _setKPI('gl-kpi-haberes',    '$'+totalHab.toLocaleString('es-CL'),    'haberes variables');
+  _setKPI('gl-kpi-haberes',    '$'+totalHab.toLocaleString('es-CL'),    'bonificaciones');
   _setKPI('gl-kpi-descuentos', '$'+totalDes.toLocaleString('es-CL'),    'descuentos período');
   _setKPI('gl-kpi-hextra',     totalHex.toFixed(1)+' h',                'horas extra');
 
@@ -250,11 +333,21 @@ function _reabrirDetalleSiCorresponde(){
 function _htmlDetalleNovedad(f){
   // Una sola lista, ordenada por fecha — cada fecha se queda en su lugar y
   // muestra su propio estado (pendiente o ya clasificada), sin saltar de una
-  // sección a otra al clasificarla.
+  // sección a otra al clasificarla. Una novedad de varios días (ej. licencia
+  // de una semana) se expande en una fila por cada día, no en una sola fila
+  // con el rango de fechas hacia el lado.
   const combinado = [
     ...f.sinClasif.map(a => ({ orden: a.fecha, tipoFila: 'pendiente', a })),
-    ...f.novsRut.map(n   => ({ orden: n.fecha_inicio, tipoFila: 'novedad', n })),
-  ].sort((x,y) => x.orden.localeCompare(y.orden));
+  ];
+  f.novsRut.forEach(n => {
+    let d = n.fecha_inicio;
+    const fin = n.fecha_fin || n.fecha_inicio;
+    while(d <= fin){
+      combinado.push({ orden: d, tipoFila: 'novedad', n, fechaFila: d });
+      d = _sumarDiaISO(d);
+    }
+  });
+  combinado.sort((x,y) => x.orden.localeCompare(y.orden));
 
   if(!combinado.length){
     return '<div style="max-width:900px;"><div style="color:var(--texto3);font-size:13px;padding:8px 0;">Sin movimientos este período</div></div>';
@@ -274,7 +367,7 @@ function _htmlDetalleNovedad(f){
     }
     const n = item.n;
     return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde);">
-      <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(n.fecha_inicio)}${n.fecha_fin&&n.fecha_fin!==n.fecha_inicio?' → '+_fmtFecha(n.fecha_fin):''}</span>
+      <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(item.fechaFila)}</span>
       ${_badgeNovedad(n.tipo)}
       <span style="font-size:12px;color:var(--texto2);flex:1;">${n.observacion||'—'}</span>
       <span class="badge ${n.aprobado?'badge-verde':'badge-gris'}">${n.aprobado?'Aprobada':'Pendiente'}</span>
@@ -429,18 +522,74 @@ function _labelNovedad(tipo){
 }
 
 /* ════════════════════════════════════════════════════════
-   TAB 2 — HABERES VARIABLES
+   TAB 2 — BONIFICACIONES (antes "Haberes Variables")
+   Reestructurado bajo el patrón "Revisar información / Registrar":
+   ver ESPECIFICACION_GESTION_LABORAL_2.0.md. Autocontenido — no
+   depende del filtro global "Revisar mes / Elegir empresa" de arriba.
    ════════════════════════════════════════════════════════ */
+
+/* Estado del selector temporal de "Revisar información de
+   Bonificaciones": 'dia' | 'mes' | 'rango'. Los tres modos son
+   solo formas distintas de definir el mismo rango [inicio, fin]
+   contra el que se filtra — no hay tres lógicas separadas. */
+let _glHabModo = 'mes';
+
+function glHabSetModo(modo){
+  _glHabModo = modo;
+  ['dia','mes','rango'].forEach(m => {
+    const btn = document.getElementById('gl-hab-modo-'+m);
+    if(btn) btn.classList.toggle('activo', m === modo);
+  });
+  const wDia   = document.getElementById('gl-hab-fecha-dia-wrap');
+  const wMes   = document.getElementById('gl-hab-fecha-mes-wrap');
+  const wRango = document.getElementById('gl-hab-fecha-rango-wrap');
+  if(wDia)   wDia.style.display   = modo === 'dia'   ? 'block' : 'none';
+  if(wMes)   wMes.style.display   = modo === 'mes'   ? 'block' : 'none';
+  if(wRango) wRango.style.display = modo === 'rango' ? 'flex'  : 'none';
+  renderHaberes();
+  _renderKPIsGL();
+}
+
+/* Resuelve el rango [inicio, fin] vigente según el modo activo.
+   Formato de fechas: 'YYYY-MM-DD' (comparable como texto, igual
+   que el resto del sistema). */
+function _glHabGetRango(){
+  if(_glHabModo === 'dia'){
+    const v = document.getElementById('gl-hab-fecha-dia')?.value || '';
+    return { inicio: v, fin: v };
+  }
+  if(_glHabModo === 'rango'){
+    const ini = document.getElementById('gl-hab-fecha-ini')?.value || '';
+    const fin = document.getElementById('gl-hab-fecha-fin')?.value || '';
+    return { inicio: ini, fin: fin };
+  }
+  // modo 'mes' (por defecto)
+  const v = document.getElementById('gl-hab-fecha-mes')?.value || '';
+  if(!v) return { inicio: '', fin: '' };
+  const [y, m] = v.split('-').map(Number);
+  const ultimoDia = new Date(y, m, 0).getDate();
+  return { inicio: `${v}-01`, fin: `${v}-${String(ultimoDia).padStart(2,'0')}` };
+}
+
 function renderHaberes(){
-  const periodo  = _getPeriodo();
-  const mandante = document.getElementById('gl-filtro-mandante')?.value||'';
-  const ruts     = _rutsFiltrados(mandante);
-  const lista    = haberes_variables.filter(h => h.periodo===periodo && ruts.includes(h.trabajador_rut));
-  const tbody    = document.getElementById('tbody-haberes');
+  const { inicio, fin } = _glHabGetRango();
+  const mandante   = document.getElementById('gl-hab-rev-empresa')?.value || '';
+  const filtroTrab = document.getElementById('gl-hab-rev-trabajador')?.value || '';
+  const filtroTipo = document.getElementById('gl-hab-rev-tipo')?.value || '';
+  const ruts       = _rutsFiltrados(mandante);
+
+  let lista = haberes_variables.filter(h =>
+    ruts.includes(h.trabajador_rut) &&
+    (!inicio || !fin || (h.fecha >= inicio && h.fecha <= fin))
+  );
+  if(filtroTrab) lista = lista.filter(h => h.trabajador_rut === filtroTrab);
+  if(filtroTipo) lista = lista.filter(h => h.tipo === filtroTipo);
+
+  const tbody = document.getElementById('tbody-haberes');
   if(!tbody) return;
 
   if(!lista.length){
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Sin haberes variables en este período</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Sin bonificaciones registradas en este rango</td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map(h => {
@@ -458,23 +607,33 @@ function renderHaberes(){
 
 function toggleFormHaber(){
   const wrap = document.getElementById('gl-hab-form-wrap');
-  wrap.style.display = wrap.style.display==='none' ? 'block' : 'none';
+  const abrir = wrap.style.display === 'none';
+  wrap.style.display = abrir ? 'block' : 'none';
+  if(abrir){
+    // Cada vez que se abre "Registrar Bonificación" se limpia la
+    // selección anterior del buscador, para no arrastrar por error
+    // un trabajador de otra empresa/registro previo.
+    _poblarEmpresasBonificaciones();
+    _btHabRegistrar?.reset();
+  }
 }
 
 function guardarHaber(){
   if(_guardandoGL) return;
-  const rut   = document.getElementById('gl-hab-trabajador')?.value;
-  const tipo  = document.getElementById('gl-hab-tipo')?.value;
-  const monto = document.getElementById('gl-hab-monto')?.value;
-  const fecha = document.getElementById('gl-hab-fecha')?.value;
-  const obs   = document.getElementById('gl-hab-obs')?.value||'';
+  const empresa = document.getElementById('gl-hab-reg-empresa')?.value;
+  const rut     = document.getElementById('gl-hab-reg-trabajador')?.value;
+  const tipo    = document.getElementById('gl-hab-tipo')?.value;
+  const monto   = document.getElementById('gl-hab-monto')?.value;
+  const fecha   = document.getElementById('gl-hab-fecha')?.value;
+  const obs     = document.getElementById('gl-hab-obs')?.value||'';
 
+  if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
   if(!rut||!tipo||!monto){ toast('⚠️ Completa trabajador, tipo y monto','error'); return; }
 
   const yaExiste = haberes_variables.some(h =>
     h.trabajador_rut === rut && h.tipo === tipo &&
     h.monto === parseFloat(monto) && h.fecha === (fecha||''));
-  if(yaExiste){ toast('⚠️ Ya existe un haber idéntico registrado','error'); return; }
+  if(yaExiste){ toast('⚠️ Ya existe una bonificación idéntica registrada','error'); return; }
 
   _guardandoGL = true;
 
@@ -487,8 +646,9 @@ function guardarHaber(){
   };
   haberes_variables.push(h);
   guardarHaberes();
-  toast('✅ Haber variable registrado','exito');
+  toast('✅ Bonificación registrada','exito');
   _resetForm('form-haber');
+  _btHabRegistrar?.reset();
   document.getElementById('gl-hab-form-wrap').style.display='none';
   renderHaberes();
   _renderKPIsGL();
@@ -496,7 +656,7 @@ function guardarHaber(){
 }
 
 function eliminarHaber(id){
-  if(!confirm('¿Eliminar este haber?')) return;
+  if(!confirm('¿Eliminar esta bonificación?')) return;
   haberes_variables = haberes_variables.filter(x => x.id!==id);
   guardarHaberes();
   renderHaberes();
@@ -628,7 +788,7 @@ function renderJornada(){
   if(!tbody) return;
 
   if(!lista.length){
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Sin registros de jornada especial en este período</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Sin registros de horas extras en este período</td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map(j => {
@@ -680,7 +840,7 @@ function guardarJornada(){
   };
   jornada_especial.push(j);
   guardarJornadaEspecial();
-  toast('✅ Jornada especial registrada','exito');
+  toast('✅ Registro de horas extras guardado','exito');
   _resetForm('form-jornada');
   document.getElementById('gl-jor-form-wrap').style.display='none';
   renderJornada();
@@ -704,6 +864,117 @@ function _badgeJornada(tipo){
   };
   const [cls,lbl] = map[tipo]||['badge-gris',tipo];
   return `<span class="badge ${cls}">${lbl}</span>`;
+}
+
+/* ════════════════════════════════════════════════════════
+   COMPONENTE REUTILIZABLE — BUSCADOR DE TRABAJADOR
+   Autocomplete por nombre o RUT, acotado dinámicamente a una lista
+   de RUTs (normalmente los de la empresa seleccionada). Reemplaza
+   al <select> largo de trabajador en los formularios de registro.
+
+   cfg = {
+     inputId:    id del <input type="text"> visible,
+     dropdownId: id del <div> donde se pintan las opciones,
+     hiddenId:   id del <input type="hidden"> que guarda el RUT elegido,
+     getRuts:    función que retorna el array de RUTs permitidos
+                 en este momento (se llama en cada búsqueda, así
+                 refleja cambios de empresa sin necesidad de reiniciar),
+     permiteVacio: true si "sin selección" es un resultado válido
+                 (ej. el filtro "Revisar" puede quedar en "todos"),
+     onSelect:   callback opcional al elegir un trabajador,
+     onClear:    callback opcional al vaciar la selección,
+   }
+   Retorna { reset() } para limpiar la selección desde afuera
+   (ej. al cambiar de empresa o tras guardar un formulario).
+   ════════════════════════════════════════════════════════ */
+function initBuscadorTrabajador(cfg){
+  const input    = document.getElementById(cfg.inputId);
+  const dropdown = document.getElementById(cfg.dropdownId);
+  const hidden   = document.getElementById(cfg.hiddenId);
+  if(!input || !dropdown || !hidden) return null;
+
+  let items = [];
+  let activeIdx = -1;
+
+  function opcionesDisponibles(){
+    const ruts = new Set((cfg.getRuts && cfg.getRuts()) || []);
+    return trabajadores
+      .filter(t => t.estado === 'activo' && ruts.has(t.rut))
+      .sort((a,b) => a.nombre.localeCompare(b.nombre));
+  }
+
+  function pintar(lista){
+    items = lista;
+    activeIdx = -1;
+    if(!lista.length){
+      dropdown.innerHTML = `<div style="padding:10px 12px;font-size:12px;color:var(--texto3);">Sin resultados</div>`;
+    } else {
+      dropdown.innerHTML = lista.map((t,i) =>
+        `<div class="bt-opcion" data-idx="${i}" style="padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--borde);">
+          ${t.nombre} <span style="color:var(--texto3);font-size:11px;">· ${t.rut}</span>
+        </div>`).join('');
+    }
+    dropdown.style.display = 'block';
+  }
+
+  function cerrar(){
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    items = [];
+    activeIdx = -1;
+  }
+
+  function marcarActivo(){
+    [...dropdown.children].forEach((el,i) => {
+      el.style.background = i === activeIdx ? 'var(--gris-bg)' : 'transparent';
+    });
+  }
+
+  function seleccionar(t){
+    hidden.value = t.rut;
+    input.value  = `${t.nombre} · ${t.rut}`;
+    cerrar();
+    if(cfg.onSelect) cfg.onSelect(t.rut);
+  }
+
+  function buscar(q){
+    const base = opcionesDisponibles();
+    const qn = (q||'').trim().toLowerCase();
+    if(!qn) return pintar(base);
+    pintar(base.filter(t =>
+      t.nombre.toLowerCase().includes(qn) || t.rut.toLowerCase().includes(qn)
+    ));
+  }
+
+  input.addEventListener('focus', () => buscar(''));
+  input.addEventListener('input', () => {
+    if(hidden.value){ hidden.value=''; if(cfg.permiteVacio && cfg.onClear) cfg.onClear(); }
+    buscar(input.value);
+  });
+  input.addEventListener('keydown', e => {
+    if(dropdown.style.display !== 'block') return;
+    if(e.key === 'ArrowDown'){ e.preventDefault(); activeIdx = Math.min(activeIdx+1, items.length-1); marcarActivo(); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); activeIdx = Math.max(activeIdx-1, 0); marcarActivo(); }
+    else if(e.key === 'Enter'){ e.preventDefault(); if(items[activeIdx]) seleccionar(items[activeIdx]); }
+    else if(e.key === 'Escape'){ cerrar(); }
+  });
+  dropdown.addEventListener('click', e => {
+    const op = e.target.closest('.bt-opcion');
+    if(!op) return;
+    const t = items[parseInt(op.dataset.idx, 10)];
+    if(t) seleccionar(t);
+  });
+  document.addEventListener('click', e => {
+    if(e.target !== input && !dropdown.contains(e.target)) cerrar();
+  });
+
+  return {
+    reset(){
+      hidden.value = '';
+      input.value  = '';
+      cerrar();
+    },
+  };
 }
 
 /* ── UTILIDADES INTERNAS ───────────────────────────────── */
