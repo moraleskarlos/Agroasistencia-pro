@@ -1,0 +1,76 @@
+/* ══════════════════════════════════════════════════
+   AGROCONTRATISTA — DESIGN SYSTEM 1.0
+   assets/css/components/forms.css
+   Componente: Formularios — labels, inputs, selects, textareas
+   Depende de: base/variables.css (incluye la regla :focus unificada)
+   ══════════════════════════════════════════════════ */
+
+/* ── Estructura de formulario ──────────────────── */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.form-group.full {
+  grid-column: span 2;
+}
+
+/* ── Etiquetas ──────────────────────────────────── */
+
+label {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  color: var(--texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Campos de entrada ─────────────────────────── */
+
+input,
+select,
+textarea {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--borde-estructural);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-texto-tabla);
+  color: var(--texto-principal);
+  background: var(--gris-bg);
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+/* El estado :focus de input/select/textarea vive en
+   base/variables.css como fuente única de verdad — no se
+   redefine aquí para evitar que ambas reglas diverjan. */
+
+/* ── Encabezados de sección de formulario ──────── */
+
+.form-section {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-bold);
+  color: var(--texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: var(--space-2) 0 var(--space-1);
+  border-bottom: 1px solid var(--borde-estructural);
+  margin: var(--space-4) 0 var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Pendiente de Fase 1 (fuera de alcance de esta ronda) */
+.campo-especificar label {
+  color: #1E40AF;
+}
