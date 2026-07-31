@@ -1,0 +1,32 @@
+/* ══════════════════════════════════════════════════
+   AGROCONTRATISTA — ARQUITECTURA MODULAR DS 1.0
+   css/estilos.css — Director de Orquesta
+   (Migración en progreso — Fase 3 parcial)
+
+   ORDEN CRÍTICO — NO REORDENAR:
+   1. legacy.css   → todo lo que aún no hemos migrado
+   2. variables.css → tokens del Manual (colores, tipografía, espaciado)
+   3. componentes  → reglas ya corregidas, se cargan al final para
+      sobrescribir a las equivalentes de legacy.css con el mismo
+      nombre de clase (ej. .sidebar, .card, .btn-primary)
+   ══════════════════════════════════════════════════ */
+
+/* 1. Red de seguridad: todo el sistema anterior */
+@import url("./legacy.css");
+
+/* 2. Variables oficiales del Design System 1.0 */
+@import url("./base/variables.css");
+
+/* 3. Componentes ya migrados y corregidos */
+@import url("./components/sidebar.css");
+@import url("./components/tables.css");
+@import url("./components/forms.css");
+@import url("./components/buttons.css");
+@import url("./components/topbar.css");
+@import url("./components/cards-kpis.css");
+
+/* ── Pendientes de migrar (siguen viviendo en legacy.css) ──
+   Modales, Toasts, Badges de estado, Avatares, Barras de
+   progreso, Excel-hint, Zona de carga (drag&drop), Sec-header,
+   layout .app/.main/.content/.pagina, responsive @media,
+   tabs de Gestión Laboral. */
