@@ -9,21 +9,26 @@
    3. componentes  → reglas ya corregidas, se cargan al final para
       sobrescribir a las equivalentes de legacy.css con el mismo
       nombre de clase (ej. .sidebar, .card, .btn-primary)
+
+   NOTA DE RUTAS: legacy.css vive junto a este archivo, dentro de
+   css/, por eso usa "./". Las carpetas base/ y components/ viven
+   en la raíz del repositorio (un nivel arriba de css/), por eso
+   sus imports usan "../".
    ══════════════════════════════════════════════════ */
 
-/* 1. Red de seguridad: todo el sistema anterior */
+/* 1. Red de seguridad: todo el sistema anterior (vive en css/) */
 @import url("./legacy.css");
 
-/* 2. Variables oficiales del Design System 1.0 */
-@import url("./base/variables.css");
+/* 2. Variables oficiales del Design System 1.0 (vive en la raíz) */
+@import url("../base/variables.css");
 
-/* 3. Componentes ya migrados y corregidos */
-@import url("./components/sidebar.css");
-@import url("./components/tables.css");
-@import url("./components/forms.css");
-@import url("./components/buttons.css");
-@import url("./components/topbar.css");
-@import url("./components/cards-kpis.css");
+/* 3. Componentes ya migrados y corregidos (viven en la raíz) */
+@import url("../components/sidebar.css");
+@import url("../components/tables.css");
+@import url("../components/forms.css");
+@import url("../components/buttons.css");
+@import url("../components/topbar.css");
+@import url("../components/cards-kpis.css");
 
 /* ── Pendientes de migrar (siguen viviendo en legacy.css) ──
    Modales, Toasts, Badges de estado, Avatares, Barras de
