@@ -1075,18 +1075,22 @@
       </div>
 
       <!-- ASISTENCIA -->
-      <!-- GESTIÓN LABORAL -->
+<!-- GESTIÓN LABORAL -->
       <div id="p-gestion-laboral" class="pagina">
         <div class="sec-header">
           <div>
-            <div class="sec-title">Haberes, Descuentos y Ausencias</div>
-            <div class="sec-sub">Faltas y permisos, haberes variables, descuentos y jornada especial</div>
+            <div class="sec-title">Bonificaciones, Descuentos y Ausencias</div>
+            <div class="sec-sub">Faltas y permisos, bonificaciones, descuentos y horas extras</div>
           </div>
           <div style="display:flex;gap:8px;align-items:end;">
             <div class="f-group" style="margin:0;"><label class="form-label">Revisar mes</label><input type="month" id="gl-filtro-periodo" class="btn btn-secondary" style="font-size:13px;" onchange="switchTabGL(_tabGLActivo)"></div>
             <div class="f-group" style="margin:0;"><label class="form-label">Elegir empresa</label><select id="gl-filtro-mandante" class="btn btn-secondary" style="font-size:13px;" onchange="switchTabGL(_tabGLActivo)"><option value="">Todas las Empresas Mandante</option></select></div>
           </div>
         </div>
+        <!-- NOTA: el filtro "Revisar mes / Elegir empresa" de arriba sigue
+             gobernando Faltas y Permisos, Descuentos y Horas Extras (aún no
+             migrados). Bonificaciones ya es autocontenido y tiene sus
+             propios controles dentro de su panel — ver más abajo. -->
 
         <!-- KPIs (dinámicos según pestaña activa) -->
         <div class="g4" id="gl-kpis-wrap" style="margin-bottom:16px;">
@@ -1094,7 +1098,7 @@
           <div class="kpi amarillo" id="gl-kpi-singoce" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Permiso sin goce</div><div class="kpi-value" style="font-size:18px;">0</div><div class="kpi-sub" style="font-size:10px;">trabajadores</div></div>
           <div class="kpi verde" id="gl-kpi-licencia" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Licencia médica</div><div class="kpi-value" style="font-size:18px;">0</div><div class="kpi-sub" style="font-size:10px;">trabajadores</div></div>
           <div class="kpi rojo" id="gl-kpi-inasistencia" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Inasistencia</div><div class="kpi-value" style="font-size:18px;">0</div><div class="kpi-sub" style="font-size:10px;">trabajadores</div></div>
-          <div class="kpi verde" id="gl-kpi-haberes" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Haberes Variables</div><div class="kpi-value" style="font-size:18px;">$0</div><div class="kpi-sub" style="font-size:10px;">haberes variables</div></div>
+          <div class="kpi verde" id="gl-kpi-haberes" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Bonificaciones</div><div class="kpi-value" style="font-size:18px;">$0</div><div class="kpi-sub" style="font-size:10px;">bonificaciones</div></div>
           <div class="kpi rojo" id="gl-kpi-descuentos" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Descuentos</div><div class="kpi-value" style="font-size:18px;">$0</div><div class="kpi-sub" style="font-size:10px;">descuentos período</div></div>
           <div class="kpi amarillo" id="gl-kpi-hextra" style="padding:10px 14px;"><div class="kpi-label" style="font-size:11px;">Horas Extra</div><div class="kpi-value" style="font-size:18px;">0.0 h</div><div class="kpi-sub" style="font-size:10px;">horas extra</div></div>
         </div>
@@ -1106,16 +1110,16 @@
             class="activo">📋 Faltas y Permisos</button>
           <button id="tab-gl-haberes" onclick="switchTabGL('gl-haberes')"
             style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
-            💰 Haberes Variables</button>
+            💰 Bonificaciones</button>
           <button id="tab-gl-descuentos" onclick="switchTabGL('gl-descuentos')"
             style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
             ➖ Descuentos</button>
           <button id="tab-gl-jornada" onclick="switchTabGL('gl-jornada')"
             style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
-            ⏱️ Jornada Especial</button>
+            ⏱️ Horas Extras</button>
         </div>
 
-        <!-- PANEL FALTAS Y PERMISOS -->
+        <!-- PANEL FALTAS Y PERMISOS (sin cambios) -->
         <div id="panel-gl-novedades">
           <div class="card" style="margin-bottom:14px;">
             <!-- Cabecera con filtros -->
@@ -1177,25 +1181,90 @@
                   <th style="text-align:center;">Días</th>
                   <th>Detalle</th>
                 </tr></thead>
-                <tbody id="tbody-novedades"><tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+                <tbody id="tbody-novedades"></tbody>
               </table>
             </div>
           </div>
         </div>
 
-        <!-- PANEL HABERES -->
+        <!-- PANEL BONIFICACIONES (antes "Haberes Variables") ─────────────
+             Reestructurado bajo el patrón Revisar / Registrar.
+             Autocontenido: no usa gl-filtro-periodo ni gl-filtro-mandante. -->
         <div id="panel-gl-haberes" style="display:none;">
+
+          <!-- GRUPO 1 — Revisar información de Bonificaciones -->
           <div class="card" style="margin-bottom:14px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-cash"></i> Haberes variables del período</div>
-              <button class="btn btn-primary btn-sm" onclick="toggleFormHaber()"><i class="ti ti-plus"></i> Agregar haber</button>
+            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-search"></i> Revisar información de Bonificaciones</div>
+
+            <!-- Selector temporal: Día / Mes / Rango -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;">
+              <button type="button" id="gl-hab-modo-dia" class="btn btn-secondary btn-sm" onclick="glHabSetModo('dia')">Día</button>
+              <button type="button" id="gl-hab-modo-mes" class="btn btn-secondary btn-sm activo" onclick="glHabSetModo('mes')">Mes</button>
+              <button type="button" id="gl-hab-modo-rango" class="btn btn-secondary btn-sm" onclick="glHabSetModo('rango')">Rango</button>
             </div>
-            <div id="gl-hab-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;margin-bottom:14px;">
+            <div style="margin-bottom:14px;">
+              <div id="gl-hab-fecha-dia-wrap" style="display:none;max-width:220px;">
+                <input type="date" id="gl-hab-fecha-dia" onchange="renderHaberes();_renderKPIsGL();">
+              </div>
+              <div id="gl-hab-fecha-mes-wrap" style="display:block;max-width:220px;">
+                <input type="month" id="gl-hab-fecha-mes" onchange="renderHaberes();_renderKPIsGL();">
+              </div>
+              <div id="gl-hab-fecha-rango-wrap" style="display:none;gap:10px;align-items:center;">
+                <input type="date" id="gl-hab-fecha-ini" onchange="renderHaberes();_renderKPIsGL();" style="max-width:180px;">
+                <span style="font-size:12px;color:var(--texto2);">hasta</span>
+                <input type="date" id="gl-hab-fecha-fin" onchange="renderHaberes();_renderKPIsGL();" style="max-width:180px;">
+              </div>
+            </div>
+
+            <!-- Empresa / Trabajador / Tipo -->
+            <div class="form-grid" style="margin-bottom:14px;">
+              <div class="form-group"><label>Empresa</label>
+                <select id="gl-hab-rev-empresa" onchange="renderHaberes();_renderKPIsGL();"><option value="">Todas las Empresas Mandante</option></select></div>
+              <div class="form-group" style="position:relative;"><label>Trabajador</label>
+                <input type="text" id="gl-hab-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <input type="hidden" id="gl-hab-rev-trabajador">
+                <div id="gl-hab-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
+              </div>
+              <div class="form-group"><label>Tipo de Bonificación</label>
+                <select id="gl-hab-rev-tipo" onchange="renderHaberes()">
+                  <option value="">Todos los tipos</option>
+                  <option value="bono_produccion">🌿 Bono producción</option>
+                  <option value="bono_asistencia">📅 Bono asistencia</option>
+                  <option value="bono_puntualidad">⏰ Bono puntualidad</option>
+                  <option value="bono_responsabilidad">⭐ Bono responsabilidad</option>
+                  <option value="colacion">🍽️ Colación</option>
+                  <option value="movilizacion">🚌 Movilización</option>
+                  <option value="viatico">✈️ Viático</option>
+                  <option value="asignacion_especial">💼 Asignación especial</option>
+                  <option value="otro">📋 Otro</option>
+                </select></div>
+            </div>
+
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:700px;">
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Monto</th><th>Fecha</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-haberes"><tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- GRUPO 2 — Registrar Bonificación -->
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div class="card-title" style="margin:0;"><i class="ti ti-cash"></i> Registrar Bonificación</div>
+              <button class="btn btn-primary btn-sm" onclick="toggleFormHaber()"><i class="ti ti-plus"></i> Registrar Bonificación</button>
+            </div>
+            <div id="gl-hab-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;">
               <form id="form-haber" onsubmit="event.preventDefault();guardarHaber();">
                 <div class="form-grid" style="margin-bottom:10px;">
-                  <div class="form-group"><label>Trabajador</label>
-                    <select id="gl-hab-trabajador"><option value="">— Seleccionar —</option></select></div>
-                  <div class="form-group"><label>Tipo de haber</label>
+                  <div class="form-group"><label>Empresa</label>
+                    <select id="gl-hab-reg-empresa"><option value="">— Seleccionar empresa —</option></select></div>
+                  <div class="form-group" style="position:relative;"><label>Trabajador</label>
+                    <input type="text" id="gl-hab-reg-trabajador-input" placeholder="Buscar por nombre o RUT..." autocomplete="off">
+                    <input type="hidden" id="gl-hab-reg-trabajador">
+                    <div id="gl-hab-reg-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
+                  </div>
+                  <div class="form-group"><label>Tipo de Bonificación</label>
                     <select id="gl-hab-tipo">
                       <option value="">— Seleccionar —</option>
                       <option value="bono_produccion">🌿 Bono producción</option>
@@ -1213,7 +1282,7 @@
                   <div class="form-group"><label>Fecha</label>
                     <input type="date" id="gl-hab-fecha"></div>
                   <div class="form-group full"><label>Observación</label>
-                    <input type="text" id="gl-hab-obs" placeholder="Descripción del haber"></div>
+                    <input type="text" id="gl-hab-obs" placeholder="Descripción de la bonificación"></div>
                 </div>
                 <div style="display:flex;gap:8px;">
                   <button type="submit" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Guardar</button>
@@ -1221,16 +1290,10 @@
                 </div>
               </form>
             </div>
-            <div class="tabla-wrap">
-              <table class="tabla" style="min-width:700px;">
-                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Monto</th><th>Fecha</th><th>Observación</th><th></th></tr></thead>
-                <tbody id="tbody-haberes"><tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
-              </table>
-            </div>
           </div>
         </div>
 
-        <!-- PANEL DESCUENTOS -->
+        <!-- PANEL DESCUENTOS (sin cambios) -->
         <div id="panel-gl-descuentos" style="display:none;">
           <div class="card" style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -1274,11 +1337,12 @@
           </div>
         </div>
 
-        <!-- PANEL JORNADA ESPECIAL -->
+        <!-- PANEL HORAS EXTRAS (antes "Jornada Especial" — solo cambio de
+             nombre por ahora; estructura y lógica interna sin cambios) -->
         <div id="panel-gl-jornada" style="display:none;">
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-clock-hour-4"></i> Jornada especial del período</div>
+              <div class="card-title" style="margin:0;"><i class="ti ti-clock-hour-4"></i> Horas Extras del período</div>
               <button class="btn btn-primary btn-sm" onclick="toggleFormJornada()"><i class="ti ti-plus"></i> Agregar registro</button>
             </div>
             <div id="gl-jor-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;margin-bottom:14px;">
