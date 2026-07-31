@@ -1,0 +1,95 @@
+/* ══════════════════════════════════════════════════
+   AGROCONTRATISTA — DESIGN SYSTEM 1.0
+   assets/css/base/variables.css
+   Cimientos: Variables Globales + Accesibilidad Base
+   ══════════════════════════════════════════════════ */
+
+:root {
+
+  /* ── 1. COLORES ─────────────────────────────── */
+
+  /* Principal / Corporativo */
+  --color-primario: #0F2942;
+
+  /* Éxito / Confirmación (Botón Primario) */
+  --color-exito: #047857;
+  --color-exito-hover: #065F46;
+
+  /* Texto — sobre fondos claros */
+  --texto-principal: #1E293B;
+  --texto-secundario: #475569;
+
+  /* Texto — sobre fondos oscuros (Sidebar) */
+  --texto-principal-oscuro: #FFFFFF;
+  --texto-secundario-oscuro: #94A3B8;
+  --texto-encabezado-oscuro: #CBD5E1;
+
+  /* Peligro */
+  --color-peligro: #991B1B;
+  --color-peligro-bg: #FEE2E2;
+
+  /* Fondos y neutros de apoyo */
+  --gris-bg: #F1F5F9;
+  --blanco: #FFFFFF;
+
+
+  /* ── 2. TIPOGRAFÍA ──────────────────────────── */
+
+  --fs-titulo-principal: 1.5rem;      /* 24px */
+  --fs-titulo-secundario: 0.8125rem;  /* 13px */
+  --fs-texto-tabla: 0.875rem;         /* 14px */
+  --fs-label: 0.75rem;                /* 12px — piso mínimo del sistema */
+
+  --fw-bold: 700;
+  --fw-semibold: 600;
+  --fw-regular: 400;
+
+  --lh-titulo: 1.3;
+  --lh-secundario: 1.4;
+  --lh-tabla: 1.6;
+
+
+  /* ── 3. ESPACIADO (escala base 4px) ─────────── */
+
+  --space-1: 0.25rem;  /* 4px  */
+  --space-2: 0.5rem;   /* 8px  */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-16: 4rem;    /* 64px */
+
+
+  /* ── 4. BORDES Y RADIOS ─────────────────────── */
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  --borde-decorativo: #E2E8F0;
+  --borde-estructural: #8896AC;
+}
+
+
+/* ══════════════════════════════════════════════════
+   REGLAS GLOBALES DE ACCESIBILIDAD
+   ══════════════════════════════════════════════════ */
+
+/* Base rem: 1rem = 16px. Respeta el zoom/accesibilidad del usuario. */
+html {
+  font-size: 16px;
+}
+
+/* Foco unificado — input, select y textarea como una sola categoría.
+   Fuente única de verdad: cualquier componente que use estos
+   selectores hereda este comportamiento automáticamente. */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-exito);
+  background: var(--blanco);
+  box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.15);
+  outline: none;
+}
