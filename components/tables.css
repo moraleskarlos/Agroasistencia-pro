@@ -1,0 +1,92 @@
+/* ══════════════════════════════════════════════════
+   AGROCONTRATISTA — DESIGN SYSTEM 1.0
+   assets/css/components/tables.css
+   Componente: Tablas y Encabezados
+   Depende de: base/variables.css
+   ══════════════════════════════════════════════════ */
+
+.tabla-wrap {
+  overflow-x: auto;
+  position: relative;
+}
+
+.tabla-wrap::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tabla-wrap::-webkit-scrollbar-thumb {
+  background: var(--borde-estructural);
+  border-radius: var(--radius-sm);
+}
+
+.tabla {
+  width: 100%;
+  min-width: 1100px;
+  border-collapse: collapse;
+  font-size: var(--fs-texto-tabla);
+  line-height: var(--lh-tabla);
+}
+
+.tabla th {
+  text-align: left;
+  padding: var(--space-3) var(--space-3);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  color: var(--texto-secundario);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 2px solid var(--borde-estructural);
+  background: var(--gris-bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tabla td {
+  padding: var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--borde-estructural);
+  color: var(--texto-principal);
+  white-space: nowrap;
+}
+
+.tabla td.wrap-ok {
+  white-space: normal;
+}
+
+.tabla tr:last-child td {
+  border-bottom: none;
+}
+
+.tabla tbody tr:nth-child(even) td {
+  background: var(--gris-bg);
+}
+
+.tabla tr:hover td {
+  background: #F8FAFC;
+}
+
+/* ── Elementos auxiliares de tabla ─────────────── */
+
+/* Pendiente de Fase 1 (prioridad Baja) */
+.rut-mono {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--texto2);
+}
+
+.row-av {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.row-av-info .nombre {
+  font-size: var(--fs-texto-tabla);
+  font-weight: 500;
+}
+
+/* Pendiente de Fase 1 (prioridad Baja) */
+.row-av-info .sub {
+  font-size: 11px;
+  color: var(--texto2);
+}
