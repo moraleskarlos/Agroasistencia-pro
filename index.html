@@ -1128,31 +1128,7 @@
 
         <!-- ═══════════════ PANEL FALTAS Y PERMISOS ═══════════════ -->
         <div id="panel-gl-novedades">
-          <div class="card" style="margin-bottom:14px;">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-search"></i> Revisar información de Ausencias</div>
-            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:0;">
-              <div class="form-group"><label>Mes</label>
-                <input type="month" id="gl-nov-rev-mes" class="campo-fecha"></div>
-              <div class="form-group"><label>Empresa</label>
-                <select id="gl-nov-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
-              <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                <input type="text" id="gl-nov-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
-                <input type="hidden" id="gl-nov-rev-trabajador">
-                <div id="gl-nov-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
-              </div>
-              <div class="form-group"><label>Tipo de Ausencia</label>
-                <select id="gl-nov-rev-tipo">
-                  <option value="">Todos los tipos</option>
-                  <option value="sin_clasificar">⚠️ Sin clasificar</option>
-                  <option value="licencia_medica">🏥 Lic. Médica</option>
-                  <option value="permiso_goce">✅ Permiso c/goce</option>
-                  <option value="permiso_sin_goce">⚠️ Permiso s/goce</option>
-                  <option value="vacaciones">🏖️ Vacaciones</option>
-                  <option value="ausencia_injustificada">❌ Injustificada</option>
-                </select></div>
-            </div>
-          </div>
-
+          <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Ausencia</div>
@@ -1193,8 +1169,30 @@
             </div>
           </div>
 
+          <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-alert-circle"></i> Faltas y Permisos del período</div>
+            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-alert-circle"></i> Ausencias del período</div>
+            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
+              <div class="form-group"><label>Mes</label>
+                <input type="month" id="gl-nov-rev-mes" class="campo-fecha"></div>
+              <div class="form-group"><label>Empresa</label>
+                <select id="gl-nov-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
+              <div class="form-group" style="position:relative;"><label>Trabajador</label>
+                <input type="text" id="gl-nov-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <input type="hidden" id="gl-nov-rev-trabajador">
+                <div id="gl-nov-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
+              </div>
+              <div class="form-group"><label>Tipo de Ausencia</label>
+                <select id="gl-nov-rev-tipo">
+                  <option value="">Todos los tipos</option>
+                  <option value="sin_clasificar">⚠️ Sin clasificar</option>
+                  <option value="licencia_medica">🏥 Lic. Médica</option>
+                  <option value="permiso_goce">✅ Permiso c/goce</option>
+                  <option value="permiso_sin_goce">⚠️ Permiso s/goce</option>
+                  <option value="vacaciones">🏖️ Vacaciones</option>
+                  <option value="ausencia_injustificada">❌ Injustificada</option>
+                </select></div>
+            </div>
             <div class="tabla-wrap">
               <table class="tabla" style="min-width:700px;">
                 <thead><tr>
@@ -1213,34 +1211,7 @@
 
         <!-- ═══════════════ PANEL BONIFICACIONES ═══════════════ -->
         <div id="panel-gl-haberes" style="display:none;">
-          <div class="card" style="margin-bottom:14px;">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-search"></i> Revisar información de Bonificaciones</div>
-            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:0;">
-              <div class="form-group"><label>Mes</label>
-                <input type="month" id="gl-hab-rev-mes" class="campo-fecha"></div>
-              <div class="form-group"><label>Empresa</label>
-                <select id="gl-hab-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
-              <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                <input type="text" id="gl-hab-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
-                <input type="hidden" id="gl-hab-rev-trabajador">
-                <div id="gl-hab-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
-              </div>
-              <div class="form-group"><label>Tipo de Bonificación</label>
-                <select id="gl-hab-rev-tipo">
-                  <option value="">Todos los tipos</option>
-                  <option value="bono_produccion">🌿 Bono producción</option>
-                  <option value="bono_asistencia">📅 Bono asistencia</option>
-                  <option value="bono_puntualidad">⏰ Bono puntualidad</option>
-                  <option value="bono_responsabilidad">⭐ Bono responsabilidad</option>
-                  <option value="colacion">🍽️ Colación</option>
-                  <option value="movilizacion">🚌 Movilización</option>
-                  <option value="viatico">✈️ Viático</option>
-                  <option value="asignacion_especial">💼 Asignación especial</option>
-                  <option value="otro">📋 Otro</option>
-                </select></div>
-            </div>
-          </div>
-
+          <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Bonificación</div>
@@ -1284,8 +1255,33 @@
             </div>
           </div>
 
+          <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
             <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-cash"></i> Bonificaciones del período</div>
+            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
+              <div class="form-group"><label>Mes</label>
+                <input type="month" id="gl-hab-rev-mes" class="campo-fecha"></div>
+              <div class="form-group"><label>Empresa</label>
+                <select id="gl-hab-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
+              <div class="form-group" style="position:relative;"><label>Trabajador</label>
+                <input type="text" id="gl-hab-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <input type="hidden" id="gl-hab-rev-trabajador">
+                <div id="gl-hab-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
+              </div>
+              <div class="form-group"><label>Tipo de Bonificación</label>
+                <select id="gl-hab-rev-tipo">
+                  <option value="">Todos los tipos</option>
+                  <option value="bono_produccion">🌿 Bono producción</option>
+                  <option value="bono_asistencia">📅 Bono asistencia</option>
+                  <option value="bono_puntualidad">⏰ Bono puntualidad</option>
+                  <option value="bono_responsabilidad">⭐ Bono responsabilidad</option>
+                  <option value="colacion">🍽️ Colación</option>
+                  <option value="movilizacion">🚌 Movilización</option>
+                  <option value="viatico">✈️ Viático</option>
+                  <option value="asignacion_especial">💼 Asignación especial</option>
+                  <option value="otro">📋 Otro</option>
+                </select></div>
+            </div>
             <div class="tabla-wrap">
               <table class="tabla" style="min-width:700px;">
                 <thead><tr><th>Trabajador</th><th>Tipo</th><th>Monto</th><th>Fecha</th><th>Observación</th><th></th></tr></thead>
@@ -1297,31 +1293,7 @@
 
         <!-- ═══════════════ PANEL DESCUENTOS ═══════════════ -->
         <div id="panel-gl-descuentos" style="display:none;">
-          <div class="card" style="margin-bottom:14px;">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-search"></i> Revisar información de Descuentos</div>
-            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:0;">
-              <div class="form-group"><label>Mes</label>
-                <input type="month" id="gl-des-rev-mes" class="campo-fecha"></div>
-              <div class="form-group"><label>Empresa</label>
-                <select id="gl-des-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
-              <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                <input type="text" id="gl-des-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
-                <input type="hidden" id="gl-des-rev-trabajador">
-                <div id="gl-des-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
-              </div>
-              <div class="form-group"><label>Tipo de Descuento</label>
-                <select id="gl-des-rev-tipo">
-                  <option value="">Todos los tipos</option>
-                  <option value="anticipo">💸 Anticipo</option>
-                  <option value="prestamo">🏦 Préstamo</option>
-                  <option value="caja_compensacion">🏢 Caja de Compensación</option>
-                  <option value="cuota_sindical">👥 Cuota sindical</option>
-                  <option value="retencion_judicial">⚖️ Retención judicial</option>
-                  <option value="otro">📋 Otro</option>
-                </select></div>
-            </div>
-          </div>
-
+          <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Descuento</div>
@@ -1347,7 +1319,7 @@
                       <option value="retencion_judicial">⚖️ Retención judicial</option>
                       <option value="otro">📋 Otro</option>
                     </select></div>
-                  <div class="form-group"><label>Monto cuota ($)</label>
+                  <div class="form-group"><label>Monto total ($)</label>
                     <input type="number" id="gl-des-monto" class="campo-corto" placeholder="0" min="0"></div>
                   <div class="form-group"><label>N° de cuotas</label>
                     <input type="number" id="gl-des-cuotas" class="campo-corto" placeholder="1" min="1" value="1"></div>
@@ -1362,12 +1334,34 @@
             </div>
           </div>
 
+          <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
             <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-minus-vertical"></i> Descuentos del período</div>
+            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
+              <div class="form-group"><label>Mes</label>
+                <input type="month" id="gl-des-rev-mes" class="campo-fecha"></div>
+              <div class="form-group"><label>Empresa</label>
+                <select id="gl-des-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
+              <div class="form-group" style="position:relative;"><label>Trabajador</label>
+                <input type="text" id="gl-des-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <input type="hidden" id="gl-des-rev-trabajador">
+                <div id="gl-des-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
+              </div>
+              <div class="form-group"><label>Tipo de Descuento</label>
+                <select id="gl-des-rev-tipo">
+                  <option value="">Todos los tipos</option>
+                  <option value="anticipo">💸 Anticipo</option>
+                  <option value="prestamo">🏦 Préstamo</option>
+                  <option value="caja_compensacion">🏢 Caja de Compensación</option>
+                  <option value="cuota_sindical">👥 Cuota sindical</option>
+                  <option value="retencion_judicial">⚖️ Retención judicial</option>
+                  <option value="otro">📋 Otro</option>
+                </select></div>
+            </div>
             <div class="tabla-wrap">
-              <table class="tabla" style="min-width:800px;">
-                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Cuota</th><th style="text-align:center;">Cuotas</th><th style="text-align:center;">Pagadas</th><th>Saldo</th><th>Observación</th><th></th></tr></thead>
-                <tbody id="tbody-descuentos"><tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              <table class="tabla" style="min-width:900px;">
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Monto Total</th><th>Monto Cuota</th><th style="text-align:center;">Cuotas</th><th style="text-align:center;">Pagadas</th><th>Saldo</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-descuentos"><tr><td colspan="9" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -1375,29 +1369,7 @@
 
         <!-- ═══════════════ PANEL HORAS EXTRAS ═══════════════ -->
         <div id="panel-gl-jornada" style="display:none;">
-          <div class="card" style="margin-bottom:14px;">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-search"></i> Revisar información de Horas Extras</div>
-            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:0;">
-              <div class="form-group"><label>Mes</label>
-                <input type="month" id="gl-jor-rev-mes" class="campo-fecha"></div>
-              <div class="form-group"><label>Empresa</label>
-                <select id="gl-jor-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
-              <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                <input type="text" id="gl-jor-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
-                <input type="hidden" id="gl-jor-rev-trabajador">
-                <div id="gl-jor-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
-              </div>
-              <div class="form-group"><label>Tipo</label>
-                <select id="gl-jor-rev-tipo">
-                  <option value="">Todos los tipos</option>
-                  <option value="hora_extra">⏱️ Horas extra</option>
-                  <option value="hora_compensada">🔄 Horas compensadas</option>
-                  <option value="cambio_turno">🔀 Cambio de turno</option>
-                  <option value="turno_especial">📋 Turno especial</option>
-                </select></div>
-            </div>
-          </div>
-
+          <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Horas Extras</div>
@@ -1441,8 +1413,28 @@
             </div>
           </div>
 
+          <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
             <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-clock-hour-4"></i> Horas Extras del período</div>
+            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
+              <div class="form-group"><label>Mes</label>
+                <input type="month" id="gl-jor-rev-mes" class="campo-fecha"></div>
+              <div class="form-group"><label>Empresa</label>
+                <select id="gl-jor-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
+              <div class="form-group" style="position:relative;"><label>Trabajador</label>
+                <input type="text" id="gl-jor-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <input type="hidden" id="gl-jor-rev-trabajador">
+                <div id="gl-jor-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
+              </div>
+              <div class="form-group"><label>Tipo</label>
+                <select id="gl-jor-rev-tipo">
+                  <option value="">Todos los tipos</option>
+                  <option value="hora_extra">⏱️ Horas extra</option>
+                  <option value="hora_compensada">🔄 Horas compensadas</option>
+                  <option value="cambio_turno">🔀 Cambio de turno</option>
+                  <option value="turno_especial">📋 Turno especial</option>
+                </select></div>
+            </div>
             <div class="tabla-wrap">
               <table class="tabla" style="min-width:750px;">
                 <thead><tr><th>Trabajador</th><th>Tipo</th><th>Fecha</th><th style="text-align:center;">Horas</th><th style="text-align:center;">Recargo</th><th>Observación</th><th></th></tr></thead>
