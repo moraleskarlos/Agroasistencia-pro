@@ -24,10 +24,13 @@
 .card {
   background: var(--blanco);
 
-  /* ✅ HALLAZGO 2 CORREGIDO — Contorno de contenedor
-     Antes: var(--borde) #E2E8F0 → contraste 1.23:1 (invisible)
-     Ahora: var(--borde-estructural) #8896AC → contraste ≈3.0:1 */
-  border: 1px solid var(--borde-estructural);
+  /* Contorno decorativo — la Card es un contenedor de agrupación visual,
+     no un control operable, por lo que WCAG 1.4.11 no exige aquí el
+     mínimo de 3:1 (ese criterio sí sigue aplicando dentro de la Card:
+     inputs, selects, textareas y separadores de fila de tabla mantienen
+     --borde-estructural sin cambios). La separación del fondo ahora la
+     hace principalmente la sombra reforzada, no el borde. */
+  border: 1px solid var(--borde-decorativo);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
 
@@ -102,8 +105,9 @@
   min-width: 160px;
   max-width: 220px;
 
-  /* ✅ HALLAZGO 2 CORREGIDO — mismo caso que .card */
-  border: 1px solid var(--borde-estructural);
+  /* Mismo criterio que .card: contorno decorativo, la sombra
+     reforzada asume la separación visual del fondo. */
+  border: 1px solid var(--borde-decorativo);
   border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-4);
   box-shadow: var(--shadow-card);
