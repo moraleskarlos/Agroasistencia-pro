@@ -81,20 +81,30 @@
 
 /* ── KPIs ──────────────────────────────────────── */
 
+/* Corrección: antes usaba grid de columnas fijas (repeat(4,1fr)), lo que
+   forzaba a cada tarjeta a estirarse al ancho total de su columna sin
+   importar cuánto contenido tuviera — con 1 sola tarjeta visible (ej. un
+   submódulo de Gestión Laboral) quedaba flotando con un vacío enorme al
+   lado; con 4 tarjetas de texto corto (ej. Dashboard) se veían infladas.
+   Ahora cada tarjeta ocupa solo el ancho que necesita su contenido, con
+   un tope máximo, y se acomodan en fila con espacio entre ellas. */
 .kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-4);
   margin-bottom: var(--space-6);
 }
 
 .kpi {
   background: var(--blanco);
+  flex: 0 1 200px;
+  min-width: 160px;
+  max-width: 220px;
 
   /* ✅ HALLAZGO 2 CORREGIDO — mismo caso que .card */
   border: 1px solid var(--borde-estructural);
   border-radius: var(--radius-lg);
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
