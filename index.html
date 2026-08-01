@@ -1154,23 +1154,6 @@
           </div>
 
           <div class="card" style="margin-bottom:14px;">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-alert-circle"></i> Faltas y Permisos del período</div>
-            <div class="tabla-wrap">
-              <table class="tabla" style="min-width:700px;">
-                <thead><tr>
-                  <th>Trabajador</th>
-                  <th>RUT</th>
-                  <th>Estado</th>
-                  <th>Motivos</th>
-                  <th style="text-align:center;">Días</th>
-                  <th>Detalle</th>
-                </tr></thead>
-                <tbody id="tbody-novedades"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Ausencia</div>
               <button class="btn btn-primary btn-sm" onclick="toggleFormNovedad()"><i class="ti ti-plus"></i> Registrar Ausencia</button>
@@ -1209,6 +1192,23 @@
               </form>
             </div>
           </div>
+
+          <div class="card">
+            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-alert-circle"></i> Faltas y Permisos del período</div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:700px;">
+                <thead><tr>
+                  <th>Trabajador</th>
+                  <th>RUT</th>
+                  <th>Estado</th>
+                  <th>Motivos</th>
+                  <th style="text-align:center;">Días</th>
+                  <th>Detalle</th>
+                </tr></thead>
+                <tbody id="tbody-novedades"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <!-- ═══════════════ PANEL BONIFICACIONES ═══════════════ -->
@@ -1242,16 +1242,6 @@
           </div>
 
           <div class="card" style="margin-bottom:14px;">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-cash"></i> Bonificaciones del período</div>
-            <div class="tabla-wrap">
-              <table class="tabla" style="min-width:700px;">
-                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Monto</th><th>Fecha</th><th>Observación</th><th></th></tr></thead>
-                <tbody id="tbody-haberes"><tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Bonificación</div>
               <button class="btn btn-primary btn-sm" onclick="toggleFormHaber()"><i class="ti ti-plus"></i> Registrar Bonificación</button>
@@ -1293,6 +1283,16 @@
               </form>
             </div>
           </div>
+
+          <div class="card">
+            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-cash"></i> Bonificaciones del período</div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:700px;">
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Monto</th><th>Fecha</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-haberes"><tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <!-- ═══════════════ PANEL DESCUENTOS ═══════════════ -->
@@ -1323,16 +1323,6 @@
           </div>
 
           <div class="card" style="margin-bottom:14px;">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-minus-vertical"></i> Descuentos del período</div>
-            <div class="tabla-wrap">
-              <table class="tabla" style="min-width:800px;">
-                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Cuota</th><th style="text-align:center;">Cuotas</th><th style="text-align:center;">Pagadas</th><th>Saldo</th><th>Observación</th><th></th></tr></thead>
-                <tbody id="tbody-descuentos"><tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Descuento</div>
               <button class="btn btn-primary btn-sm" onclick="toggleFormDescuento()"><i class="ti ti-plus"></i> Registrar Descuento</button>
@@ -1371,6 +1361,16 @@
               </form>
             </div>
           </div>
+
+          <div class="card">
+            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-minus-vertical"></i> Descuentos del período</div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:800px;">
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Cuota</th><th style="text-align:center;">Cuotas</th><th style="text-align:center;">Pagadas</th><th>Saldo</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-descuentos"><tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <!-- ═══════════════ PANEL HORAS EXTRAS ═══════════════ -->
@@ -1399,16 +1399,6 @@
           </div>
 
           <div class="card" style="margin-bottom:14px;">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-clock-hour-4"></i> Horas Extras del período</div>
-            <div class="tabla-wrap">
-              <table class="tabla" style="min-width:750px;">
-                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Fecha</th><th style="text-align:center;">Horas</th><th style="text-align:center;">Recargo</th><th>Observación</th><th></th></tr></thead>
-                <tbody id="tbody-jornada"><tr><td colspan="7" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Horas Extras</div>
               <button class="btn btn-primary btn-sm" onclick="toggleFormJornada()"><i class="ti ti-plus"></i> Registrar Horas Extras</button>
@@ -1450,10 +1440,19 @@
               </form>
             </div>
           </div>
+
+          <div class="card">
+            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-clock-hour-4"></i> Horas Extras del período</div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:750px;">
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Fecha</th><th style="text-align:center;">Horas</th><th style="text-align:center;">Recargo</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-jornada"><tr><td colspan="7" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
       </div><!-- /p-gestion-laboral -->
-
       <!-- REMUNERACIONES -->
       <div id="p-remuneraciones" class="pagina">
         <div class="sec-header">
