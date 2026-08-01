@@ -241,12 +241,17 @@ function renderNovedades(){
     }
 
     const totalDias   = novsRut.reduce((s,n) => s + (n.dias||1), 0);
-    const pendientes  = novsRut.filter(n => !n.aprobado).length;
 
-    return { rut, t, sinClasif, novsRut, totalDias, pendientes };
+    return { rut, t, sinClasif, novsRut, totalDias };
   }).filter(Boolean);
 
-  if(!filas.length){
+  // ✅ Corregido: si NINGÚN trabajador tiene novedades ni ausencias sin
+  // clasificar en este período, se muestra el estado vacío en vez de
+  // listar a todos como "✅ Al día" — un mes sin ninguna información
+  // registrada no es lo mismo que un mes donde se revisó y todo está bien.
+  const hayInformacion = filas.some(f => f.totalDias > 0 || f.sinClasif.length > 0);
+
+  if(!filas.length || !hayInformacion){
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">
       Sin novedades en este período · Las ausencias se detectan automáticamente desde Asistencia
     </td></tr>`;
@@ -332,7 +337,7 @@ function _htmlDetalleNovedad(f){
         <span class="badge badge-amarillo">⚠️ Sin clasificar</span>
         <span style="font-size:12px;color:var(--texto3);flex:1;">Detectada desde Asistencia</span>
         <button class="btn btn-secondary btn-sm" onclick="clasificarAusencia('${a.rut}','${a.fecha}')">
-          <i class="ti ti-tag"></i> Clasificar
+          <i class="ti ti-tag"></i> Registrar
         </button>
       </div>`;
     }
@@ -345,8 +350,6 @@ function _htmlDetalleNovedad(f){
       <span class="badge badge-gris">${n.dias||1} día${(n.dias||1)>1?'s':''}</span>
       ${_badgeNovedad(n.tipo)}
       <span style="font-size:12px;color:var(--texto2);flex:1;">${n.observacion||'—'}</span>
-      <span class="badge ${n.aprobado?'badge-verde':'badge-gris'}">${n.aprobado?'Aprobada':'Pendiente'}</span>
-      ${!n.aprobado?`<button class="btn btn-primary btn-sm" onclick="aprobarNovedad('${n.id}')"><i class="ti ti-check"></i></button>`:''}
       <button class="btn btn-danger btn-sm" onclick="eliminarNovedad('${n.id}')"><i class="ti ti-trash"></i></button>
     </div>`;
   }).join('');
@@ -364,6 +367,13 @@ function _leerAusenciasAsistencia(periodo, ruts){
     const fecha = `${anio}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const clave = 'asistencia_' + fecha;
     const data  = JSON.parse(localStorage.getItem(clave)||'[]');
+    // ✅ Corregido: si ese día no hay NINGÚN dato de asistencia guardado
+    // (nadie marcó nada), significa que el día no fue registrado por el
+    // módulo de Asistencia — no que todos los trabajadores faltaron. Antes,
+    // un mes sin datos (ej. un mes futuro) marcaba a TODOS como "sin
+    // clasificar" en cada día hábil, generando listas falsas como
+    // "23 sin clasificar" sin que existiera ninguna inasistencia real.
+    if(!data.length) continue;
     ruts.forEach(rut => {
       const marcacion = data.find(x => x.rut === rut);
       if(!marcacion){
@@ -432,7 +442,11 @@ function guardarNovedad(){
     fecha_fin:       fin || inicio,
     dias,
     observacion:     obs,
-    aprobado:        false,
+    // Se eliminó el paso de aprobación por separado — guardar el
+    // formulario es el único trámite necesario. registrado_por y
+    // fecha_registro (abajo) quedan como el registro de auditoría de
+    // quién ingresó la novedad y cuándo.
+    aprobado:        true,
     registrado_por:  sesionActiva?.usuario||'admin',
     fecha_registro:  new Date().toISOString().slice(0,10),
   };
@@ -452,15 +466,6 @@ function guardarNovedad(){
   renderNovedades();
   _renderKPIsGL();
   _guardandoGL = false;
-}
-
-function aprobarNovedad(id){
-  const n = novedades.find(x => x.id === id);
-  if(!n) return;
-  n.aprobado = true;
-  guardarNovedades();
-  toast('✅ Novedad aprobada','exito');
-  renderNovedades();
 }
 
 function eliminarNovedad(id){
