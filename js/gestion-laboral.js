@@ -357,6 +357,29 @@ function _htmlDetalleNovedad(f){
   return `<div style="max-width:900px;">${filasHtml}</div>`;
 }
 
+/* Determina si el trabajador tiene una marcación REAL de asistencia
+   (hora_entrada) en una fecha puntual. Usa el mismo criterio que
+   variables.js (_leerAsistenciaMes) para no tener dos definiciones
+   distintas de "asistió" en el sistema. */
+function _tieneMarcacionAsistencia(rut, fecha){
+  const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
+  const reg  = data.find(x => x.rut === rut);
+  return !!(reg && reg.hora_entrada);
+}
+
+/* Recorre un rango [inicio, fin] y devuelve las fechas donde el
+   trabajador ya tiene asistencia marcada — usado para bloquear el
+   registro de una ausencia que contradice un dato real. */
+function _diasConAsistenciaEnRango(rut, inicio, fin){
+  const conflictos = [];
+  let d = inicio;
+  while(d <= fin){
+    if(_tieneMarcacionAsistencia(rut, d)) conflictos.push(d);
+    d = _sumarDiaISO(d);
+  }
+  return conflictos;
+}
+
 function _leerAusenciasAsistencia(periodo, ruts){
   if(!periodo) return [];
   const [anio, mes] = periodo.split('-').map(Number);
@@ -424,6 +447,18 @@ function guardarNovedad(){
 
   if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
   if(!rut || !tipo || !inicio){ toast('⚠️ Completa trabajador, tipo y fecha inicio','error'); return; }
+
+  // ✅ Validación cruzada contra Asistencia — reemplaza al paso de
+  // aprobación manual que se eliminó. Si el trabajador ya tiene una
+  // marcación real (hora_entrada) en algún día del rango, no se permite
+  // registrar una ausencia ahí: el dato objetivo de Asistencia prevalece
+  // sobre un registro manual que lo contradice.
+  const conflictos = _diasConAsistenciaEnRango(rut, inicio, fin || inicio);
+  if(conflictos.length){
+    const t = trabajadores.find(x => x.rut === rut);
+    toast(`⚠️ ${t?.nombre||'El trabajador'} ya tiene asistencia marcada el ${_fmtFecha(conflictos[0])}${conflictos.length>1?` (y ${conflictos.length-1} día(s) más)`:''} — no se puede registrar una ausencia en un día con asistencia confirmada`, 'error');
+    return;
+  }
 
   const yaExiste = novedades.some(n =>
     n.trabajador_rut === rut && n.tipo === tipo &&
