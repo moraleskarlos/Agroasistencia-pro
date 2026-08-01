@@ -54,6 +54,27 @@ textarea {
    base/variables.css como fuente única de verdad — no se
    redefine aquí para evitar que ambas reglas diverjan. */
 
+/* ── Anchos por tipo de campo — Regla del Manual ───────────
+   "El contenedor se ajusta al contenido, el texto no se fuerza
+   a llenar el contenedor." Por defecto todo input/select/textarea
+   ocupa el 100% de su columna (arriba). Estas clases son la
+   EXCEPCIÓN explícita para campos cuyo dato esperado es corto:
+   se agregan como clase adicional en el HTML cuando corresponda.
+   No reemplazan el ancho completo por defecto — lo acotan solo
+   donde el contenido lo justifica. Aplica a todo el sistema. */
+
+.campo-corto {
+  max-width: 130px;
+}
+
+.campo-fecha {
+  max-width: 160px;
+}
+
+.campo-selector-corto {
+  max-width: 220px;
+}
+
 /* ── Encabezados de sección de formulario ──────── */
 
 .form-section {
