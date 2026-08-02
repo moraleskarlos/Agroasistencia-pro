@@ -79,7 +79,7 @@
      borde estructural NO se aclara: ya está calibrado al mínimo de
      contraste exigido por WCAG 1.4.11 (3:1) y no se puede debilitar
      más sin volver a caer en el hallazgo de Fase 1 (bordes invisibles). */
-  --shadow-card: 0 2px 4px rgba(15, 23, 42, 0.06), 0 12px 28px rgba(15, 23, 42, 0.12);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 10px rgba(15, 23, 42, 0.05);
 }
 
 
