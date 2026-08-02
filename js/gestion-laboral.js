@@ -63,7 +63,7 @@ function _mesActual(){
 
 function _poblarSelectsGL(){
   const mes = _mesActual();
-  ['gl-nov-rev-mes','gl-hab-rev-mes','gl-des-rev-mes','gl-jor-rev-mes'].forEach(id => {
+  ['gl-nov-rev-mes','gl-hab-rev-mes','gl-des-rev-mes','gl-jor-rev-mes','gl-des-mes'].forEach(id => {
     const el = document.getElementById(id);
     if(el && !el.value) el.value = mes;
   });
@@ -158,8 +158,11 @@ function _renderKPIsGL(){
   const desPer      = descuentos.filter(d => d.periodo === mesDes && rutsDes.includes(d.trabajador_rut));
   const totalDes    = desPer.reduce((s,d) => s + (parseFloat(d.monto)||0), 0);
   const trabDes     = new Set(desPer.map(d => d.trabajador_rut)).size;
-  const cuotasAct   = desPer.filter(d => (d.cuotas_pagadas||0) < (d.cuotas_total||1)).length;
-  const saldoTotal  = desPer.reduce((s,d) => s + (parseFloat(d.monto_total||d.monto||0) - parseFloat(d.monto_pagado||0)), 0);
+  // Con el modelo de "una cuota por mes", cada registro que aparece en el
+  // período YA es una cuota activa de ese mes — no hace falta comparar
+  // contra un contador de pagadas.
+  const cuotasAct   = desPer.length;
+  const saldoTotal  = desPer.reduce((s,d) => s + Math.max(0, parseFloat(d.monto_total||0) - (parseFloat(d.monto||0) * (d.numero_cuota||1))), 0);
   _setKPI('gl-kpi-descuentos',      '$'+totalDes.toLocaleString('es-CL'), 'descuentos período');
   _setKPI('gl-kpi-des-trabajadores', trabDes,                             'trabajadores');
   _setKPI('gl-kpi-des-cuotas',       cuotasAct,                           'cuotas activas');
@@ -662,14 +665,15 @@ function renderDescuentos(){
   }
   tbody.innerHTML = lista.map(d => {
     const t = trabajadores.find(x => x.rut === d.trabajador_rut);
-    const saldo = (parseFloat(d.monto_total||d.monto||0) - parseFloat(d.monto_pagado||0));
+    // Saldo restante después de aplicar la cuota de ESTE mes.
+    const saldoRestante = Math.max(0, parseFloat(d.monto_total||0) - (parseFloat(d.monto||0) * (d.numero_cuota||1)));
     return `<tr>
       <td style="font-size:13px;font-weight:500;">${t?.nombre||d.trabajador_rut}</td>
       <td>${_badgeDescuento(d.tipo)}</td>
+      <td style="font-size:13px;font-weight:600;color:var(--texto);">$${parseFloat(d.monto_total||0).toLocaleString('es-CL')}</td>
       <td style="font-size:13px;font-weight:600;color:var(--danger);">$${parseFloat(d.monto||0).toLocaleString('es-CL')}</td>
-      <td style="font-size:12px;text-align:center;">${d.cuotas_total||1}</td>
-      <td style="font-size:12px;text-align:center;">${d.cuotas_pagadas||0}</td>
-      <td style="font-size:13px;font-weight:500;">$${saldo.toLocaleString('es-CL')}</td>
+      <td style="font-size:12px;text-align:center;">${d.numero_cuota||1}/${d.cuotas_total||1}</td>
+      <td style="font-size:13px;font-weight:500;">$${saldoRestante.toLocaleString('es-CL')}</td>
       <td style="font-size:12px;color:var(--texto2);">${d.observacion||'—'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="eliminarDescuento('${d.id}')"><i class="ti ti-trash"></i></button></td>
     </tr>`;
@@ -683,45 +687,79 @@ function toggleFormDescuento(forzar){
   if(abrir){
     _poblarEmpresasGL();
     _buscadoresGL['des-reg']?.reset();
+    const elMes = document.getElementById('gl-des-mes');
+    if(elMes && !elMes.value) elMes.value = _mesActual();
   }
   return abrir;
 }
 
+/* Suma N meses a un período 'YYYY-MM' (N puede ser 0). */
+function _sumarMeses(periodo, n){
+  const [y, m] = periodo.split('-').map(Number);
+  const d = new Date(y, (m - 1) + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function _fmtMes(periodo){
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const [y, m] = periodo.split('-').map(Number);
+  return `${meses[m-1]} de ${y}`;
+}
+
 function guardarDescuento(){
   if(_guardandoGL) return;
-  const empresa = document.getElementById('gl-des-reg-empresa')?.value;
-  const rut     = document.getElementById('gl-des-reg-trabajador')?.value;
-  const tipo    = document.getElementById('gl-des-tipo')?.value;
-  const monto   = document.getElementById('gl-des-monto')?.value;
-  const cuotas  = document.getElementById('gl-des-cuotas')?.value||1;
-  const obs     = document.getElementById('gl-des-obs')?.value||'';
+  const empresa    = document.getElementById('gl-des-reg-empresa')?.value;
+  const rut        = document.getElementById('gl-des-reg-trabajador')?.value;
+  const tipo       = document.getElementById('gl-des-tipo')?.value;
+  const montoTotal = document.getElementById('gl-des-monto')?.value;
+  const cuotas     = document.getElementById('gl-des-cuotas')?.value||1;
+  const mesInicio  = document.getElementById('gl-des-mes')?.value || _mesActual();
+  const obs        = document.getElementById('gl-des-obs')?.value||'';
 
   if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
-  if(!rut||!tipo||!monto){ toast('⚠️ Completa trabajador, tipo y monto','error'); return; }
+  if(!rut||!tipo||!montoTotal){ toast('⚠️ Completa trabajador, tipo y monto','error'); return; }
 
-  const periodoActual = _mesActual();
+  // El campo del formulario ("Monto total") es la deuda completa, no la
+  // cuota. La cuota mensual se calcula aquí.
+  const nCuotas    = parseInt(cuotas) || 1;
+  const totalNum   = parseFloat(montoTotal);
+  const montoCuota = Math.round(totalNum / nCuotas);
+
   const yaExiste = descuentos.some(d =>
     d.trabajador_rut === rut && d.tipo === tipo &&
-    d.monto === parseFloat(monto) && d.periodo === periodoActual);
-  if(yaExiste){ toast('⚠️ Ya existe un descuento idéntico registrado este período','error'); return; }
+    d.monto_total === totalNum && d.periodo === mesInicio);
+  if(yaExiste){ toast('⚠️ Ya existe un descuento idéntico registrado en ese mes','error'); return; }
 
   _guardandoGL = true;
 
-  const d = {
-    id:              Date.now().toString(),
-    trabajador_rut:  rut,
-    periodo:         periodoActual,
-    tipo, monto: parseFloat(monto),
-    monto_total:     parseFloat(monto) * parseInt(cuotas),
-    monto_pagado:    parseFloat(monto),
-    cuotas_total:    parseInt(cuotas),
-    cuotas_pagadas:  1,
-    observacion:     obs,
-    registrado_por:  sesionActiva?.usuario||'admin',
-  };
-  descuentos.push(d);
+  // ✅ Recurrencia: se genera UN registro por cada cuota, cada uno en su mes
+  // correspondiente (mesInicio, mesInicio+1, ...). Como calculo.js ya filtra
+  // los descuentos por período exacto (getDescuentosPorRut), esto hace que
+  // cada mes futuro descuente su cuota automáticamente, sin tocar
+  // calculo.js ni variables.js — antes solo existía el registro del primer
+  // mes y las cuotas siguientes nunca se aplicaban solas.
+  const grupoId = Date.now().toString();
+  for(let i = 0; i < nCuotas; i++){
+    descuentos.push({
+      id:              grupoId + '-' + i,
+      grupo_id:        grupoId,
+      trabajador_rut:  rut,
+      periodo:         _sumarMeses(mesInicio, i),
+      tipo,
+      monto:           montoCuota,
+      monto_total:     totalNum,
+      numero_cuota:    i + 1,
+      cuotas_total:    nCuotas,
+      observacion:     obs,
+      registrado_por:  sesionActiva?.usuario||'admin',
+    });
+  }
   guardarDescuentos();
-  toast('✅ Descuento registrado','exito');
+
+  const mesFin = _sumarMeses(mesInicio, nCuotas - 1);
+  toast(nCuotas > 1
+    ? `✅ Descuento registrado — ${nCuotas} cuotas generadas, de ${_fmtMes(mesInicio)} a ${_fmtMes(mesFin)}`
+    : '✅ Descuento registrado', 'exito');
   _resetForm('form-descuento');
   _buscadoresGL['des-reg']?.reset();
   document.getElementById('gl-des-form-wrap').style.display='none';
@@ -731,7 +769,7 @@ function guardarDescuento(){
 }
 
 function eliminarDescuento(id){
-  if(!confirm('¿Eliminar este descuento?')) return;
+  if(!confirm('¿Eliminar esta cuota? (Solo se borra la de este mes; las demás cuotas del mismo descuento no se ven afectadas)')) return;
   descuentos = descuentos.filter(x => x.id!==id);
   guardarDescuentos();
   renderDescuentos();
