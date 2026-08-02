@@ -1323,9 +1323,12 @@
                     <input type="number" id="gl-des-monto" class="campo-corto" placeholder="0" min="0"></div>
                   <div class="form-group"><label>N° de cuotas</label>
                     <input type="number" id="gl-des-cuotas" class="campo-corto" placeholder="1" min="1" value="1"></div>
+                  <div class="form-group"><label>Mes correspondiente</label>
+                    <input type="month" id="gl-des-mes" class="campo-fecha"></div>
                   <div class="form-group full"><label>Observación</label>
                     <input type="text" id="gl-des-obs" placeholder="Ej: Anticipo quincena, préstamo aprobado el..."></div>
                 </div>
+                <p style="font-size:12px;color:var(--texto2);margin:0 0 10px;">Si son varias cuotas, se generará una por mes automáticamente a partir del mes que elijas arriba.</p>
                 <div style="display:flex;gap:8px;">
                   <button type="submit" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Guardar</button>
                   <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFormDescuento()">Cancelar</button>
@@ -1360,8 +1363,8 @@
             </div>
             <div class="tabla-wrap">
               <table class="tabla" style="min-width:900px;">
-                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Monto Total</th><th>Monto Cuota</th><th style="text-align:center;">Cuotas</th><th style="text-align:center;">Pagadas</th><th>Saldo</th><th>Observación</th><th></th></tr></thead>
-                <tbody id="tbody-descuentos"><tr><td colspan="9" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Monto Total</th><th>Monto Cuota</th><th style="text-align:center;">N° Cuota</th><th>Saldo Restante</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-descuentos"><tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
               </table>
             </div>
           </div>
