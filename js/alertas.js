@@ -182,9 +182,17 @@ function calcularAlertas(){
   if(typeof _leerAusenciasAsistencia === 'function'){
     const ausencias = _leerAusenciasAsistencia(periodoActual, rutsActivos)
       .filter(a => new Date(a.fecha+'T12:00:00') <= hoy);
-    const novsPeriodo = (typeof novedades !== 'undefined' ? novedades : []).filter(n => n.periodo === periodoActual);
+    const todasNovedades = (typeof novedades !== 'undefined' ? novedades : []);
     ausencias.forEach(a => {
-      const clasificada = novsPeriodo.some(n => n.trabajador_rut === a.rut && n.fecha_inicio === a.fecha);
+      // ✅ Corregido: revisa si el día cae dentro del RANGO completo
+      // (fecha_inicio → fecha_fin) de cualquier novedad del trabajador,
+      // no solo si coincide exactamente con el día de inicio. Antes, una
+      // licencia médica de varios días solo "clasificaba" el primer día
+      // — del día 2 en adelante seguía apareciendo esta alerta aunque ya
+      // estuviera cubierto por un registro válido. Tampoco se restringe
+      // por período, para cubrir novedades que cruzan de un mes a otro.
+      const clasificada = todasNovedades.some(n =>
+        n.trabajador_rut === a.rut && n.fecha_inicio <= a.fecha && n.fecha_fin >= a.fecha);
       if(!clasificada){
         const t = trabajadores.find(x => x.rut === a.rut);
         alertas.push(_alerta('critico','Gestión Laboral',`ausencia_sin_clasificar_${a.rut}_${a.fecha}`,
@@ -250,15 +258,6 @@ function calcularAlertas(){
           'Saldo de vacaciones alto', `${t.nombre} acumula ${vac.dias_saldo} días de vacaciones pendientes`,
           () => irA('remuneraciones')));
       }
-    }
-  });
-
-  (typeof novedades !== 'undefined' ? novedades : []).forEach(n => {
-    if(!n.aprobado){
-      const t = trabajadores.find(x => x.rut === n.trabajador_rut);
-      alertas.push(_alerta('preventivo','Gestión Laboral',`novedad_pendiente_${n.id}`,
-        'Novedad pendiente de aprobar', `Novedad de ${t?.nombre||n.trabajador_rut} sin aprobar`,
-        () => irA('gestion-laboral')));
     }
   });
 
