@@ -463,10 +463,19 @@ function guardarNovedad(){
     return;
   }
 
-  const yaExiste = novedades.some(n =>
-    n.trabajador_rut === rut && n.tipo === tipo &&
-    n.fecha_inicio === inicio && n.fecha_fin === (fin || inicio));
-  if(yaExiste){ toast('⚠️ Ya existe una novedad idéntica registrada','error'); return; }
+  // ✅ NUEVO — Validación cruzada entre novedades: un trabajador no puede
+  // tener dos motivos de ausencia distintos (o repetidos) en fechas que se
+  // superponen. Reemplaza al chequeo de "duplicado exacto" — este es más
+  // amplio, porque también detecta motivos DISTINTOS que se cruzan (ej.
+  // licencia médica y permiso sin goce el mismo día), no solo repetidos.
+  const conflictoNov = novedades.find(n =>
+    n.trabajador_rut === rut &&
+    n.fecha_inicio <= (fin || inicio) && n.fecha_fin >= inicio);
+  if(conflictoNov){
+    const t = trabajadores.find(x => x.rut === rut);
+    toast(`⚠️ ${t?.nombre||'Este trabajador'} ya tiene "${_labelNovedad(conflictoNov.tipo)}" registrado entre ${_fmtFecha(conflictoNov.fecha_inicio)} y ${_fmtFecha(conflictoNov.fecha_fin)} — no puede tener dos motivos en fechas que se cruzan`, 'error');
+    return;
+  }
 
   _guardandoGL = true;
 
@@ -725,10 +734,21 @@ function guardarDescuento(){
   const totalNum   = parseFloat(montoTotal);
   const montoCuota = Math.round(totalNum / nCuotas);
 
-  const yaExiste = descuentos.some(d =>
-    d.trabajador_rut === rut && d.tipo === tipo &&
-    d.monto_total === totalNum && d.periodo === mesInicio);
-  if(yaExiste){ toast('⚠️ Ya existe un descuento idéntico registrado en ese mes','error'); return; }
+  // ✅ NUEVO — Aviso de dos niveles cuando el trabajador ya tiene un
+  // descuento ese mismo mes. No bloquea (Sí/No), porque puede ser legítimo
+  // (ej. anticipo Y préstamo el mismo mes) — pero si es el MISMO tipo, el
+  // mensaje es más directo, porque huele más a error de tipeo que a un
+  // caso real (especialmente en tipos como Retención judicial o Cuota
+  // sindical, que normalmente son una obligación única y continua).
+  const otroDelMes = descuentos.find(d => d.trabajador_rut === rut && d.periodo === mesInicio);
+  if(otroDelMes){
+    const t = trabajadores.find(x => x.rut === rut);
+    const nombre = t?.nombre || 'Este trabajador';
+    const mensaje = otroDelMes.tipo === tipo
+      ? `${nombre} ya tiene un descuento de tipo "${_labelDescuento(tipo)}" registrado en ${_fmtMes(mesInicio)} — ¿es un descuento distinto, o fue un error?`
+      : `${nombre} ya tiene un descuento este mes (${_labelDescuento(otroDelMes.tipo)}) — ¿confirmas agregar también este?`;
+    if(!confirm(mensaje + '\n\nAceptar = continuar de todas formas.\nCancelar = no guardar.')) return;
+  }
 
   _guardandoGL = true;
 
@@ -776,6 +796,14 @@ function eliminarDescuento(id){
   _renderKPIsGL();
 }
 
+function _labelDescuento(tipo){
+  const map = {
+    anticipo:'Anticipo', prestamo:'Préstamo', caja_compensacion:'Caja de Compensación',
+    cuota_sindical:'Cuota sindical', retencion_judicial:'Retención judicial', otro:'Otro',
+  };
+  return map[tipo]||tipo;
+}
+
 function _badgeDescuento(tipo){
   const map = {
     anticipo:          ['badge-rojo',     '💸 Anticipo'],
@@ -807,22 +835,43 @@ function renderJornada(){
   if(!tbody) return;
 
   if(!lista.length){
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--texto3);">Sin registros de horas extras en este período</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--texto3);">Sin registros de horas extras en este período</td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map(j => {
     const t      = trabajadores.find(x => x.rut === j.trabajador_rut);
     const recargo = j.tipo==='hora_extra' ? (j.recargo==='100'?'100%':'50%') : '—';
+    const monto   = _montoHoraExtra(j);
     return `<tr>
       <td style="font-size:13px;font-weight:500;">${t?.nombre||j.trabajador_rut}</td>
       <td>${_badgeJornada(j.tipo)}</td>
       <td style="font-size:12px;">${_fmtFecha(j.fecha)||'—'}</td>
       <td style="font-size:13px;font-weight:600;text-align:center;">${parseFloat(j.horas||0).toFixed(1)} h</td>
       <td style="font-size:12px;text-align:center;">${recargo}</td>
+      <td style="font-size:13px;font-weight:600;color:var(--verde-dark);">${monto!==null ? '$'+monto.toLocaleString('es-CL') : '—'}</td>
       <td style="font-size:12px;color:var(--texto2);">${j.observacion||'—'}</td>
       <td><button class="btn btn-danger btn-sm" onclick="eliminarJornada('${j.id}')"><i class="ti ti-trash"></i></button></td>
     </tr>`;
   }).join('');
+}
+
+/* ✅ NUEVO — Monto a pagar por un registro de hora extra, reutilizando la
+   misma fórmula que ya usa variables.js para la liquidación (sueldo base
+   ÷ 30 ÷ (horas semanales ÷ 5) × recargo). Solo aplica a tipo='hora_extra';
+   los otros 3 tipos (compensada, cambio turno, turno especial) no tienen
+   una fórmula de pago asociada. Si no hay contrato vigente para calcular,
+   retorna null (la tabla muestra "—" en ese caso). */
+function _montoHoraExtra(j){
+  if(j.tipo !== 'hora_extra') return null;
+  if(typeof _getContratoVigente !== 'function' || typeof _getSueldoBase !== 'function') return null;
+  const contrato   = _getContratoVigente(j.trabajador_rut, j.periodo);
+  const sueldoInfo = _getSueldoBase(j.trabajador_rut, j.periodo);
+  if(!contrato || !sueldoInfo || !sueldoInfo.monto) return null;
+  const divisor        = typeof DIVISOR_MES !== 'undefined' ? DIVISOR_MES : 30;
+  const horasSemanales = parseFloat(contrato.horas_semana) || 45;
+  const valorHoraOrd   = Math.round((sueldoInfo.monto / divisor) / (horasSemanales / 5));
+  const recargo        = j.recargo === '100' ? 2.0 : 1.5;
+  return Math.round(valorHoraOrd * recargo * (parseFloat(j.horas) || 0));
 }
 
 function toggleFormJornada(forzar){
@@ -855,6 +904,21 @@ function guardarJornada(){
 
   if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
   if(!rut||!tipo||!horas){ toast('⚠️ Completa trabajador, tipo y horas','error'); return; }
+
+  // ✅ NUEVO — Tope legal diario (Art. 31 Código del Trabajo): máximo 2
+  // horas extraordinarias por día. Solo aplica al tipo "hora_extra" — los
+  // otros 3 tipos no son horas extraordinarias legales, no tienen tope.
+  if(tipo === 'hora_extra'){
+    const yaHorasDia = jornada_especial
+      .filter(j => j.trabajador_rut === rut && j.tipo === 'hora_extra' && j.fecha === fecha)
+      .reduce((s,j) => s + (parseFloat(j.horas)||0), 0);
+    const totalDia = yaHorasDia + parseFloat(horas);
+    if(totalDia > 2){
+      const t = trabajadores.find(x => x.rut === rut);
+      toast(`⚠️ Tope legal superado (Art. 31 Código del Trabajo — máx. 2h extra por día). ${t?.nombre||'Este trabajador'} ya tiene ${yaHorasDia.toFixed(1)}h registradas el ${_fmtFecha(fecha)}`, 'error');
+      return;
+    }
+  }
 
   _guardandoGL = true;
 
