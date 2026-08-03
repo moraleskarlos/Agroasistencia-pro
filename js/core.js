@@ -123,31 +123,140 @@ function irA(idPagina, botonEl) {
   }
 }
 
+/* Fecha de hoy en formato 'YYYY-MM-DD', usada por las funciones de
+   Asistencia del Dashboard. */
+function _fechaHoyISO(){
+  const h = new Date();
+  return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;
+}
+
+/* Presentes hoy: cuenta trabajadores activos con marcación de entrada
+   registrada en el día de hoy. Mismo criterio ('hora_entrada' presente)
+   que ya usa variables.js (_leerAsistenciaMes) para no tener dos
+   definiciones distintas de "asistió". */
+function _presentesHoyDashboard(){
+  const fecha = _fechaHoyISO();
+  const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
+  const activos = trabajadores.filter(t => t.estado === 'activo');
+  const presentes = activos.filter(t => data.some(x => x.rut === t.rut && x.hora_entrada)).length;
+  return { presentes, total: activos.length };
+}
+
+/* Asistencia promedio del mes en curso: promedio del % de trabajadores
+   activos presentes, calculado día hábil por día hábil transcurrido.
+   Los días sin ningún dato de Asistencia guardado se omiten (no cuentan
+   como 0% ni afectan el promedio) — mismo criterio ya usado en
+   gestion-laboral.js (_leerAusenciasAsistencia) para no generar falsos
+   negativos en meses/días sin uso del módulo de Asistencia. */
+function _asistenciaMesPromedio(){
+  const hoy = new Date();
+  const anio = hoy.getFullYear(), mes = hoy.getMonth() + 1;
+  const activos = trabajadores.filter(t => t.estado === 'activo');
+  if(!activos.length) return null;
+
+  let sumaPct = 0, diasContados = 0;
+  for(let d = 1; d <= hoy.getDate(); d++){
+    const fecha = `${anio}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const diaSemana = new Date(fecha + 'T12:00:00').getDay();
+    if(diaSemana === 0 || diaSemana === 6) continue; // solo días hábiles
+    const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
+    if(!data.length) continue; // día sin ningún dato registrado: se omite
+    const presentes = activos.filter(t => data.some(x => x.rut === t.rut && x.hora_entrada)).length;
+    sumaPct += (presentes / activos.length) * 100;
+    diasContados++;
+  }
+  return diasContados ? Math.round(sumaPct / diasContados) : null;
+}
+
+/* Últimas marcaciones del día de hoy, más recientes primero. */
+function _ultimasMarcacionesHoy(limite){
+  const fecha = _fechaHoyISO();
+  const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
+  return data
+    .filter(x => x.hora_entrada)
+    .map(x => ({ ...x, t: trabajadores.find(tr => tr.rut === x.rut) }))
+    .sort((a, b) => (b.hora_entrada || '').localeCompare(a.hora_entrada || ''))
+    .slice(0, limite);
+}
+
+/* Asistencia de la semana actual (lunes a domingo): cantidad de
+   trabajadores activos presentes cada día. Los días futuros de la
+   semana en curso muestran 0 (todavía no hay marcación posible). */
+function _asistenciaSemanalDashboard(){
+  const hoy = new Date();
+  const diaSemana = hoy.getDay(); // 0 = domingo
+  const offsetLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() + offsetLunes);
+
+  const activos = trabajadores.filter(t => t.estado === 'activo');
+  const vals = [];
+  let idxHoy = 0;
+  for(let i = 0; i < 7; i++){
+    const d = new Date(lunes);
+    d.setDate(lunes.getDate() + i);
+    const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if(fecha === _fechaHoyISO()) idxHoy = i;
+    if(d > hoy){ vals.push(0); continue; }
+    const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
+    const presentes = activos.filter(t => data.some(x => x.rut === t.rut && x.hora_entrada)).length;
+    vals.push(presentes);
+  }
+  return { vals, idxHoy };
+}
+
 function renderDashboard(){
   const total=trabajadores.length, activos=trabajadores.filter(t=>t.estado==='activo').length;
   document.getElementById('kpi-total').textContent=total;
   document.getElementById('kpi-activos-sub').textContent=activos+' activos';
   document.getElementById('kpi-contratistas').textContent=empresas.length;
-  document.getElementById('kpi-presentes').textContent='—';
-  document.getElementById('kpi-presentes-sub').textContent='Conecta Supabase';
-  document.getElementById('kpi-asistencia').textContent='—%';
+
+  // ✅ Presentes hoy — conectado a Asistencia real (localStorage)
+  const { presentes, total: totalActivosHoy } = _presentesHoyDashboard();
+  document.getElementById('kpi-presentes').textContent = totalActivosHoy ? presentes : '—';
+  document.getElementById('kpi-presentes-sub').textContent = totalActivosHoy
+    ? `de ${totalActivosHoy} activos`
+    : 'sin trabajadores activos';
+
+  // ✅ Asistencia mes — conectado a Asistencia real (localStorage)
+  const pctMes = _asistenciaMesPromedio();
+  document.getElementById('kpi-asistencia').textContent = pctMes !== null ? pctMes + '%' : '—%';
+
   const colors=['#10b981','#2563EB','#D97706','#7C3AED','#DC2626'];
   const barEl=document.getElementById('barras-contratistas');
-  if(!empresas.length){barEl.innerHTML='<div style="font-size:13px;color:var(--texto3);text-align:center;padding:20px 0;">Agrega mandantes para ver el resumen</div>';return;}
-  barEl.innerHTML=empresas.map((e,i)=>{
-    const t=trabajadores.filter(w=>(w.mandante_id||w.empresa_rut||w.empresa)===( e.id||e.rut)).length;
-    const a=trabajadores.filter(w=>(w.mandante_id||w.empresa_rut||w.empresa)===( e.id||e.rut)&&w.estado==='activo').length;
-    const pct=t?Math.round(a/t*100):0;
-    return`<div class="barra-row"><div class="barra-header"><span>${e.nombre}</span><span>${a}/${t} activos</span></div><div class="barra-track"><div class="barra-fill" style="width:${pct}%;background:${colors[i%colors.length]}"></div></div></div>`;
-  }).join('');
-  const dias=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],vals=[0,0,0,0,0,0,0],max=Math.max(...vals,1);
-  document.getElementById('chart-semanal').innerHTML=dias.map((d,i)=>`<div class="chart-col"><div class="chart-val">${vals[i]||''}</div><div class="chart-bar" style="height:${Math.round(vals[i]/max*60)+4}px;background:${i===4?'#2563EB':'#D1FAE5'}"></div><div class="chart-lbl">${d}</div></div>`).join('');
+  if(!empresas.length){
+    barEl.innerHTML='<div style="font-size:13px;color:var(--texto3);text-align:center;padding:20px 0;">Agrega mandantes para ver el resumen</div>';
+  } else {
+    barEl.innerHTML=empresas.map((e,i)=>{
+      const t=trabajadores.filter(w=>(w.mandante_id||w.empresa_rut||w.empresa)===( e.id||e.rut)).length;
+      const a=trabajadores.filter(w=>(w.mandante_id||w.empresa_rut||w.empresa)===( e.id||e.rut)&&w.estado==='activo').length;
+      const pct=t?Math.round(a/t*100):0;
+      return`<div class="barra-row"><div class="barra-header"><span>${e.nombre}</span><span>${a}/${t} activos</span></div><div class="barra-track"><div class="barra-fill" style="width:${pct}%;background:${colors[i%colors.length]}"></div></div></div>`;
+    }).join('');
+  }
+  // ✅ Asistencia semanal — conectado a Asistencia real; se resalta la
+  // columna del día de HOY (antes resaltaba siempre "Viernes" a la fuerza,
+  // sin relación con la fecha real).
+  const dias=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  const { vals, idxHoy } = _asistenciaSemanalDashboard();
+  const max=Math.max(...vals,1);
+  document.getElementById('chart-semanal').innerHTML=dias.map((d,i)=>`<div class="chart-col"><div class="chart-val">${vals[i]||''}</div><div class="chart-bar" style="height:${Math.round(vals[i]/max*60)+4}px;background:${i===idxHoy?'#2563EB':'#D1FAE5'}"></div><div class="chart-lbl">${d}</div></div>`).join('');
+
   document.getElementById('badge-trabajadores').textContent=total;
   document.getElementById('badge-contratistas').textContent=empresas_propias.length+empresas.length;
   const bMan=document.getElementById('badge-mandantes-tab'); if(bMan) bMan.textContent=empresas.length;
   const bMis=document.getElementById('badge-mis-empresas'); if(bMis) bMis.textContent=empresas_propias.length;
   poblarSelectsEmpresaPropia();
-  document.getElementById('ultimas-marcaciones').innerHTML='<div style="font-size:13px;color:var(--texto3);text-align:center;padding:20px 0;">Usa el módulo de Asistencia para registrar marcaciones</div>';
+
+  // ✅ Últimas marcaciones — conectado a Asistencia real
+  const ultimas = _ultimasMarcacionesHoy(5);
+  document.getElementById('ultimas-marcaciones').innerHTML = ultimas.length
+    ? ultimas.map(m => `<div class="barra-row" style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:500;">${m.t?.nombre || m.rut}</span>
+        <span style="font-size:12px;color:var(--texto2);">${m.hora_entrada}</span>
+      </div>`).join('')
+    : '<div style="font-size:13px;color:var(--texto3);text-align:center;padding:20px 0;">Sin marcaciones registradas hoy</div>';
+
   // Verificar alerta de indicadores
   if(typeof verificarAlertaIndicadores === 'function') verificarAlertaIndicadores();
 }
