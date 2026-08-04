@@ -83,38 +83,6 @@ function renderContratistas(){
   if(empNomEl) empNomEl.textContent = cfg.empresa?.razon_social || '— Sin configurar —';
   if(empRutEl) empRutEl.textContent = cfg.empresa?.rut ? 'RUT: ' + cfg.empresa.rut : 'Ve a Configuración para ingresar los datos de tu empresa';
 
-  // KPIs globales
-  const totalEmp   = empresas.length;
-  const totalTrab  = trabajadores.length;
-  const totalAct   = trabajadores.filter(t=>t.estado==='activo').length;
-  const totalInact = totalTrab-totalAct;
-  const porVencer  = empresas.filter(e=>{
-    if(!e.vigencia_contrato)return false;
-    const d=(new Date(e.vigencia_contrato)-new Date())/(1000*60*60*24);
-    return d>=0&&d<=30;
-  }).length;
-  const vencidos   = empresas.filter(e=>{
-    if(!e.vigencia_contrato)return false;
-    return(new Date(e.vigencia_contrato)-new Date())<0;
-  }).length;
-
-  // Zona KPIs
-  const kz=document.getElementById('kpi-contratistas-zone');
-  if(kz) kz.innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px;">
-      <div class="kpi azul"><div class="kpi-label">Empresas Mandante</div><div class="kpi-value">${totalEmp}</div><div class="kpi-sub">empresas registradas</div></div>
-      <div class="kpi"><div class="kpi-label">Trabajadores Totales</div><div class="kpi-value">${totalTrab}</div><div class="kpi-sub">en todas las empresas</div></div>
-      <div class="kpi verde"><div class="kpi-label">Trabajadores Activos</div><div class="kpi-value">${totalAct}</div><div class="kpi-sub">trabajando</div></div>
-      <div class="kpi rojo"><div class="kpi-label">Trabajadores Inactivos</div><div class="kpi-value">${totalInact}</div><div class="kpi-sub">dados de baja</div></div>
-      <div class="kpi" style="border-color:${vencidos>0?'#dc2626':porVencer>0?'#d97706':'var(--borde)'};">
-        <div class="kpi-label">Contratos</div>
-        <div class="kpi-value" style="color:${vencidos>0?'#dc2626':porVencer>0?'#d97706':'var(--verde-dark)'};">
-          ${vencidos>0?vencidos+' vencido'+(vencidos>1?'s':''):porVencer>0?porVencer+' por vencer':'✅ Al día'}
-        </div>
-        <div class="kpi-sub">${vencidos>0?'requieren atención urgente':porVencer>0?'vencen en ≤30 días':'todos vigentes'}</div>
-      </div>
-    </div>`;
-
   if(!empresas.length){
     el.innerHTML='<div style="font-size:13px;color:var(--texto3);text-align:center;padding:32px;">Sin mandantes registrados — haz clic en "Nuevo Mandante"</div>';
     return;
@@ -124,10 +92,11 @@ function renderContratistas(){
 
   el.innerHTML=`
     <div style="background:var(--gris-bg);display:flex;padding:10px 16px;font-size:11px;font-weight:600;color:var(--texto3);border-bottom:2px solid var(--borde);text-transform:uppercase;letter-spacing:0.4px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
-      <div style="flex:1.6;">Empresa</div>
+      <div style="flex:1.5;">Empresa</div>
       <div style="flex:0.7;">RUT</div>
-      <div style="flex:1.1;">Faena</div>
-      <div style="flex:0.8;">Vigencia</div>
+      <div style="flex:1;">Faena</div>
+      <div style="flex:0.6;">Inicio</div>
+      <div style="flex:0.7;">Término</div>
       <div style="flex:0.4;text-align:center;">Total</div>
       <div style="flex:0.4;text-align:center;">Activos</div>
       <div style="flex:0.5;text-align:center;">Inactivos</div>
@@ -148,7 +117,7 @@ function renderContratistas(){
         ? '<span style="color:var(--texto3);font-size:12px;">— sin faena —</span>'
         : faenas.length===1
           ? `<span style="font-size:12px;">${faenas[0].nombre||faenas[0]}</span>`
-          : `<span onclick="event.stopPropagation();_toggleFaenasFila('${empId}')" style="cursor:pointer;font-size:12px;font-weight:600;color:var(--azul);">
+          : `<span onclick="_toggleFaenasFila('${empId}')" style="cursor:pointer;font-size:12px;font-weight:600;color:var(--azul);">
                <i class="ti ti-plant"></i> ${faenas.length} faenas <i class="ti ti-chevron-down" id="chev-faenas-${empId}"></i>
              </span>`;
       const subfilaFaenas = faenas.length>1 ? `
@@ -158,10 +127,12 @@ function renderContratistas(){
             <i class="ti ti-plant" style="font-size:11px;color:var(--verde-dark);"></i> ${f.nombre||f}
           </span>`).join('')}
         </div>` : '';
-      return`<div style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--borde);cursor:pointer;transition:.15s;"
-        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''"
-        onclick="verTrabajadoresEmpresa('${e.id||e.rut}')">
-        <div style="flex:1.6;display:flex;align-items:center;gap:10px;">
+      // ✅ Se eliminó el onclick de toda la fila (llevaba accidentalmente
+      // a "Trabajadores" con cualquier clic) — la acción "Ver trabajadores"
+      // ahora vive solo en su botón explícito, en la columna Acciones.
+      return`<div style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--borde);transition:.15s;"
+        onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+        <div style="flex:1.5;display:flex;align-items:center;gap:10px;">
           <div style="width:38px;height:38px;border-radius:9px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${ini}</div>
           <div>
             <div style="font-weight:600;font-size:13px;">${e.nombre}${venc.badge}</div>
@@ -169,11 +140,15 @@ function renderContratistas(){
           </div>
         </div>
         <div style="flex:0.7;font-family:monospace;font-size:11px;color:var(--texto2);">${e.rut}</div>
-        <div style="flex:1.1;min-width:0;">${faenaColHTML}</div>
-        <div style="flex:0.8;min-width:0;">
-          ${e.fecha_inicio_contrato ? `<div style="font-size:10.5px;color:var(--texto3);white-space:nowrap;">Desde ${new Date(e.fecha_inicio_contrato).toLocaleDateString('es-CL')}</div>` : ''}
+        <div style="flex:1;min-width:0;">${faenaColHTML}</div>
+        <div style="flex:0.6;min-width:0;">
+          ${e.fecha_inicio_contrato
+            ? `<div style="font-size:12px;font-weight:600;color:#2563EB;white-space:nowrap;">${new Date(e.fecha_inicio_contrato).toLocaleDateString('es-CL')}</div>`
+            : '<span style="color:var(--texto3);font-size:12px;">—</span>'}
+        </div>
+        <div style="flex:0.7;min-width:0;">
           <div style="font-size:12px;font-weight:600;color:${venc.color};white-space:nowrap;">${venc.texto}</div>
-          <div style="margin-top:4px;height:4px;background:var(--gris-bg);border-radius:2px;overflow:hidden;max-width:110px;">
+          <div style="margin-top:4px;height:4px;background:var(--gris-bg);border-radius:2px;overflow:hidden;max-width:90px;">
             <div style="height:100%;width:${pct}%;background:${fg};border-radius:2px;"></div>
           </div>
         </div>
@@ -184,7 +159,7 @@ function renderContratistas(){
         <div style="flex:0.5;text-align:center;">
           <span style="background:${inact>0?'#FEE2E2':'#F1F5F9'};color:${inact>0?'#dc2626':'#94A3B8'};font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;">${inact}</span>
         </div>
-        <div style="flex:1.8;display:flex;gap:5px;justify-content:flex-end;" onclick="event.stopPropagation()">
+        <div style="flex:1.8;display:flex;gap:5px;justify-content:flex-end;">
           <button class="btn btn-secondary btn-sm" onclick="verTrabajadoresEmpresa('${e.id||e.rut}')" title="Ver trabajadores">
   <i class="ti ti-eye"></i> Trabajadores
 </button>
@@ -224,6 +199,9 @@ function abrirModalEmpresa(idOrRut=null){
   m.style.display='flex';
   document.getElementById('modal-empresa-titulo').textContent=idOrRut?'Editar mandante':'Nuevo mandante';
   document.getElementById('e-rut-original').value=idOrRut||'';
+  const msgDupE = document.getElementById('e-rut-msg-dup');
+  if(msgDupE) msgDupE.textContent = '';
+  document.getElementById('e-rut').style.borderColor = '';
   const campos=['e-rut','e-nombre','e-rut-rep','e-nombre-rep','e-correo','e-telefono','e-fecha-inicio','e-vigencia','e-direccion','e-comuna','e-region'];
   if(!idOrRut){
     campos.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -313,6 +291,10 @@ async function guardarEmpresa(){
   };
 
   if(!datos.rut||!datos.nombre){toast('⚠️ RUT y nombre son obligatorios','error');return;}
+  if(datos.correo && !_formatoCorreoValido(datos.correo)){
+    toast('⚠️ El correo ingresado no tiene un formato válido','error');
+    return;
+  }
   // Advertencia si RUT parece inválido, pero no bloquea (algunos RUTs de empresa son especiales)
   if(!validarRUT(datos.rut)){
     const continuar = confirm(`El dígito verificador del RUT "${datos.rut}" no coincide.\n¿Deseas guardarlo de todas formas?`);
@@ -335,7 +317,7 @@ async function guardarEmpresa(){
   if(!supabaseClient){
     const idx=empresas.findIndex(e=>e.id===datos.id || e.rut===datos.rut);
     if(idx>=0)empresas[idx]={...empresas[idx],...datos}; else empresas.push(datos);
-    guardarLocal(); cerrarModalEmpresa(); renderContratistas(); poblarSelects();
+    guardarLocal(); cerrarModalEmpresa(); renderContratistas(); renderKpisMandantes(); poblarSelects();
     toast(`✅ ${datos.nombre} guardada localmente`,'exito'); return;
   }
   try{
@@ -358,6 +340,7 @@ function toggleEstadoMandante(idOrRut){
   e.estado = nuevoEstado;
   guardarLocal();
   renderContratistas();
+  renderKpisMandantes();
   toast(`✅ ${e.nombre} ${nuevoEstado === 'inactivo' ? 'dada de baja' : 'reactivada'}`, 'exito');
 }
 
@@ -370,6 +353,7 @@ function eliminarMandante(idOrRut){
   empresas = empresas.filter(x => x.id !== e.id && x.rut !== e.rut);
   guardarLocal();
   renderContratistas();
+  renderKpisMandantes();
   poblarSelects();
   toast(`🗑️ ${e.nombre} eliminada`, 'exito');
 }
@@ -394,7 +378,7 @@ function _kpiActivoInactivo(label, activas, inactivas, sub){
     <div class="kpi-value">
       <span style="color:var(--verde-dark);">${activas}</span><span style="color:var(--texto3);font-weight:400;"> / </span><span style="color:${inactivas>0?'#dc2626':'var(--texto3)'};">${inactivas}</span>
     </div>
-    <div class="kpi-sub">${sub} (activas / inactivas)</div>
+    <div class="kpi-sub">${sub ? sub + ' ' : ''}(activas / inactivas)</div>
   </div>`;
 }
 
@@ -403,18 +387,16 @@ function renderKpisMisEmpresas(){
   if(!zona) return;
   const activas   = empresas_propias.filter(e => e.estado !== 'inactivo').length;
   const inactivas = empresas_propias.filter(e => e.estado === 'inactivo').length;
-  const trabEP    = trabajadores.filter(t => t.empresa_propia_id);
-  const contr     = contratos.filter(c =>
-    trabEP.some(t => t.id === c.trabajador_id || t.rut === c.trabajador_rut)
-  ).length;
 
-  zona.style.display = 'grid';
-  zona.style.gridTemplateColumns = 'repeat(3,1fr)';
+  // ✅ Tarjetas "Trabajadores" y "Contratos" eliminadas — esa información
+  // ya está visible por fila en la lista de abajo (columnas Total/Activos/
+  // Inactivos). Se deja solo el resumen de Mis Empresas.
+  // ✅ Grilla de ancho a contenido (igual criterio que .kpi-grid del resto
+  // del sistema) en vez de columnas fijas iguales.
+  zona.style.display = 'flex';
+  zona.style.flexWrap = 'wrap';
   zona.style.gap = '14px';
-  zona.innerHTML =
-    _kpiActivoInactivo('Mis Empresas', activas, inactivas, 'empresas propias') +
-    _kpiCard('Trabajadores',  trabEP.length, 'en mis empresas',   'var(--texto)') +
-    _kpiCard('Contratos',     contr,         'registrados',       'var(--verde-dark)');
+  zona.innerHTML = _kpiActivoInactivo('Mis Empresas', activas, inactivas, 'empresas propias');
 }
 
 function renderKpisMandantes(){
@@ -422,15 +404,35 @@ function renderKpisMandantes(){
   if(!zona) return;
   const activos    = empresas.filter(e => e.estado !== 'inactivo').length;
   const inactivos  = empresas.filter(e => e.estado === 'inactivo').length;
-  const totalFaenas= empresas.reduce((acc, e) => acc + (e.faenas?.length || 0), 0);
 
-  zona.style.display = 'grid';
-  zona.style.gridTemplateColumns = 'repeat(3,1fr)';
+  // ✅ "Faenas Registradas" reemplazado por resumen de vigencias (dato que
+  // NO se ve de un vistazo en la lista, a diferencia de faenas/trabajadores
+  // que sí están visibles por fila). "Trabajadores" eliminado por la misma
+  // razón que en Mis Empresas — ya está en la lista.
+  const porVencer = empresas.filter(e => {
+    if(!e.vigencia_contrato) return false;
+    const d = (new Date(e.vigencia_contrato) - new Date()) / (1000*60*60*24);
+    return d >= 0 && d <= 30;
+  }).length;
+  const vencidos = empresas.filter(e => {
+    if(!e.vigencia_contrato) return false;
+    return (new Date(e.vigencia_contrato) - new Date()) < 0;
+  }).length;
+  const vigTexto = vencidos > 0
+    ? `${vencidos} vencido${vencidos>1?'s':''}`
+    : porVencer > 0 ? `${porVencer} por vencer` : '✅ Al día';
+  const vigColor = vencidos > 0 ? '#dc2626' : porVencer > 0 ? '#d97706' : 'var(--verde-dark)';
+
+  zona.style.display = 'flex';
+  zona.style.flexWrap = 'wrap';
   zona.style.gap = '14px';
   zona.innerHTML =
-    _kpiActivoInactivo('Mandantes', activos, inactivos, 'empresas mandante') +
-    _kpiCard('Faenas Registradas', totalFaenas, 'entre todos los mandantes', 'var(--azul)') +
-    _kpiCard('Trabajadores',       trabajadores.filter(t => t.mandante_id || t.empresa_rut || t.empresa).length, 'asignados a faenas', 'var(--texto)');
+    _kpiActivoInactivo('Empresas Mandantes', activos, inactivos, '') +
+    `<div class="kpi" style="border-color:${vencidos>0?'#dc2626':porVencer>0?'#d97706':'var(--borde)'};">
+      <div class="kpi-label">Vigencia de contratos</div>
+      <div class="kpi-value" style="color:${vigColor};font-size:20px;">${vigTexto}</div>
+      <div class="kpi-sub">${vencidos>0?'requieren atención urgente':porVencer>0?'vencen en ≤30 días':'todos vigentes'}</div>
+    </div>`;
 }
 
 function switchTabEmpresas(tab){
@@ -443,16 +445,16 @@ function switchTabEmpresas(tab){
   const kpiMan  = document.getElementById('kpi-mandantes-zone');
 
   if(tab === 'mis-empresas'){
-    tabMis.style.borderBottomColor = 'var(--azul)';   tabMis.style.color = 'var(--azul)';
-    tabMan.style.borderBottomColor = 'transparent';    tabMan.style.color = 'var(--texto2)';
+    tabMis.style.borderBottomColor = 'var(--azul)';   tabMis.style.color = 'var(--azul)';   tabMis.style.background = 'var(--gris-bg)';
+    tabMan.style.borderBottomColor = 'transparent';    tabMan.style.color = 'var(--texto2)'; tabMan.style.background = 'none';
     subMis.style.display = '';    subMan.style.display = 'none';
     if(kpiMis) kpiMis.style.display = '';
     if(kpiMan) kpiMan.style.display = 'none';
     renderKpisMisEmpresas();
     renderMisEmpresas();
   } else {
-    tabMan.style.borderBottomColor = 'var(--azul)';   tabMan.style.color = 'var(--azul)';
-    tabMis.style.borderBottomColor = 'transparent';    tabMis.style.color = 'var(--texto2)';
+    tabMan.style.borderBottomColor = 'var(--azul)';   tabMan.style.color = 'var(--azul)';   tabMan.style.background = 'var(--gris-bg)';
+    tabMis.style.borderBottomColor = 'transparent';    tabMis.style.color = 'var(--texto2)'; tabMis.style.background = 'none';
     subMan.style.display = '';    subMis.style.display = 'none';
     if(kpiMan) kpiMan.style.display = '';
     if(kpiMis) kpiMis.style.display = 'none';
@@ -572,10 +574,48 @@ function abrirModalEmpresaPropia(id){
   document.getElementById('ep-direccion').value    = ep.direccion||'';
   document.getElementById('ep-comuna').value       = ep.comuna||'';
   document.getElementById('ep-region').value       = ep.region||'';
+  const msgDup = document.getElementById('ep-rut-msg-dup');
+  if(msgDup) msgDup.textContent = '';
+  document.getElementById('ep-rut').style.borderColor = '';
 }
 
 function cerrarModalEmpresaPropia(){
   document.getElementById('modal-empresa-propia').style.display = 'none';
+}
+
+/* ✅ Validación de RUT duplicado EN VIVO (al salir del campo), en vez de
+   esperar a que se presione Guardar — resuelve además el problema de que
+   el aviso por toast quedaba abajo a la derecha y era fácil de no ver:
+   ahora el mensaje queda fijo, en rojo, justo debajo del campo. */
+function _validarRutDuplicadoEnVivo(input){
+  let msgEl = document.getElementById(input.id + '-msg-dup');
+  if(!msgEl){
+    msgEl = document.createElement('div');
+    msgEl.id = input.id + '-msg-dup';
+    msgEl.style.cssText = 'font-size:11px;color:var(--danger);margin-top:4px;';
+    input.insertAdjacentElement('afterend', msgEl);
+  }
+  const rut = input.value.trim();
+  if(!rut){ msgEl.textContent = ''; input.style.borderColor = ''; return; }
+
+  const idExcluirEl = input.id === 'ep-rut'
+    ? document.getElementById('ep-id-original')
+    : document.getElementById('e-rut-original');
+  const idExcluir = idExcluirEl?.value || '';
+
+  const dup = _rutYaExiste(rut, idExcluir);
+  if(dup){
+    msgEl.textContent = `⚠️ Este RUT ya está registrado en "${dup.registro.nombre}" (${dup.tipo})`;
+    input.style.borderColor = 'var(--danger)';
+  } else {
+    msgEl.textContent = '';
+    input.style.borderColor = '';
+  }
+}
+
+function _formatoCorreoValido(correo){
+  if(!correo) return true; // vacío se valida aparte según si el campo es obligatorio
+  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(correo);
 }
 
 function guardarEmpresaPropia(){
@@ -605,20 +645,41 @@ function guardarEmpresaPropia(){
     return;
   }
 
+  // ✅ Campos obligatorios ampliados — quedan opcionales solo Cargo,
+  // Correo y Teléfono (decisión del usuario). RUT y Razón Social ya se
+  // validaban arriba.
+  const nombreRep = document.getElementById('ep-nombre-rep').value.trim();
+  const correo    = document.getElementById('ep-correo').value.trim();
+  const ciudad    = document.getElementById('ep-ciudad').value.trim();
+  const direccion = document.getElementById('ep-direccion').value.trim();
+  const comuna    = document.getElementById('ep-comuna').value.trim();
+  const region    = document.getElementById('ep-region').value;
+
+  if(!rutRep)     { toast('⚠️ Ingresa el RUT del representante','error'); return; }
+  if(!nombreRep)  { toast('⚠️ Ingresa el nombre del representante','error'); return; }
+  if(!ciudad)     { toast('⚠️ Ingresa la ciudad','error'); return; }
+  if(!direccion)  { toast('⚠️ Ingresa la dirección','error'); return; }
+  if(!comuna)     { toast('⚠️ Ingresa la comuna','error'); return; }
+  if(!region)     { toast('⚠️ Selecciona la región','error'); return; }
+  if(correo && !_formatoCorreoValido(correo)){
+    toast('⚠️ El correo ingresado no tiene un formato válido','error');
+    return;
+  }
+
   const epExistente = empresas_propias.find(e => e.id === idOrig || e.rut === rut);
   const datos = {
     id:                  idOrig || 'ep_' + Date.now(),
     rut,
     nombre,
     rut_representante:   rutRep,
-    nombre_representante:document.getElementById('ep-nombre-rep').value.trim(),
+    nombre_representante:nombreRep,
     cargo_representante: document.getElementById('ep-cargo-rep').value.trim(),
-    correo:              document.getElementById('ep-correo').value.trim(),
+    correo,
     telefono:            document.getElementById('ep-telefono').value.trim(),
-    ciudad:              document.getElementById('ep-ciudad').value.trim(),
-    direccion:           document.getElementById('ep-direccion').value.trim(),
-    comuna:              document.getElementById('ep-comuna').value.trim(),
-    region:              document.getElementById('ep-region').value,
+    ciudad,
+    direccion,
+    comuna,
+    region,
     estado:              epExistente?.estado || 'activo',
   };
 
@@ -629,6 +690,7 @@ function guardarEmpresaPropia(){
   guardarLocal();
   cerrarModalEmpresaPropia();
   renderMisEmpresas();
+  renderKpisMisEmpresas();
   poblarSelectsEmpresaPropia();
   toast(`✅ ${datos.nombre} guardada`, 'exito');
 }
@@ -642,6 +704,7 @@ function toggleEstadoEmpresaPropia(id){
   ep.estado = nuevoEstado;
   guardarLocal();
   renderMisEmpresas();
+  renderKpisMisEmpresas();
   toast(`✅ ${ep.nombre} ${nuevoEstado === 'inactivo' ? 'dada de baja' : 'reactivada'}`, 'exito');
 }
 
@@ -654,6 +717,7 @@ function eliminarEmpresaPropia(id){
   empresas_propias = empresas_propias.filter(e => e.id !== id);
   guardarLocal();
   renderMisEmpresas();
+  renderKpisMisEmpresas();
   toast('🗑️ Empresa eliminada', 'exito');
 }
 
