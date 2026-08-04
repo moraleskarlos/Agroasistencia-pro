@@ -104,14 +104,14 @@
         </div>
 
         <div class="kpi-grid">
-          <div class="kpi verde"><div class="kpi-label">Presentes hoy</div><div class="kpi-value" id="kpi-presentes">—</div><div class="kpi-sub" id="kpi-presentes-sub">sin datos</div></div>
+          <div class="kpi verde"><div class="kpi-label">Trabajadores presentes hoy</div><div class="kpi-value" id="kpi-presentes">—</div><div class="kpi-sub" id="kpi-presentes-sub">sin datos</div></div>
           <div class="kpi azul"><div class="kpi-label">Total trabajadores</div><div class="kpi-value" id="kpi-total">0</div><div class="kpi-sub" id="kpi-activos-sub">0 activos</div></div>
-          <div class="kpi"><div class="kpi-label">Mandantes</div><div class="kpi-value" id="kpi-contratistas">0</div><div class="kpi-sub">activos en faena</div></div>
+          <div class="kpi"><div class="kpi-label">Empresas Mandantes</div><div class="kpi-value" id="kpi-contratistas">0</div><div class="kpi-sub">activos en faena</div></div>
           <div class="kpi amarillo"><div class="kpi-label">Asistencia mes</div><div class="kpi-value" id="kpi-asistencia">—%</div><div class="kpi-sub">promedio general</div></div>
         </div>
         <div class="g2" style="margin-bottom:16px;">
           <div class="card">
-            <div class="card-title"><i class="ti ti-building-factory"></i> Asistencia por mandante</div>
+            <div class="card-title"><i class="ti ti-building-factory"></i> Asistencia por Empresa Mandante</div>
             <div id="barras-contratistas"><div style="font-size:13px;color:var(--texto3);text-align:center;padding:20px 0;">Agrega mandantes para ver el resumen</div></div>
           </div>
           <div class="card">
@@ -990,16 +990,16 @@
   <!-- TABS -->
   <div style="display:flex;gap:0;border-bottom:2px solid var(--borde);margin-bottom:16px;">
     <button id="tab-mis-empresas" onclick="switchTabEmpresas('mis-empresas')"
-      style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-      cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);">
+      style="padding:10px 20px;border:none;background:var(--gris-bg);font-size:13px;font-weight:600;
+      cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);border-radius:8px 8px 0 0;">
       <i class="ti ti-building-skyscraper"></i> Mis Empresas
       <span id="badge-mis-empresas" style="background:var(--azul);color:#fff;border-radius:99px;
         padding:1px 7px;font-size:11px;margin-left:6px;">0</span>
     </button>
     <button id="tab-mandantes" onclick="switchTabEmpresas('mandantes')"
       style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-      cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
-      <i class="ti ti-building-factory"></i> Mandantes
+      cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);border-radius:8px 8px 0 0;">
+      <i class="ti ti-building-factory"></i> Empresas Mandantes
       <span id="badge-mandantes-tab" style="background:var(--gris-bg);color:var(--texto2);border-radius:99px;
         padding:1px 7px;font-size:11px;margin-left:6px;">0</span>
     </button>
@@ -2312,7 +2312,7 @@
           <option value="">— Seleccionar —</option>
           <option>I Región de Tarapacá</option><option>II Región de Antofagasta</option>
           <option>III Región de Atacama</option><option>IV Región de Coquimbo</option>
-          <option>V Región de Valparaíso</option><option>VI Región del Libertador</option>
+          <option>V Región de Valparaíso</option><option>VI Región del Libertador General Bernardo O'Higgins</option>
           <option>VII Región del Maule</option><option>VIII Región del Biobío</option>
           <option>IX Región de La Araucanía</option><option>X Región de Los Lagos</option>
           <option>XI Región de Aysén</option><option>XII Región de Magallanes</option>
@@ -2337,23 +2337,23 @@
     </div>
     <input type="hidden" id="ep-id-original">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <div class="form-group"><label>RUT Empresa *</label><input type="text" id="ep-rut" placeholder="76.123.456-7" maxlength="12" oninput="formatearRutInput(this)"></div>
+      <div class="form-group"><label>RUT Empresa *</label><input type="text" id="ep-rut" placeholder="76.123.456-7" maxlength="12" oninput="formatearRutInput(this)" onblur="_validarRutDuplicadoEnVivo(this)"></div>
       <div class="form-group"><label>Razón Social *</label><input type="text" id="ep-nombre" placeholder="Servicios Agrícolas Ltda."></div>
-      <div class="form-group"><label>RUT Representante</label><input type="text" id="ep-rut-rep" placeholder="12.345.678-9" maxlength="12" oninput="formatearRutInput(this)"></div>
-      <div class="form-group"><label>Nombre Representante</label><input type="text" id="ep-nombre-rep" placeholder="Juan Pérez"></div>
+      <div class="form-group"><label>RUT Representante *</label><input type="text" id="ep-rut-rep" placeholder="12.345.678-9" maxlength="12" oninput="formatearRutInput(this)"></div>
+      <div class="form-group"><label>Nombre Representante *</label><input type="text" id="ep-nombre-rep" placeholder="Juan Pérez"></div>
       <div class="form-group"><label>Cargo Representante</label><input type="text" id="ep-cargo-rep" placeholder="Gerente General"></div>
       <div class="form-group"><label>Correo</label><input type="email" id="ep-correo" placeholder="contacto@empresa.cl"></div>
       <div class="form-group"><label>Teléfono</label><input type="text" id="ep-telefono" placeholder="+56 9 1234 5678"></div>
-      <div class="form-group"><label>Ciudad</label><input type="text" id="ep-ciudad" placeholder="Curicó"></div>
+      <div class="form-group"><label>Ciudad *</label><input type="text" id="ep-ciudad" placeholder="Curicó"></div>
     </div>
-    <div class="form-group" style="margin-bottom:10px;"><label>Dirección</label><input type="text" id="ep-direccion" placeholder="Av. Principal 123, Curicó"></div>
+    <div class="form-group" style="margin-bottom:10px;"><label>Dirección *</label><input type="text" id="ep-direccion" placeholder="Av. Principal 123, Curicó"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-      <div class="form-group"><label>Comuna</label><input type="text" id="ep-comuna" placeholder="Curicó"></div>
-      <div class="form-group"><label>Región</label><select id="ep-region">
+      <div class="form-group"><label>Comuna *</label><input type="text" id="ep-comuna" placeholder="Curicó"></div>
+      <div class="form-group"><label>Región *</label><select id="ep-region">
         <option value="">— Seleccionar —</option>
         <option>I Región de Tarapacá</option><option>II Región de Antofagasta</option>
         <option>III Región de Atacama</option><option>IV Región de Coquimbo</option>
-        <option>V Región de Valparaíso</option><option>VI Región del Libertador</option>
+        <option>V Región de Valparaíso</option><option>VI Región del Libertador General Bernardo O'Higgins</option>
         <option>VII Región del Maule</option><option>VIII Región del Biobío</option>
         <option>IX Región de La Araucanía</option><option>X Región de Los Lagos</option>
         <option>XI Región de Aysén</option><option>XII Región de Magallanes</option>
@@ -2480,7 +2480,7 @@
       <button class="btn btn-secondary btn-sm" onclick="cerrarModalEmpresa()"><i class="ti ti-x"></i></button>
     </div>
     <div class="form-grid">
-      <div class="form-group"><label>RUT empresa *</label><input type="text" id="e-rut" placeholder="76.123.456-7" oninput="formatearRUT(this)"></div>
+      <div class="form-group"><label>RUT empresa *</label><input type="text" id="e-rut" placeholder="76.123.456-7" oninput="formatearRUT(this)" onblur="_validarRutDuplicadoEnVivo(this)"></div>
       <div class="form-group"><label>Nombre empresa *</label><input type="text" id="e-nombre" placeholder="Constructora Ejemplo Ltda."></div>
       <div class="form-group"><label>RUT representante</label><input type="text" id="e-rut-rep" placeholder="12.345.678-9" oninput="formatearRUT(this)"></div>
       <div class="form-group"><label>Nombre representante</label><input type="text" id="e-nombre-rep" placeholder="Juan Pérez"></div>
@@ -2494,7 +2494,7 @@
         <option value="">— Seleccionar —</option>
         <option>I Región de Tarapacá</option><option>II Región de Antofagasta</option>
         <option>III Región de Atacama</option><option>IV Región de Coquimbo</option>
-        <option>V Región de Valparaíso</option><option>VI Región del Libertador</option>
+        <option>V Región de Valparaíso</option><option>VI Región del Libertador General Bernardo O'Higgins</option>
         <option>VII Región del Maule</option><option>VIII Región del Biobío</option>
         <option>IX Región de La Araucanía</option><option>X Región de Los Lagos</option>
         <option>XI Región de Aysén</option><option>XII Región de Magallanes</option>
