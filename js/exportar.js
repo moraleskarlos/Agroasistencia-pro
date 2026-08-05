@@ -108,6 +108,7 @@ function descargarPlantilla(){
     'Nombre':            'Juan Pérez González',
     'Nacionalidad':      'Chileno',
     'Fecha Nacimiento':  '1990-05-15',
+    'Sexo':              'Hombre',
     'Estado Civil':      'Soltero',
     'Domicilio':         'Av. Principal 123, Curicó',
     'Correo':            'juan.perez@gmail.com',
@@ -120,7 +121,7 @@ function descargarPlantilla(){
   }];
   const ws1 = XLSX.utils.json_to_sheet(ejemplo);
   ws1['!cols'] = [
-    {wch:14},{wch:24},{wch:12},{wch:16},{wch:12},
+    {wch:14},{wch:24},{wch:12},{wch:16},{wch:10},{wch:12},
     {wch:28},{wch:26},{wch:10},{wch:10},{wch:14},
     {wch:22},{wch:16},{wch:18}
   ];
@@ -132,6 +133,7 @@ function descargarPlantilla(){
     { Campo:'Nombre',           'Formato / Valores aceptados':'Nombre completo',                                                                                       Obligatorio:'Sí',  Ejemplo:'Juan Pérez González' },
     { Campo:'Nacionalidad',     'Formato / Valores aceptados':'Chileno · Colombiano · Peruano · Boliviano · Venezolano · Ecuatoriano · Haitiano · Argentino · Otro',   Obligatorio:'Sí',  Ejemplo:'Chileno' },
     { Campo:'Fecha Nacimiento', 'Formato / Valores aceptados':'AAAA-MM-DD',                                                                                            Obligatorio:'Sí',  Ejemplo:'1990-05-15' },
+    { Campo:'Sexo',             'Formato / Valores aceptados':'Hombre · Mujer',                                                                                        Obligatorio:'Sí',  Ejemplo:'Hombre' },
     { Campo:'Estado Civil',     'Formato / Valores aceptados':'Soltero · Casado · Divorciado · Viudo · Conviviente',                                                   Obligatorio:'Sí',  Ejemplo:'Soltero' },
     { Campo:'Domicilio',        'Formato / Valores aceptados':'Texto libre (calle, número, ciudad)',                                                                    Obligatorio:'Sí',  Ejemplo:'Av. Principal 123, Curicó' },
     { Campo:'Correo',           'Formato / Valores aceptados':'correo@dominio.com',                                                                                    Obligatorio:'No',  Ejemplo:'juan@gmail.com' },
