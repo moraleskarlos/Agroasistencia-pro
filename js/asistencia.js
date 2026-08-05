@@ -12,8 +12,10 @@ function switchTabAsistencia(tab){
   const esDia = tab === 'dia';
   document.getElementById('tab-asist-dia').style.borderBottomColor = esDia ? 'var(--azul)' : 'transparent';
   document.getElementById('tab-asist-dia').style.color = esDia ? 'var(--azul)' : 'var(--texto2)';
+  document.getElementById('tab-asist-dia').style.background = esDia ? 'var(--gris-bg)' : 'none';
   document.getElementById('tab-asist-manual').style.borderBottomColor = esDia ? 'transparent' : 'var(--azul)';
   document.getElementById('tab-asist-manual').style.color = esDia ? 'var(--texto2)' : 'var(--azul)';
+  document.getElementById('tab-asist-manual').style.background = esDia ? 'none' : 'var(--gris-bg)';
   document.getElementById('sub-tab-asist-dia').style.display = esDia ? '' : 'none';
   document.getElementById('sub-tab-asist-manual').style.display = esDia ? 'none' : '';
 }
