@@ -733,13 +733,13 @@ function verTrabajadoresEmpresaPropia(id){
 }
 
 function poblarSelectsEmpresaPropia(){
-  const ids = ['filtro-empresa-propia', 'filtro-empresa-propia-ext', 'asignar-ep-select', 'm-empresa-contratista', 'c-empresa-propia'];
+  const ids = ['filtro-empresa-propia', 'filtro-empresa-propia-ext', 'asignar-ep-select', 'm-empresa-contratista', 'c-empresa-propia', 'lote-empresa-propia'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if(!el) return;
     const val = el.value;
-    const esContratista = (id === 'm-empresa-contratista');
-    el.innerHTML = `<option value="">${esContratista ? '— Seleccionar empresa propia —' : '— Todas las empresas —'}</option>`
+    const esSeleccionUnica = (id === 'm-empresa-contratista' || id === 'lote-empresa-propia');
+    el.innerHTML = `<option value="">${esSeleccionUnica ? '— Seleccionar empresa propia —' : '— Todas las empresas —'}</option>`
       + empresas_propias.map(ep => `<option value="${ep.id}">${ep.nombre}</option>`).join('');
     if(val) el.value = val;
   });
@@ -750,82 +750,12 @@ function abrirModalMandante(){
   abrirModalEmpresa(null); // reutiliza el modal existente
 }
 
-function abrirModalAsignarMandante(rut){
-  const t = trabajadores.find(x => x.rut === rut);
-  if(!t) return;
-
-  document.getElementById('asignar-mandante-rut').value = rut;
-  document.getElementById('asignar-mandante-trabajador-nombre').textContent =
-    `${t.nombre} — ${t.rut}`;
-
-  // Poblar select mandantes
-  const sel = document.getElementById('asignar-mandante-empresa');
-  sel.innerHTML = '<option value="">— Sin mandante asignado —</option>'
-    + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
-
-  // Preseleccionar valores actuales
-  sel.value = t.mandante_id || t.empresa_rut || t.empresa || '';
-  onCambioMandanteAsignar(t.faena_obra);
-
-  document.getElementById('asignar-mandante-fecha').value = t.fecha_ingreso || '';
-
-  document.getElementById('modal-asignar-mandante').style.display = 'flex';
-}
-
-function cerrarModalAsignarMandante(){
-  document.getElementById('modal-asignar-mandante').style.display = 'none';
-}
-
-function onCambioMandanteAsignar(faenaPresel){
-  const rut      = document.getElementById('asignar-mandante-empresa').value;
-  const selFaena = document.getElementById('asignar-mandante-faena');
-  const mandante = empresas.find(e => e.rut === rut);
-  const faenas   = mandante?.faenas || [];
-
-  if(!rut){
-    selFaena.innerHTML = '<option value="">— Selecciona primero un mandante —</option>';
-    return;
-  }
-  if(faenas.length){
-    selFaena.innerHTML = '<option value="">— Seleccionar faena —</option>'
-      + faenas.map(f => `<option value="${f.nombre||f}">${f.nombre||f}</option>`).join('');
-  } else {
-    selFaena.innerHTML = '<option value="">Sin faenas registradas</option>';
-  }
-  if(faenaPresel) selFaena.value = faenaPresel;
-}
-
-async function guardarAsignacionMandante(){
-  const rut         = document.getElementById('asignar-mandante-rut').value;
-  const mandante_id  = document.getElementById('asignar-mandante-empresa').value;
-  const mandanteObj  = empresas.find(e => e.id === mandante_id || e.rut === mandante_id);
-  const empresa_rut  = mandanteObj?.rut || mandante_id;
-  const faena_obra  = document.getElementById('asignar-mandante-faena').value;
-  const fecha       = document.getElementById('asignar-mandante-fecha').value;
-
-  const t = trabajadores.find(x => x.rut === rut);
-  if(!t) return;
-
-  t.empresa_rut   = empresa_rut;   // RUT como dato
-  t.empresa       = empresa_rut;   // compatibilidad
-  t.mandante_id   = empresa_rut;   // ID (será uuid cuando se migre)
-  t.faena_obra    = faena_obra;
-  t.fecha_ingreso = fecha || null;
-
-  if(supabaseClient){
-    await supabaseClient.from('trabajadores')
-      .update({ empresa_rut, empresa: empresa_rut, faena_obra, fecha_ingreso: fecha||null })
-      .eq('rut', rut);
-  }
-
-  guardarLocal();
-  cerrarModalAsignarMandante();
-  cargarTrabajadores();
-  poblarSelects();
-
-  const emp = empresas.find(e => (e.id === empresa_rut || e.rut === empresa_rut));
-  toast(`✅ ${t.nombre} asignado a ${emp?.nombre || 'sin mandante'}`, 'exito');
-}
+// ✅ Eliminado código muerto confirmado (Hallazgo Grande #13): el modal
+// "Reasignar Mandante" completo — abrirModalAsignarMandante,
+// cerrarModalAsignarMandante, onCambioMandanteAsignar,
+// guardarAsignacionMandante — nunca se llamaba desde ningún botón ni
+// onclick en todo el sistema. Se verificó exhaustivamente antes de
+// eliminarlo (ver bitácora, Hallazgo #13).
 
 function estadoVencimiento(fecha){
   if(!fecha) return {texto:'Sin fecha',color:'var(--texto3)',badge:'',dias:null};
