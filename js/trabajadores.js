@@ -30,31 +30,15 @@ function cargarTrabajadores(){
   if(kA) kA.textContent = activos;
   if(kI) kI.textContent = inact;
 
-  const firmados   = trabajadores.filter(t => (contratos||[]).some(c => c.trabajador_id === t.id || c.trabajador_rut === t.rut)).length;
-  const pendientes = total - firmados;
-  const kCval = document.getElementById('kpi-t-contratos-val');
-  const kCsub = document.getElementById('kpi-t-contratos-sub');
-  if(kCval && kCsub){
-    if(total === 0){
-      kCval.textContent = '—';
-      kCval.style.color = 'var(--texto3)';
-      kCsub.textContent = 'sin trabajadores';
-    } else if(pendientes === 0){
-      kCval.textContent = '✅ Al día';
-      kCval.style.color = 'var(--verde-dark)';
-      kCsub.textContent = 'todos vigentes';
-    } else {
-      kCval.textContent = `⚠️ ${pendientes} pendiente${pendientes!==1?'s':''}`;
-      kCval.style.color = '#d97706';
-      kCsub.textContent = `${firmados}/${total} firmados`;
-    }
-  }
+  // ✅ KPI "Contratos" eliminado de este módulo — no corresponde mostrar
+  // el estado de firma de contratos aquí, ese proceso vive en Contratos
+  // (Fase 2, item 11 de la bitácora).
 
   const tbody = document.getElementById('tbody-trabajadores');
   if(!tbody) return;
 
   if(!lista.length){
-    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--texto3);">
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--texto3);">
       ${total === 0
         ? '📋 Sin trabajadores — ve a Registro Personal'
         : '🔍 Sin resultados para los filtros'}
@@ -69,11 +53,8 @@ function cargarTrabajadores(){
     const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
     const empPrincipal = empEmpleadora?.razon_social || empEmpleadora?.nombre || '—';
     const activo       = t.estado !== 'inactivo';
-
-    const contrato = (contratos || []).find(c => c.trabajador_id === t.id || c.trabajador_rut === t.rut);
-    const estadoContrato = contrato
-      ? `<span style="background:#D1FAE5;color:#065F46;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap;">✅ Firmado</span>`
-      : `<span style="background:#FEF3C7;color:#92400E;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap;">⚠️ Pendiente</span>`;
+    // ✅ Columna/estado de Contrato eliminados de aquí — pertenecen al
+    // módulo Contratos, no a Trabajadores (Fase 2, item 16).
 
     return `<tr>
       <td style="text-align:center;width:36px;">
@@ -95,7 +76,6 @@ function cargarTrabajadores(){
           ${activo ? 'Activo' : 'Inactivo'}
         </span>
       </td>
-      <td>${estadoContrato}</td>
       <td style="min-width:120px;">
         <div style="display:flex;gap:5px;flex-wrap:nowrap;align-items:center;">
           <button class="btn btn-secondary btn-sm"
@@ -105,10 +85,6 @@ function cargarTrabajadores(){
           <button class="btn btn-secondary btn-sm"
             onclick="verPerfilTrabajador('${t.rut}')" title="Carpeta laboral">
             <i class="ti ti-folder"></i>
-          </button>
-          <button class="btn btn-secondary btn-sm"
-            onclick="irAContrato('${t.rut}')" title="Ver contrato">
-            <i class="ti ti-file-text"></i>
           </button>
           <button class="btn ${activo ? 'btn-danger' : 'btn-secondary'} btn-sm"
             onclick="cambiarEstado('${t.rut}','${activo ? 'inactivo' : 'activo'}')"
@@ -233,13 +209,8 @@ async function cambiarEstado(rut, nuevoEstado){
   toast(`✅ ${t.nombre} ${nuevoEstado === 'inactivo' ? 'dado de baja' : 'reactivado'}`, 'exito');
 }
 
-function irAContrato(rut){
-  const btn = [...document.querySelectorAll('.sb-item')]
-    .find(b => b.getAttribute('onclick')?.includes('contratos'));
-  // Pasar el rut directamente a irA para que initContratos lo reciba
-  _rutPrecontratoTemp = rut;
-  if(btn) irA('contratos', btn);
-}
+// irAContrato() eliminada — el botón "Ver contrato" se quitó de la
+// tabla de Trabajadores (Fase 2, item 18); esa acción vive en Contratos.
 
 
 function limpiarFiltroFecha(){
@@ -418,6 +389,7 @@ function switchTabPerfil(tab){
     sub.style.display = activo ? 'block' : 'none';
     btn.style.color = activo ? 'var(--azul)' : 'var(--texto2)';
     btn.style.borderBottom = activo ? '2px solid var(--azul)' : '2px solid transparent';
+    btn.style.background = activo ? 'var(--gris-bg)' : 'none';
   });
 
   if(tab === 'carpeta' && _perfil_rut_actual) _renderCarpetaTrabajador(_perfil_rut_actual);
