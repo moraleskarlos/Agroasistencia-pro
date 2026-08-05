@@ -176,7 +176,8 @@
     #p-gestion-laboral [id^="tab-gl-"].activo {
       color: var(--verde-dark) !important;
       border-bottom-color: var(--verde-dark) !important;
-      background: none !important;
+      background: var(--gris-bg) !important;
+      border-radius: var(--radius) var(--radius) 0 0;
     }
     #p-gestion-laboral [id^="tab-gl-"]:hover {
       color: var(--texto) !important;
