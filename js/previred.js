@@ -380,8 +380,10 @@ function _construirLineaPrevired(liq, t, periodo, cfgEmp){
   // 11. Pagador de subsidios — no aplica (sin licencias en curso gestionadas aquí)
   f[102] = ''; f[103] = '';
 
-  // 12. Centro de costos — usamos la faena/obra si existe
-  f[104] = t.faena_obra || '';
+  // 12. Centro de costos — usamos la faena/obra del Contrato vigente
+  // para el período que se está declarando (más preciso que un dato
+  // fijo: si la persona cambió de faena, refleja la de ese mes exacto).
+  f[104] = _faenaVigente(t.rut, liq.periodo) || '';
 
   return f.join(';');
 }
@@ -453,7 +455,7 @@ function exportarPreviredExcel(){
     'AFC empleador':          Math.round(liq.monto_afc_emp||0),
     'IUSC':                   Math.round(liq.iusc||0),
     'Tipo contrato':          _tipoContratoLabel(liq.tipo_contrato),
-    'Faena / centro costo':   t.faena_obra || '—',
+    'Faena / centro costo':   _faenaVigente(t.rut, periodo) || '—',
   }));
 
   const ws = XLSX.utils.json_to_sheet(rows);
