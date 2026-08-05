@@ -65,7 +65,6 @@ function cargarTrabajadores(){
   tbody.innerHTML = lista.map((t) => {
     const mandante     = findMandante(t);
     const mandanteNom  = mandante ? mandante.nombre : '—';
-    const faenaNom     = t.faena_obra || '—';
     const cargoNom     = t.funcion_cargo || '—';
     const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
     const empPrincipal = empEmpleadora?.razon_social || empEmpleadora?.nombre || '—';
@@ -91,7 +90,6 @@ function cargarTrabajadores(){
       <td style="font-size:12px;">${t.nacionalidad||'—'}</td>
       <td style="font-size:12px;">${cargoNom}</td>
       <td style="font-size:12px;">${mandanteNom}</td>
-      <td class="wrap-ok" style="font-size:12px;min-width:160px;">${faenaNom}</td>
       <td>
         <span class="badge ${activo ? 'badge-verde' : 'badge-rojo'}">
           ${activo ? 'Activo' : 'Inactivo'}
@@ -472,7 +470,6 @@ function _renderDatosPersonalesPerfil(t){
     </div>
     ${fila('Empresa contratista', empEmpleadora?.razon_social || empEmpleadora?.nombre)}
     ${fila('Mandante', mandante?.nombre)}
-    ${fila('Faena', t.faena_obra)}
     ${fila('Cargo', t.funcion_cargo)}
     ${fila('Fecha de ingreso', t.fecha_ingreso ? fmtFecha(t.fecha_ingreso) : null)}
 
