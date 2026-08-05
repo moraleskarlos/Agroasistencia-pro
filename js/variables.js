@@ -192,6 +192,20 @@ function _getContratoVigente(rut, periodo){
   return vigente || ordenados[0]; // fallback al más reciente
 }
 
+/* ✅ Helper compartido (Hallazgo Grande #13) — reemplaza a leer
+   t.faena_obra directo (campo eliminado del trabajador). Busca la
+   Faena en el Contrato vigente de la persona para el período dado
+   (o el mes actual si no se especifica). Usado por anexos.js,
+   exportar.js, liquidaciones.js, previred.js y trabajadores.js. */
+function _faenaVigente(rut, periodo){
+  const p = periodo || (() => {
+    const h = new Date();
+    return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}`;
+  })();
+  const cont = typeof _getContratoVigente === 'function' ? _getContratoVigente(rut, p) : null;
+  return cont?.nombre_faena || '';
+}
+
 /* ── Normalizar tipo de contrato → clave AFC ────────────── */
 function _normalizarTipoContrato(tipo){
   if(!tipo) return 'indefinido';
