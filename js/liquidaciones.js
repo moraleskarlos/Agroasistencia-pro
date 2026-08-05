@@ -380,7 +380,7 @@ function _generarHTMLLiquidacion(liq, guardada){
           <div class="ld-row"><span class="ld-row-label">Empresa</span><span class="ld-row-val">${ep?.razon_social||ep?.nombre||'—'}</span></div>
           <div class="ld-row"><span class="ld-row-label">RUT</span><span class="ld-row-val">${ep?.rut||'—'}</span></div>
           ${mandante ? `<div class="ld-row"><span class="ld-row-label">Mandante</span><span class="ld-row-val">${mandante.nombre}</span></div>` : ''}
-          ${t?.faena_obra ? `<div class="ld-row"><span class="ld-row-label">Faena</span><span class="ld-row-val">${t.faena_obra}</span></div>` : ''}
+          ${_faenaVigente(t?.rut, liq.periodo) ? `<div class="ld-row"><span class="ld-row-label">Faena</span><span class="ld-row-val">${_faenaVigente(t?.rut, liq.periodo)}</span></div>` : ''}
         </div>
         <div class="ld-ficha-col">
           <div class="ld-ficha-col-title">Trabajador</div>
