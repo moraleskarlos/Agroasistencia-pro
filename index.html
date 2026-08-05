@@ -304,17 +304,13 @@
 
     <div class="form-group">
       <label>Empresa Mandante *</label>
-      <select id="m-empresa" onchange="onCambioMandanteRegistro()" required>
+      <select id="m-empresa" required>
         <option value="">— Seleccionar mandante —</option>
       </select>
     </div>
 
-    <div class="form-group">
-      <label>Faena / Lugar de trabajo *</label>
-      <select id="m-faena" required>
-        <option value="">— Selecciona primero un mandante —</option>
-      </select>
-    </div>
+    <!-- Campo Faena eliminado — ahora vive en Contratos, donde
+         realmente se usa (Hallazgo Grande #13 de la bitácora). -->
 
     <div class="form-group full">
       <label>Cargo *</label>
@@ -360,14 +356,57 @@
           </div>
           <div class="card">
             <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva desde Excel</div>
-            <div class="excel-hint"><strong>📋 Columnas requeridas:</strong><ul><li>RUT · Nombre · Nacionalidad · Fecha Nacimiento</li><li>Estado Civil · Domicilio · Correo · AFP · Salud</li></ul><div style="font-size:11px;color:var(--texto3);margin-top:4px;">La asignación de Empresa Mandante se hace desde el módulo Trabajadores.</div></div>
+
+            <div class="form-grid" style="margin-bottom:10px;">
+              <div class="form-group"><label>Empresa Contratista *</label>
+                <select id="lote-empresa-propia" onchange="_actualizarEstadoLote()">
+                  <option value="">— Seleccionar —</option>
+                </select></div>
+              <div class="form-group"><label>Empresa Mandante *</label>
+                <select id="lote-mandante" onchange="_actualizarEstadoLote()">
+                  <option value="">— Seleccionar —</option>
+                </select></div>
+              <div class="form-group full"><label>Cargo del lote *</label>
+                <select id="lote-cargo" onchange="_onCambioCargoLote()">
+                  <option value="">— Seleccionar cargo —</option>
+                  <option value="Cosechero">Cosechero</option>
+                  <option value="Cosechera">Cosechera</option>
+                  <option value="Podador">Podador</option>
+                  <option value="Raleador">Raleador</option>
+                  <option value="Operario de Packing">Operario de Packing</option>
+                  <option value="Seleccionador">Seleccionador</option>
+                  <option value="Amarrador">Amarrador</option>
+                  <option value="Regador">Regador</option>
+                  <option value="Fumigador">Fumigador</option>
+                  <option value="Tractorista">Tractorista</option>
+                  <option value="Jefe de Cuadrilla">Jefe de Cuadrilla</option>
+                  <option value="Supervisor de Campo">Supervisor de Campo</option>
+                  <option value="Encargado de Bodega">Encargado de Bodega</option>
+                  <option value="Estibador">Estibador</option>
+                  <option value="Chofer">Chofer</option>
+                  <option value="otro">Otro (especificar)</option>
+                </select>
+                <input type="text" id="lote-cargo-otro" placeholder="Especifica el cargo" style="display:none;margin-top:8px;">
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--texto3);margin-bottom:12px;">
+              <i class="ti ti-info-circle"></i> Todos los trabajadores de este archivo quedarán asignados a la Empresa, Mandante y Cargo elegidos arriba. La Faena se define después, al generar sus Contratos. Si necesitas mezclar distintos cargos, súbelos en archivos separados.
+            </div>
+
+            <div class="excel-hint"><strong>📋 Columnas del Excel:</strong><ul><li>RUT · Nombre · Nacionalidad · Fecha Nacimiento</li><li>Estado Civil · Domicilio · Correo · AFP · Salud · Fecha Ingreso</li></ul></div>
             <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" onclick="descargarPlantilla()"><i class="ti ti-file-download"></i> Descargar plantilla Excel</button>
-            <div class="zona-drop" onclick="document.getElementById('archivo-excel').click()">
+            <div class="zona-drop" id="zona-drop-excel" onclick="_clickZonaDropExcel()" style="opacity:0.5;">
               <i class="ti ti-file-spreadsheet"></i>
-              <div class="drop-title" id="drop-titulo">Arrastra tu archivo Excel aquí</div>
+              <div class="drop-title" id="drop-titulo">Completa Empresa, Mandante y Cargo arriba primero</div>
               <div class="drop-sub">o haz clic para explorar · .xlsx / .xls</div>
             </div>
             <input type="file" id="archivo-excel" accept=".xlsx,.xls" style="display:none;" onchange="procesarExcel(event)">
+            <div id="lote-aviso-deshacer" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;margin-top:12px;">
+              <span style="font-size:12px;color:#92400E;"></span>
+              <button class="btn btn-secondary btn-sm" onclick="deshacerUltimaImportacionMasiva()" style="color:var(--danger);flex-shrink:0;">
+                <i class="ti ti-arrow-back-up"></i> Deshacer
+              </button>
+            </div>
             <div id="seccion-preview" style="display:none;margin-top:14px;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                 <span style="font-size:13px;font-weight:600;" id="preview-count"></span>
@@ -462,7 +501,6 @@
             <th>Nacionalidad</th>
             <th>Cargo</th>
             <th>Mandante</th>
-            <th>Faena</th>
             <th>Estado</th>
             <th>Contrato</th>
             <th>Acciones</th>
@@ -471,7 +509,7 @@
 
     <tbody id="tbody-trabajadores">
         <tr>
-            <td colspan="12" style="text-align:center;padding:24px;color:var(--texto3);">
+            <td colspan="11" style="text-align:center;padding:24px;color:var(--texto3);">
                 Cargando trabajadores...
             </td>
         </tr>
@@ -2412,47 +2450,8 @@
 </div>
 
 <!-- MODAL ASIGNAR MANDANTE -->
-<div id="modal-asignar-mandante" style="display:none;position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:420px;box-shadow:var(--shadow-md);">
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <div style="font-size:16px;font-weight:700;">
-        <i class="ti ti-building" style="color:var(--azul);margin-right:6px;"></i>
-        Asignar Mandante y Faena
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="cerrarModalAsignarMandante()"><i class="ti ti-x"></i></button>
-    </div>
-    <div style="font-size:12px;color:var(--texto2);margin-bottom:16px;" id="asignar-mandante-trabajador-nombre"></div>
-
-    <input type="hidden" id="asignar-mandante-rut">
-
-    <div class="form-group" style="margin-bottom:12px;">
-      <label>Empresa Mandante</label>
-      <select id="asignar-mandante-empresa" onchange="onCambioMandanteAsignar()">
-        <option value="">— Sin mandante asignado —</option>
-      </select>
-    </div>
-
-    <div class="form-group" style="margin-bottom:12px;">
-      <label>Faena / Lugar de trabajo</label>
-      <select id="asignar-mandante-faena">
-        <option value="">— Selecciona primero un mandante —</option>
-      </select>
-    </div>
-
-    <div class="form-group" style="margin-bottom:16px;">
-      <label>Fecha de ingreso</label>
-      <input type="date" id="asignar-mandante-fecha">
-    </div>
-
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button class="btn btn-secondary" onclick="cerrarModalAsignarMandante()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarAsignacionMandante()">
-        <i class="ti ti-check"></i> Guardar
-      </button>
-    </div>
-  </div>
-</div>
+<!-- Modal "Asignar Mandante y Faena" eliminado — confirmado código
+     muerto, nunca se llamaba desde ningún botón (Hallazgo Grande #13). -->
 
 <!-- MODAL FAENA -->
 <!-- MODAL EMPRESA -->
@@ -2645,69 +2644,9 @@
   </script>
 
   <!-- MODAL ASIGNACIÓN MASIVA (Empresa / Mandante / Cargo) -->
-  <div id="modal-asignacion-masiva" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:14px;padding:24px;width:560px;max-width:92vw;max-height:86vh;overflow-y:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div style="font-size:16px;font-weight:700;">Asignar empresa y mandante</div>
-        <button class="btn btn-secondary btn-sm" onclick="cerrarModalAsignacionMasiva()"><i class="ti ti-x"></i></button>
-      </div>
-      <div id="am-contador" style="font-size:12px;color:var(--texto3);margin-bottom:16px;"></div>
-
-      <div class="form-grid" style="margin-bottom:14px;">
-        <div class="form-group">
-          <label>Empresa Contratista</label>
-          <select id="am-empresa-propia"></select>
-        </div>
-        <div class="form-group">
-          <label>Mandante</label>
-          <select id="am-mandante" onchange="onCambioMandanteAsignacionMasiva()"></select>
-        </div>
-        <div class="form-group">
-          <label>Faena</label>
-          <select id="am-faena"><option value="">— Selecciona primero un mandante —</option></select>
-        </div>
-        <div class="form-group">
-          <label>Cargo</label>
-          <select id="am-cargo" onchange="onCambioCargoAsignacionMasiva()">
-            <option value="">— Seleccionar cargo —</option>
-            <option value="Cosechero">Cosechero</option>
-            <option value="Cosechera">Cosechera</option>
-            <option value="Podador">Podador</option>
-            <option value="Raleador">Raleador</option>
-            <option value="Operario de Packing">Operario de Packing</option>
-            <option value="Seleccionador">Seleccionador</option>
-            <option value="Amarrador">Amarrador</option>
-            <option value="Regador">Regador</option>
-            <option value="Fumigador">Fumigador</option>
-            <option value="Tractorista">Tractorista</option>
-            <option value="Jefe de Cuadrilla">Jefe de Cuadrilla</option>
-            <option value="Supervisor de Campo">Supervisor de Campo</option>
-            <option value="Encargado de Bodega">Encargado de Bodega</option>
-            <option value="Estibador">Estibador</option>
-            <option value="Chofer">Chofer</option>
-            <option value="otro">Otro (especificar)</option>
-          </select>
-          <input type="text" id="am-cargo-otro" placeholder="Especifica el cargo" style="display:none;margin-top:8px;">
-        </div>
-      </div>
-
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:4px;border-bottom:2px solid var(--borde);padding-bottom:8px;">
-        <input type="checkbox" id="am-check-todos" checked onchange="toggleSeleccionarTodosMasivo()" style="width:auto;">
-        Seleccionar todos
-      </label>
-      <div id="am-lista-trabajadores" style="max-height:220px;overflow-y:auto;margin-bottom:16px;"></div>
-
-      <div style="display:flex;gap:8px;justify-content:space-between;">
-        <button class="btn btn-secondary btn-sm" onclick="deshacerImportacionMasiva()" style="color:var(--danger);">
-          <i class="ti ti-trash"></i> Deshacer importación
-        </button>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-secondary btn-sm" onclick="cerrarModalAsignacionMasiva()">Cerrar (asignar después)</button>
-          <button class="btn btn-primary btn-sm" onclick="aplicarAsignacionMasiva()"><i class="ti ti-check"></i> Aplicar a seleccionados</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Modal de Asignación Masiva eliminado — reemplazado por el
+       encabezado del lote (Empresa/Mandante/Cargo) en Registro Personal,
+       elegido ANTES de subir el Excel. Ver Hallazgo Grande #12/#13. -->
   <!-- MODAL CONFIGURACIÓN DE GRUPOS — Contratos Masivo -->
   <div id="modal-config-grupos-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:24px;width:820px;max-width:96vw;max-height:90vh;overflow-y:auto;">
