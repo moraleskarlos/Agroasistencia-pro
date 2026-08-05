@@ -1015,7 +1015,7 @@ function onSeleccionTrabajadorAnexo(){
   set('anexo-pre-rep',           emp.representante);
   set('anexo-pre-mandante',      man?.nombre);
   set('anexo-pre-cargo',         cont?.funcion_cargo || t?.funcion_cargo);
-  set('anexo-pre-faena',         cont?.nombre_faena  || t?.faena_obra);
+  set('anexo-pre-faena',         cont?.nombre_faena  || '');
   set('anexo-pre-fecha-contrato',
       cont?.fecha_firma ? new Date(cont.fecha_firma).toLocaleDateString('es-CL')
       : t?.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString('es-CL') : null);
