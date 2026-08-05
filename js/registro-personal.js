@@ -1,5 +1,66 @@
 /* ════ REGISTRO PERSONAL ════ */
 
+/* ════════════════════════════════════════════════════════
+   CARGO Y ESTADO CIVIL SEGÚN SEXO (Hallazgo Grande #9)
+   Antes: una sola lista mezclada, solo Cosechero/Cosechera tenía
+   ambas formas, el resto solo masculino. Ahora: pares completos,
+   se muestra la forma correcta automáticamente según el Sexo
+   elegido — antes de elegir Sexo, se muestra la forma masculina
+   por defecto (no bloquea poder seguir llenando el resto).
+   ════════════════════════════════════════════════════════ */
+const CARGOS_PARES = [
+  ['Cosechero','Cosechera'],
+  ['Podador','Podadora'],
+  ['Raleador','Raleadora'],
+  ['Operario de Packing','Operaria de Packing'],
+  ['Seleccionador','Seleccionadora'],
+  ['Amarrador','Amarradora'],
+  ['Regador','Regadora'],
+  ['Fumigador','Fumigadora'],
+  ['Tractorista','Tractorista'],
+  ['Jefe de Cuadrilla','Jefa de Cuadrilla'],
+  ['Supervisor de Campo','Supervisora de Campo'],
+  ['Encargado de Bodega','Encargada de Bodega'],
+  ['Estibador','Estibadora'],
+  ['Chofer','Chofer'],
+];
+const ESTADO_CIVIL_PARES = [
+  ['Soltero','Soltera'],
+  ['Casado','Casada'],
+  ['Divorciado','Divorciada'],
+  ['Viudo','Viuda'],
+  ['Conviviente','Conviviente'],
+];
+
+function _actualizarListasPorSexo(){
+  const sexo   = document.getElementById('m-sexo')?.value || '';
+  const colIdx = sexo === 'Mujer' ? 1 : 0; // por defecto (sin elegir aún) muestra la forma masculina
+
+  // --- Cargo ---
+  const selCargo = document.getElementById('m-cargo');
+  if(selCargo){
+    const valorPrevio = selCargo.value;
+    // Encontrar en qué fila estaba el valor previamente elegido, para
+    // mantener la misma selección en la forma de género correcta.
+    const filaPrevia = CARGOS_PARES.find(p => p.includes(valorPrevio));
+    selCargo.innerHTML = '<option value="">— Seleccionar cargo —</option>'
+      + CARGOS_PARES.map(p => `<option value="${p[colIdx]}">${p[colIdx]}</option>`).join('')
+      + '<option value="otro">Otro (especificar)</option>';
+    if(valorPrevio === 'otro') selCargo.value = 'otro';
+    else if(filaPrevia) selCargo.value = filaPrevia[colIdx];
+  }
+
+  // --- Estado civil ---
+  const selCivil = document.getElementById('m-estado-civil');
+  if(selCivil){
+    const valorPrevio = selCivil.value;
+    const filaPrevia = ESTADO_CIVIL_PARES.find(p => p.includes(valorPrevio));
+    selCivil.innerHTML = '<option value="">— Seleccionar —</option>'
+      + ESTADO_CIVIL_PARES.map(p => `<option value="${p[colIdx]}">${p[colIdx]}</option>`).join('');
+    if(filaPrevia) selCivil.value = filaPrevia[colIdx];
+  }
+}
+
 /* ───────── RP-006: Validación centralizada ─────────
    Devuelve { ok:true } o { ok:false, mensaje } — nunca lanza excepción. */
 function validarFormularioTrabajador(datos, idOriginal){
@@ -25,6 +86,43 @@ function validarFormularioTrabajador(datos, idOriginal){
   if(new Date(datos.fecha_nacimiento) > new Date()){
     return { ok:false, mensaje:'La fecha de nacimiento no puede ser futura' };
   }
+
+  // ✅ NUEVO — Restricción de edad (Hallazgo Grande #10). Antes el sistema
+  // no validaba nada más allá del rango de año, dejando registrar tanto a
+  // menores de edad como a personas de 100+ años sin ningún aviso.
+  const _hoy = new Date();
+  const _fnac = new Date(datos.fecha_nacimiento);
+  let edad = _hoy.getFullYear() - _fnac.getFullYear();
+  const _mDiff = _hoy.getMonth() - _fnac.getMonth();
+  if(_mDiff < 0 || (_mDiff === 0 && _hoy.getDate() < _fnac.getDate())) edad--;
+
+  if(edad < 15){
+    // Art. 13 Código del Trabajo: prohibido el trabajo de menores de 15
+    // años, salvo excepciones muy puntuales que este sistema no cubre —
+    // se bloquea directamente, sin opción de continuar.
+    return { ok:false, mensaje:`No se puede registrar: el trabajador tiene ${edad} años. El Código del Trabajo (Art. 13) prohíbe el trabajo de menores de 15 años.` };
+  }
+  if(edad < 18){
+    // Art. 13-16 Código del Trabajo: entre 15 y 17 años se permite solo
+    // con autorización expresa de los padres/tutor y límites de horario y
+    // tipo de trabajo — se pide confirmar que esa autorización existe,
+    // en vez de bloquear directamente (puede ser un caso legítimo).
+    const ok = confirm(
+      `El trabajador tiene ${edad} años (menor de edad).\n\n`+
+      `El Código del Trabajo exige autorización expresa de los padres o tutor legal, además de límites de horario y tipo de trabajo permitido, para contratar a un menor entre 15 y 17 años.\n\n`+
+      `¿Confirmas que cuentas con esa autorización y quieres continuar con el registro?`
+    );
+    if(!ok) return { ok:false, mensaje:'Registro cancelado — se requiere autorización para contratar a un menor de edad.' };
+  } else if(edad > 80){
+    // Sin problema legal de fondo — solo un dato poco realista que vale
+    // la pena confirmar antes de guardar, para descartar un error de
+    // tipeo en la fecha de nacimiento.
+    const ok = confirm(`El trabajador tendría ${edad} años según la fecha ingresada. ¿Es correcto, o fue un error al escribir la fecha de nacimiento?`);
+    if(!ok) return { ok:false, mensaje:'Revisa la fecha de nacimiento antes de continuar.' };
+  }
+
+  // RP-005b: Sexo obligatorio (Hallazgo Grande #8)
+  if(!datos.sexo) return { ok:false, mensaje:'Selecciona el Sexo del trabajador' };
 
   // RP-005: campos obligatorios
   if(!datos.empresa_propia_id) return { ok:false, mensaje:'Selecciona la Empresa Contratista' };
@@ -80,13 +178,22 @@ function cargarEnFormulario(t){
   set('m-rut',           t.rut);
   set('m-nombre',        t.nombre);
   set('m-fecha-nac',     t.fecha_nacimiento);
-  // RP-015: trabajadores importados por Excel antes de este fix quedaron con
-  // "Soltero"/"Casado"/etc. sin "/a" — no coincide con las <option> del select
-  // (que sí tienen "/a"), así que el select aparecía vacío al editar aunque el
-  // dato estuviera guardado. Se autocorrige el valor legacy solo al mostrarlo;
-  // queda arreglado en el trabajador la próxima vez que se guarde el formulario.
-  const mapCivilLegacy = {'Soltero':'Soltero/a','Casado':'Casado/a','Divorciado':'Divorciado/a','Viudo':'Viudo/a'};
-  set('m-estado-civil',  mapCivilLegacy[t.estado_civil] || t.estado_civil);
+
+  // ✅ Sexo primero, y regenerar las listas de Cargo/Estado Civil según
+  // corresponda ANTES de fijar sus valores — si no hay sexo guardado
+  // (registros de antes de este cambio), quedan en forma masculina por
+  // defecto, igual que el resto del sistema.
+  set('m-sexo', t.sexo);
+  _actualizarListasPorSexo();
+
+  // RP-015: trabajadores importados/creados antes de este cambio pueden
+  // traer el Estado Civil en formato viejo con "/a" (ej. "Soltero/a") —
+  // se normaliza a la forma correcta según el Sexo ya cargado arriba.
+  const mapCivilLegacy = {'Soltero/a':'Soltero','Casado/a':'Casado','Divorciado/a':'Divorciado','Viudo/a':'Viudo'};
+  const civilBase = mapCivilLegacy[t.estado_civil] || t.estado_civil;
+  const filaCivil = ESTADO_CIVIL_PARES.find(p => p.includes(civilBase));
+  set('m-estado-civil', filaCivil ? filaCivil[t.sexo === 'Mujer' ? 1 : 0] : civilBase);
+
   set('m-correo',        t.correo_electronico);
   set('m-domicilio',     t.domicilio);
   set('m-afp',           t.afiliacion_afp);
@@ -203,6 +310,7 @@ async function guardarTrabajador(e){
     nombre:            document.getElementById('m-nombre').value.trim(),
     nacionalidad:      nac,
     fecha_nacimiento:  document.getElementById('m-fecha-nac').value||null,
+    sexo:              document.getElementById('m-sexo')?.value || '',
     estado_civil:      document.getElementById('m-estado-civil').value,
     correo_electronico:document.getElementById('m-correo').value.trim()||null,
     domicilio:         document.getElementById('m-domicilio').value.trim(),
@@ -335,7 +443,8 @@ function procesarExcel(event){
         .toLowerCase().replace(/^\w/, c => c.toUpperCase());
 
       const mapNac   = {'chileno':'Chileno','colombiano':'Colombiano','peruano':'Peruano','boliviano':'Boliviano','venezolano':'Venezolano','ecuatoriano':'Ecuatoriano','haitiano':'Haitiano','argentino':'Argentino','otro':'Otro'};
-      const mapCivil = {'soltero':'Soltero/a','casado':'Casado/a','divorciado':'Divorciado/a','viudo':'Viudo/a','conviviente':'Conviviente'};
+      const mapCivil = {'soltero':'Soltero','soltera':'Soltera','casado':'Casado','casada':'Casada','divorciado':'Divorciado','divorciada':'Divorciada','viudo':'Viudo','viuda':'Viuda','conviviente':'Conviviente'};
+      const mapSexo  = {'hombre':'Hombre','masculino':'Hombre','m':'Hombre','mujer':'Mujer','femenino':'Mujer','f':'Mujer'};
       const mapAfp   = {'habitat':'Habitat','provida':'Provida','capital':'Capital','cuprum':'Cuprum','planvital':'Planvital','modelo':'Modelo','uno':'Uno','no cotiza':'No cotiza'};
       const mapSalud = {'fonasa':'Fonasa','banmedica':'Isapre Banm\u00e9dica','cruz blanca':'Isapre Cruz Blanca','colmena':'Isapre Colmena','consalud':'Isapre Consalud','esencial':'Isapre Esencial','vida tres':'Isapre Vida Tres','isapre banmedica':'Isapre Banm\u00e9dica','isapre cruz blanca':'Isapre Cruz Blanca','isapre colmena':'Isapre Colmena','isapre consalud':'Isapre Consalud'};
 
@@ -390,6 +499,25 @@ function procesarExcel(event){
           return;
         }
 
+        // ✅ NUEVO — Restricción de edad (Hallazgo Grande #10), adaptada al
+        // import masivo: sin confirm() por fila (sería inmanejable con
+        // muchos trabajadores), en su lugar bloquea directo bajo 15 años,
+        // y deja advertencia (no bloquea) para 15-17 y mayores de 80.
+        const _hoyBulk  = new Date();
+        const _fnacBulk = new Date(fecha_nacimiento);
+        let _edadBulk = _hoyBulk.getFullYear() - _fnacBulk.getFullYear();
+        const _mDiffBulk = _hoyBulk.getMonth() - _fnacBulk.getMonth();
+        if(_mDiffBulk < 0 || (_mDiffBulk === 0 && _hoyBulk.getDate() < _fnacBulk.getDate())) _edadBulk--;
+        if(_edadBulk < 15){
+          errores.push({ fila, nombre, mensaje:`El trabajador tendría ${_edadBulk} años — el Código del Trabajo (Art. 13) prohíbe contratar menores de 15 años`, correccion:'Verifica la Fecha de Nacimiento; si es correcta, esta persona no puede registrarse.' });
+          return;
+        }
+        if(_edadBulk < 18){
+          advertencias.push({ fila, nombre, mensaje:`Es menor de edad (${_edadBulk} años)`, correccion:'Requiere autorización expresa de padres/tutor y límites de horario según el Código del Trabajo (Art. 13-16) — verifícalo antes de asignarle contrato.' });
+        } else if(_edadBulk > 80){
+          advertencias.push({ fila, nombre, mensaje:`Tendría ${_edadBulk} años según la fecha ingresada`, correccion:'Verifica que la Fecha de Nacimiento no tenga un error de tipeo.' });
+        }
+
         const fecha_ingreso = fmtFecha(row['Fecha Ingreso'] || row['fecha_ingreso']);
         if(!fecha_ingreso){
           errores.push({ fila, nombre, mensaje:'Falta la Fecha de Ingreso', correccion:'Completa la columna "Fecha Ingreso" en formato AAAA-MM-DD — es obligatoria.' });
@@ -423,12 +551,24 @@ function procesarExcel(event){
           correo_electronico = '';
         }
 
+        const sexoRaw = (row['Sexo'] || row['sexo'] || '').toString().trim().toLowerCase();
+        const sexo = mapSexo[sexoRaw] || '';
+        if(!sexo){
+          errores.push({ fila, nombre, mensaje:'Falta el Sexo (Hombre/Mujer)', correccion:'Completa la columna "Sexo" — es obligatoria.' });
+          return;
+        }
+
+        const civilBase = normalizar(row['Estado Civil'] || row['estado_civil'], mapCivil);
+        const filaCivil = ESTADO_CIVIL_PARES.find(p => p.includes(civilBase));
+        const estado_civil = filaCivil ? filaCivil[sexo === 'Mujer' ? 1 : 0] : civilBase;
+
         const trabajador = {
           id:                crypto.randomUUID(),
           rut, nombre,
           nacionalidad,
           fecha_nacimiento,
-          estado_civil:      normalizar(row['Estado Civil']    || row['estado_civil'],   mapCivil),
+          sexo,
+          estado_civil,
           domicilio:         (row['Domicilio']  || '').toString().trim(),
           correo_electronico:correo_electronico,
           afiliacion_afp:    normalizar(row['AFP']  || row['afp'],   mapAfp),
@@ -462,7 +602,7 @@ function procesarExcel(event){
       const thead = document.querySelector('#tabla-excel thead');
       const tbody = document.querySelector('#tabla-excel tbody');
       thead.innerHTML = `<tr>
-        <th>RUT</th><th>Nombre</th><th>Nacionalidad</th><th>F. Nacimiento</th><th>Estado Civil</th>
+        <th>RUT</th><th>Nombre</th><th>Nacionalidad</th><th>F. Nacimiento</th><th>Sexo</th><th>Estado Civil</th>
         <th>Domicilio</th><th>Correo</th><th>AFP</th><th>Salud</th><th>F. Ingreso</th>
         <th>Tipo Doc. Mig.</th><th>N° Doc. Mig.</th><th>Venc. Doc. Mig.</th>
       </tr>`;
@@ -470,7 +610,7 @@ function procesarExcel(event){
         const estMig = t.fecha_venc_migratorio ? estadoDocumentoMigratorio(t.fecha_venc_migratorio) : null;
         return `<tr>
         <td>${t.rut}</td><td>${t.nombre}</td><td>${t.nacionalidad||'—'}</td>
-        <td>${t.fecha_nacimiento||'—'}</td><td>${t.estado_civil||'—'}</td>
+        <td>${t.fecha_nacimiento||'—'}</td><td>${t.sexo||'—'}</td><td>${t.estado_civil||'—'}</td>
         <td>${t.domicilio||'—'}</td><td>${t.correo_electronico||'—'}</td>
         <td>${t.afiliacion_afp||'—'}</td><td>${t.sistema_salud||'—'}</td>
         <td>${t.fecha_ingreso||'—'}</td>
@@ -680,7 +820,7 @@ function _actualizarSemaforoMigratorio(){
    ════════════════════════════════════════════════════════ */
 const _BORRADOR_KEY = 'rp_borrador_trabajador';
 const _CAMPOS_BORRADOR = [
-  'm-rut','m-nombre','m-nacionalidad','m-otra-nac','m-fecha-nac','m-estado-civil',
+  'm-rut','m-nombre','m-nacionalidad','m-otra-nac','m-fecha-nac','m-sexo','m-estado-civil',
   'm-correo','m-domicilio','m-afp','m-salud','m-empresa-contratista','m-empresa',
   'm-cargo','cargo-otro','m-fecha-ingreso',
   'm-tipo-doc-mig','m-num-doc-mig','m-fecha-venc-mig','m-rut-original',
@@ -749,6 +889,24 @@ function _recuperarBorrador(){
     const el = document.getElementById(id);
     if(el) el.value = valor;
   });
+
+  // Cargo y Estado Civil dependen del Sexo — se reconstruyen según el
+  // Sexo recién restaurado, y se reaplica el valor guardado del borrador
+  // (el forEach de arriba pudo no aplicarlo si esa opción todavía no
+  // existía en la lista por defecto antes de conocer el Sexo).
+  _actualizarListasPorSexo();
+  if(guardado.campos['m-cargo']){
+    const selCargo = document.getElementById('m-cargo');
+    if(selCargo && [...selCargo.options].some(o => o.value === guardado.campos['m-cargo'])){
+      selCargo.value = guardado.campos['m-cargo'];
+    }
+  }
+  if(guardado.campos['m-estado-civil']){
+    const selCivil = document.getElementById('m-estado-civil');
+    if(selCivil && [...selCivil.options].some(o => o.value === guardado.campos['m-estado-civil'])){
+      selCivil.value = guardado.campos['m-estado-civil'];
+    }
+  }
 
   evaluarCampos();
   mostrarCamposMigratorios();
