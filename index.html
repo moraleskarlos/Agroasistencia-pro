@@ -234,13 +234,22 @@
     </div>
 
     <div class="form-group">
+      <label>Sexo *</label>
+      <select id="m-sexo" required onchange="_actualizarListasPorSexo()">
+        <option value="">— Seleccionar —</option>
+        <option value="Hombre">Hombre</option>
+        <option value="Mujer">Mujer</option>
+      </select>
+    </div>
+
+    <div class="form-group">
       <label>Estado civil</label>
       <select id="m-estado-civil">
         <option value="">— Seleccionar —</option>
-        <option>Soltero/a</option>
-        <option>Casado/a</option>
-        <option>Divorciado/a</option>
-        <option>Viudo/a</option>
+        <option>Soltero</option>
+        <option>Casado</option>
+        <option>Divorciado</option>
+        <option>Viudo</option>
         <option>Conviviente</option>
       </select>
     </div>
@@ -317,7 +326,6 @@
       <select id="m-cargo" onchange="evaluarCampos()" required>
         <option value="">— Seleccionar cargo —</option>
         <option value="Cosechero">Cosechero</option>
-        <option value="Cosechera">Cosechera</option>
         <option value="Podador">Podador</option>
         <option value="Raleador">Raleador</option>
         <option value="Operario de Packing">Operario de Packing</option>
@@ -393,7 +401,7 @@
               <i class="ti ti-info-circle"></i> Todos los trabajadores de este archivo quedarán asignados a la Empresa, Mandante y Cargo elegidos arriba. La Faena se define después, al generar sus Contratos. Si necesitas mezclar distintos cargos, súbelos en archivos separados.
             </div>
 
-            <div class="excel-hint"><strong>📋 Columnas del Excel:</strong><ul><li>RUT · Nombre · Nacionalidad · Fecha Nacimiento</li><li>Estado Civil · Domicilio · Correo · AFP · Salud · Fecha Ingreso</li></ul></div>
+            <div class="excel-hint"><strong>📋 Columnas del Excel:</strong><ul><li>RUT · Nombre · Nacionalidad · Fecha Nacimiento · Sexo</li><li>Estado Civil · Domicilio · Correo · AFP · Salud · Fecha Ingreso</li></ul></div>
             <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" onclick="descargarPlantilla()"><i class="ti ti-file-download"></i> Descargar plantilla Excel</button>
             <div class="zona-drop" id="zona-drop-excel" onclick="_clickZonaDropExcel()" style="opacity:0.5;">
               <i class="ti ti-file-spreadsheet"></i>
@@ -426,12 +434,6 @@
       <div id="p-trabajadores" class="pagina">
         <div class="sec-header">
           <div><div class="sec-title">Trabajadores</div><div class="sec-sub" id="trab-sub">Gestión y control del personal</div></div>
-          <div style="display:flex;gap:8px;">
-            <select id="filtro-empresa-propia" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todas las empresas</option></select>
-            <select id="filtro-empresa" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todos los mandantes</option></select>
-            <select id="filtro-estado" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
-            <button class="btn btn-secondary" onclick="exportarTrabajadoresExcel()"><i class="ti ti-download"></i> Excel</button>
-          </div>
         </div>
 
         <!-- TABS — mismo patrón que Empresas -->
@@ -448,19 +450,32 @@
 
         <!-- SUB-TAB TODOS -->
         <div id="sub-tab-todos-trab">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
-          <div class="kpi azul"><div class="kpi-label">Total registrados</div><div class="kpi-value" id="kpi-t-total">0</div><div class="kpi-sub">en el sistema</div></div>
-          <div class="kpi verde"><div class="kpi-label">Activos</div><div class="kpi-value" id="kpi-t-activos">0</div><div class="kpi-sub">trabajando</div></div>
-          <div class="kpi rojo"><div class="kpi-label">Inactivos</div><div class="kpi-value" id="kpi-t-inactivos">0</div><div class="kpi-sub">dados de baja</div></div>
-          <div class="kpi" id="kpi-t-contratos"><div class="kpi-label">Contratos</div><div class="kpi-value" id="kpi-t-contratos-val" style="color:var(--verde-dark);">—</div><div class="kpi-sub" id="kpi-t-contratos-sub">calculando...</div></div>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
+          <div class="kpi azul"><div class="kpi-label">Total de trabajadores en sistema</div><div class="kpi-value" id="kpi-t-total">0</div><div class="kpi-sub">en el sistema</div></div>
+          <div class="kpi verde"><div class="kpi-label">Trabajadores activos</div><div class="kpi-value" id="kpi-t-activos">0</div><div class="kpi-sub">trabajando</div></div>
+          <div class="kpi rojo"><div class="kpi-label">Trabajadores inactivos</div><div class="kpi-value" id="kpi-t-inactivos">0</div><div class="kpi-sub">dados de baja</div></div>
         </div>
         <div class="card">
       <!-- HEADER -->
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
 
   <div class="card-title" style="margin:0;">
-    <i class="ti ti-list"></i> Lista de personal
+    <i class="ti ti-list"></i> Lista del Personal
   </div>
+
+</div>
+
+<!-- Filtros — antes vivían sueltos arriba de la página, ahora dentro
+     del bloque de Reporte, que es donde realmente se usan. -->
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--borde);">
+  <span style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;">Filtros:</span>
+  <select id="filtro-empresa-propia" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todas las empresas</option></select>
+  <select id="filtro-empresa" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todos los mandantes</option></select>
+  <select id="filtro-estado" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
+  <button class="btn btn-secondary" onclick="exportarTrabajadoresExcel()"><i class="ti ti-download"></i> Excel</button>
+</div>
+
+<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:12px;">
 
   <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
 
@@ -471,13 +486,13 @@
            oninput="cargarTrabajadores()">
 
     <label style="font-size:12px;color:var(--texto2);white-space:nowrap;display:flex;align-items:center;gap:5px;">
-      <i class="ti ti-calendar"></i> F. Ingreso:
+      <i class="ti ti-calendar"></i> Ingreso:
       <input type="date"
              id="filtro-fecha-ingreso"
              class="btn btn-secondary"
              style="font-size:12px;padding:6px 10px;"
              onchange="cargarTrabajadores()">
-      <button class="btn btn-secondary btn-sm" onclick="limpiarFiltroFecha()" title="Limpiar fecha">✕</button>
+      <button class="btn btn-sm" onclick="limpiarFiltroFecha()" title="Limpiar fecha" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
     </label>
 
   </div>
@@ -495,21 +510,20 @@
                     style="accent-color:var(--verde);width:16px;height:16px;">
             </th>
             <th>Empresa Principal</th>
-            <th>F. Ingreso</th>
+            <th>Ingreso</th>
             <th>RUT</th>
-            <th>Nombre</th>
+            <th>Nombres</th>
             <th>Nacionalidad</th>
             <th>Cargo</th>
-            <th>Mandante</th>
+            <th>Empresa Mandante</th>
             <th>Estado</th>
-            <th>Contrato</th>
-            <th>Acciones</th>
+            <th></th>
         </tr>
     </thead>
 
     <tbody id="tbody-trabajadores">
         <tr>
-            <td colspan="11" style="text-align:center;padding:24px;color:var(--texto3);">
+            <td colspan="10" style="text-align:center;padding:24px;color:var(--texto3);">
                 Cargando trabajadores...
             </td>
         </tr>
