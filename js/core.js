@@ -412,11 +412,11 @@ async function cargarDatos(){
 
 function poblarSelects(){
   // Selects de mandantes (antes "contratistas")
-  const ids=['m-empresa','filtro-empresa','filtro-empresa-ext','asist-empresa','qr-filtro-empresa'];
+  const ids=['m-empresa','filtro-empresa','filtro-empresa-ext','asist-empresa','qr-filtro-empresa','lote-mandante'];
   ids.forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
     const val=el.value;
-    const isFilter=(id!=='m-empresa');
+    const isFilter=(id!=='m-empresa' && id!=='lote-mandante');
     el.innerHTML=(isFilter
       ?'<option value="">Todos los mandantes</option>'
       :'<option value="">— Seleccionar mandante —</option>'
