@@ -29,7 +29,7 @@ function validarFormularioTrabajador(datos, idOriginal){
   // RP-005: campos obligatorios
   if(!datos.empresa_propia_id) return { ok:false, mensaje:'Selecciona la Empresa Contratista' };
   if(!datos.mandante_id)       return { ok:false, mensaje:'Selecciona la Empresa Mandante' };
-  if(!datos.faena_obra)        return { ok:false, mensaje:'Selecciona la Faena' };
+  // Faena eliminada de aquí — ahora se define en Contratos (Hallazgo #13)
   if(!datos.funcion_cargo)     return { ok:false, mensaje:'Ingresa el Cargo' };
   if(!datos.fecha_ingreso)     return { ok:false, mensaje:'Ingresa la Fecha de Ingreso' };
 
@@ -129,7 +129,7 @@ function cargarEnFormulario(t){
 
   // Mandante
   const selEmp = document.getElementById('m-empresa');
-  if(selEmp){ selEmp.value = t.mandante_id || t.empresa_rut || ''; onCambioMandanteRegistro(t.faena_obra); }
+  if(selEmp) selEmp.value = t.mandante_id || t.empresa_rut || '';
 
   // Campos migratorios — cargar ANTES de llamar mostrarCamposMigratorios
   const selTipoDoc = document.getElementById('m-tipo-doc-mig');
@@ -212,7 +212,6 @@ async function guardarTrabajador(e){
     empresa_rut:       document.getElementById('m-empresa')?.value || '',
     empresa:           document.getElementById('m-empresa')?.value || '',
     mandante_id:       document.getElementById('m-empresa')?.value || '',
-    faena_obra:        document.getElementById('m-faena')?.value || '',
     funcion_cargo:     cargo || '',
     fecha_ingreso:     document.getElementById('m-fecha-ingreso')?.value || null,
     estado:            'activo',
@@ -263,7 +262,57 @@ async function guardarTrabajador(e){
   }catch(err){toast(`❌ Error: ${err.message}`,'error')}
 }
 
+/* ════════════════════════════════════════════════════════
+   ENCABEZADO DEL LOTE — Empresa Propia / Mandante / Cargo
+   Se elige ANTES de subir el Excel (Hallazgo Grande #12/#13).
+   Reemplaza al modal de "Asignación Masiva" posterior: todo el
+   archivo queda scopeado a este contexto desde el inicio, y ya
+   no hace falta "reconocer" a cada persona después de importar.
+   ════════════════════════════════════════════════════════ */
+function _loteCompleto(){
+  const ep     = document.getElementById('lote-empresa-propia')?.value || '';
+  const man    = document.getElementById('lote-mandante')?.value || '';
+  let   cargo  = document.getElementById('lote-cargo')?.value || '';
+  if(cargo === 'otro') cargo = document.getElementById('lote-cargo-otro')?.value.trim() || '';
+  return !!(ep && man && cargo);
+}
+
+function _onCambioCargoLote(){
+  const sel  = document.getElementById('lote-cargo');
+  const otro = document.getElementById('lote-cargo-otro');
+  if(otro) otro.style.display = sel?.value === 'otro' ? 'block' : 'none';
+  _actualizarEstadoLote();
+}
+
+function _actualizarEstadoLote(){
+  const zona  = document.getElementById('zona-drop-excel');
+  const titulo= document.getElementById('drop-titulo');
+  if(!zona) return;
+  if(_loteCompleto()){
+    zona.style.opacity = '1';
+    if(titulo) titulo.textContent = 'Arrastra tu archivo Excel aquí';
+  } else {
+    zona.style.opacity = '0.5';
+    if(titulo) titulo.textContent = 'Completa Empresa, Mandante y Cargo arriba primero';
+  }
+}
+
+function _clickZonaDropExcel(){
+  if(!_loteCompleto()){
+    toast('⚠️ Completa Empresa Contratista, Mandante y Cargo antes de subir el archivo', 'error');
+    return;
+  }
+  document.getElementById('archivo-excel').click();
+}
+
 function procesarExcel(event){
+  // Defensa: no debería poder llegar aquí sin el lote completo (el drop
+  // queda deshabilitado antes), pero se valida igual por si acaso.
+  if(!_loteCompleto()){
+    toast('⚠️ Completa Empresa Contratista, Mandante y Cargo antes de subir el archivo', 'error');
+    event.target.value = '';
+    return;
+  }
   const file = event.target.files[0];
   if(!file) return;
 
@@ -275,6 +324,12 @@ function procesarExcel(event){
       const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
 
       if(!rows.length){ toast('\u26a0\ufe0f El archivo est\u00e1 vac\u00edo','error'); return; }
+
+      // Encabezado del lote — se aplica igual a todas las filas.
+      const loteEmpresaPropia = document.getElementById('lote-empresa-propia').value;
+      const loteMandanteId    = document.getElementById('lote-mandante').value;
+      let   loteCargo         = document.getElementById('lote-cargo').value;
+      if(loteCargo === 'otro') loteCargo = document.getElementById('lote-cargo-otro').value.trim();
 
       const norm = v => (v||'').toString().trim()
         .toLowerCase().replace(/^\w/, c => c.toUpperCase());
@@ -381,11 +436,15 @@ function procesarExcel(event){
           tipo_doc_migratorio:   tipo_doc_migratorio || null,
           num_doc_migratorio:    num_doc_migratorio || null,
           fecha_venc_migratorio: fecha_venc_migratorio || null,
-          empresa_propia_id: '',
-          mandante_id:       '',
-          empresa_rut:       '',
-          empresa:           '',
-          funcion_cargo:     (row['Cargo'] || row['cargo'] || '').toString().trim(),
+          // ✅ Empresa Propia, Mandante y Cargo vienen del encabezado del
+          // lote (elegido antes de subir el archivo) — ya no se leen por
+          // fila del Excel. Faena ya no existe aquí (Hallazgo #13): se
+          // define recién al generar el Contrato de cada persona.
+          empresa_propia_id: loteEmpresaPropia,
+          mandante_id:       loteMandanteId,
+          empresa_rut:       loteMandanteId,
+          empresa:           loteMandanteId,
+          funcion_cargo:     loteCargo,
           fecha_ingreso,
           estado:            'activo'
         };
@@ -404,7 +463,7 @@ function procesarExcel(event){
       const tbody = document.querySelector('#tabla-excel tbody');
       thead.innerHTML = `<tr>
         <th>RUT</th><th>Nombre</th><th>Nacionalidad</th><th>F. Nacimiento</th><th>Estado Civil</th>
-        <th>Domicilio</th><th>Correo</th><th>AFP</th><th>Salud</th><th>F. Ingreso</th><th>Cargo</th>
+        <th>Domicilio</th><th>Correo</th><th>AFP</th><th>Salud</th><th>F. Ingreso</th>
         <th>Tipo Doc. Mig.</th><th>N° Doc. Mig.</th><th>Venc. Doc. Mig.</th>
       </tr>`;
       tbody.innerHTML = datosExcel.map(t => {
@@ -414,13 +473,15 @@ function procesarExcel(event){
         <td>${t.fecha_nacimiento||'—'}</td><td>${t.estado_civil||'—'}</td>
         <td>${t.domicilio||'—'}</td><td>${t.correo_electronico||'—'}</td>
         <td>${t.afiliacion_afp||'—'}</td><td>${t.sistema_salud||'—'}</td>
-        <td>${t.fecha_ingreso||'—'}</td><td>${t.funcion_cargo||'—'}</td>
+        <td>${t.fecha_ingreso||'—'}</td>
         <td>${t.tipo_doc_migratorio||'—'}</td><td>${t.num_doc_migratorio||'—'}</td>
         <td>${estMig ? `<span style="color:${estMig.color};font-weight:600;">${estMig.emoji} ${estMig.texto}</span>` : '—'}</td>
       </tr>`;
       }).join('');
 
-      let countMsg = `${datosExcel.length} trabajador${datosExcel.length!==1?'es':''} listo${datosExcel.length!==1?'s':''} para importar`;
+      const mandanteObj = empresas.find(e => e.id === loteMandanteId || e.rut === loteMandanteId);
+      const epObj       = empresas_propias.find(e => e.id === loteEmpresaPropia);
+      let countMsg = `${datosExcel.length} trabajador${datosExcel.length!==1?'es':''} listo${datosExcel.length!==1?'s':''} para importar — ${epObj?.nombre||''} → ${mandanteObj?.nombre||''} → ${loteCargo}`;
       if(errores.length) countMsg += ` \u00b7 ${errores.length} fila${errores.length!==1?'s':''} con error (omitida${errores.length!==1?'s':''})`;
       if(advertencias.length) countMsg += ` \u00b7 ${advertencias.length} aviso${advertencias.length!==1?'s':''}`;
       document.getElementById('preview-count').textContent = countMsg;
@@ -467,6 +528,8 @@ function _renderAvisosImportacion(errores, advertencias){
   cont.innerHTML = html;
 }
 
+let _ultimosRutsImportadosMasivo = [];
+
 function subirMasivo(){
   if(!datosExcel.length){ toast('\u26a0\ufe0f No hay datos para importar','error'); return; }
 
@@ -498,9 +561,21 @@ function subirMasivo(){
 
   guardarLocal(); poblarSelects();
 
+  // ✅ Ya no se abre el modal de "Asignación Masiva" — todo el lote ya
+  // quedó asignado desde el encabezado elegido antes de subir. Se deja
+  // un "Deshacer" simple como red de seguridad por si el lote se
+  // configuró mal, en vez del modal completo de antes.
+  _ultimosRutsImportadosMasivo = rutsImportados;
   let msg = `\u2705 ${importados} trabajador${importados!==1?'es':''} importado${importados!==1?'s':''}`;
   if(omitidos) msg += ` · ${omitidos} omitido${omitidos!==1?'s':''} (RUT ya existente)`;
   toast(msg, 'exito');
+
+  const avisoDeshacer = document.getElementById('lote-aviso-deshacer');
+  if(avisoDeshacer && rutsImportados.length){
+    avisoDeshacer.style.display = 'flex';
+    avisoDeshacer.querySelector('span').textContent =
+      `${rutsImportados.length} trabajador${rutsImportados.length!==1?'es':''} recién importado${rutsImportados.length!==1?'s':''} — ¿el lote quedó mal configurado?`;
+  }
 
   datosExcel = [];
   errores = [];
@@ -510,7 +585,28 @@ function subirMasivo(){
   const avisos = document.getElementById('preview-avisos');
   if(avisos) avisos.innerHTML = '';
 
-  if(rutsImportados.length) abrirModalAsignacionMasiva(rutsImportados);
+  if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
+  if(typeof renderContratistas === 'function') renderContratistas();
+}
+
+/* Deshace la última importación masiva (borra a los recién importados).
+   Reemplaza al "Deshacer importación" del modal anterior — mismo
+   propósito, versión simplificada acorde al nuevo flujo. */
+function deshacerUltimaImportacionMasiva(){
+  if(!_ultimosRutsImportadosMasivo.length) return;
+  const n = _ultimosRutsImportadosMasivo.length;
+  if(!confirm(`¿Deshacer la última importación? Se eliminarán los ${n} trabajador${n!==1?'es':''} recién importado${n!==1?'s':''}. Esta acción no se puede deshacer.`)) return;
+
+  trabajadores = trabajadores.filter(t => !_ultimosRutsImportadosMasivo.includes(t.rut));
+  guardarLocal();
+  toast(`🗑️ ${n} trabajador${n!==1?'es':''} eliminado${n!==1?'s':''} — importación deshecha`, 'exito');
+
+  _ultimosRutsImportadosMasivo = [];
+  const avisoDeshacer = document.getElementById('lote-aviso-deshacer');
+  if(avisoDeshacer) avisoDeshacer.style.display = 'none';
+
+  if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
+  if(typeof renderContratistas === 'function') renderContratistas();
 }
 
 function cancelarMasivo(){
@@ -524,27 +620,8 @@ function cancelarMasivo(){
 }
 
 
-function onCambioMandanteRegistro(faenaPreseleccionada){
-  const rutMandante = document.getElementById('m-empresa')?.value || '';
-  const selFaena    = document.getElementById('m-faena');
-  if(!selFaena) return;
-
-  // Buscar faenas del mandante (estructura futura: mandante.faenas[])
-  // Por ahora se leen desde el array global `faenas` si existe, o se muestra campo libre
-  const mandante    = empresas.find(e=>e.id===rutMandante || e.rut===rutMandante);
-  const listFaenas  = (mandante?.faenas || []);
-
-  if(listFaenas.length){
-    selFaena.innerHTML = '<option value="">— Seleccionar faena —</option>'
-      + listFaenas.map(f=>`<option value="${f.nombre||f}">${f.nombre||f}</option>`).join('');
-  } else {
-    selFaena.innerHTML = rutMandante
-      ? '<option value="">Sin faenas registradas (se puede escribir en Mandantes)</option>'
-      : '<option value="">— Selecciona primero un mandante —</option>';
-  }
-
-  if(faenaPreseleccionada) selFaena.value=faenaPreseleccionada;
-}
+// onCambioMandanteRegistro() eliminada — Faena ya no vive en Registro
+// Personal (Hallazgo Grande #13). El campo se define recién en Contratos.
 
 /* ── CAMPOS MIGRATORIOS ─────────────────────────────────── */
 function mostrarCamposMigratorios(){
@@ -587,137 +664,13 @@ function _actualizarSemaforoMigratorio(){
   badge.innerHTML = `<span style="color:${est.color};font-weight:600;font-size:12px;">${est.emoji} ${est.texto}</span>`;
 }
 
-/* ════════════════════════════════════════════════════════
-   MODAL DE ASIGNACIÓN MASIVA — Empresa / Mandante / Cargo
-   Se abre automáticamente después de una carga masiva por Excel
-   ════════════════════════════════════════════════════════ */
-let _ruts_asignacion_masiva = [];
-
-function abrirModalAsignacionMasiva(ruts){
-  _ruts_asignacion_masiva = ruts;
-  const modal = document.getElementById('modal-asignacion-masiva');
-  if(!modal) return;
-
-  const selEP  = document.getElementById('am-empresa-propia');
-  const selMan = document.getElementById('am-mandante');
-  if(selEP)  selEP.innerHTML  = '<option value="">— Sin cambio —</option>' + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
-  if(selMan) selMan.innerHTML = '<option value="">— Sin cambio —</option>' + (empresas||[]).map(e => `<option value="${e.id||e.rut}">${e.nombre}</option>`).join('');
-  const selFaena = document.getElementById('am-faena');
-  if(selFaena) selFaena.innerHTML = '<option value="">— Selecciona primero un mandante —</option>';
-  const cargo = document.getElementById('am-cargo');
-  if(cargo) cargo.value = '';
-  const cargoOtro = document.getElementById('am-cargo-otro');
-  if(cargoOtro){ cargoOtro.value = ''; cargoOtro.style.display = 'none'; }
-
-  const lista = document.getElementById('am-lista-trabajadores');
-  if(lista){
-    lista.innerHTML = ruts.map(rut => {
-      const t = trabajadores.find(x => x.rut === rut);
-      return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--borde);">
-        <input type="checkbox" class="am-check-trab" value="${rut}" checked style="width:auto;">
-        ${t?.nombre || rut} · <span style="color:var(--texto3);font-size:12px;">${rut}</span>
-      </label>`;
-    }).join('');
-  }
-  const chkTodos = document.getElementById('am-check-todos');
-  if(chkTodos) chkTodos.checked = true;
-
-  const contador = document.getElementById('am-contador');
-  if(contador) contador.textContent = `${ruts.length} trabajador${ruts.length!==1?'es':''} recién importado${ruts.length!==1?'s':''}`;
-
-  modal.style.display = 'flex';
-}
-
-function onCambioMandanteAsignacionMasiva(){
-  const manId    = document.getElementById('am-mandante')?.value || '';
-  const selFaena = document.getElementById('am-faena');
-  if(!selFaena) return;
-
-  const mandante   = empresas.find(e => e.id === manId || e.rut === manId);
-  const listFaenas = (mandante?.faenas || []);
-
-  if(!manId){
-    selFaena.innerHTML = '<option value="">— Selecciona primero un mandante —</option>';
-  } else if(listFaenas.length){
-    selFaena.innerHTML = '<option value="">— Sin cambio —</option>'
-      + listFaenas.map(f => `<option value="${f.nombre||f}">${f.nombre||f}</option>`).join('');
-  } else {
-    selFaena.innerHTML = '<option value="">Sin faenas registradas (se agregan desde Mandantes)</option>';
-  }
-}
-
-function toggleSeleccionarTodosMasivo(){
-  const todos = document.getElementById('am-check-todos')?.checked;
-  document.querySelectorAll('.am-check-trab').forEach(chk => chk.checked = todos);
-}
-
-function onCambioCargoAsignacionMasiva(){
-  const sel = document.getElementById('am-cargo');
-  const otro = document.getElementById('am-cargo-otro');
-  if(!sel || !otro) return;
-  otro.style.display = sel.value === 'otro' ? 'block' : 'none';
-}
-
-function aplicarAsignacionMasiva(){
-  const epId    = document.getElementById('am-empresa-propia')?.value || '';
-  const manId   = document.getElementById('am-mandante')?.value || '';
-  const faena   = document.getElementById('am-faena')?.value || '';
-  let cargo     = document.getElementById('am-cargo')?.value || '';
-  if(cargo === 'otro') cargo = document.getElementById('am-cargo-otro')?.value.trim() || '';
-
-  const seleccionados = Array.from(document.querySelectorAll('.am-check-trab:checked')).map(chk => chk.value);
-  if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
-  if(!epId && !manId && !faena && !cargo){ toast('⚠️ Elige empresa, mandante, faena o cargo para aplicar', 'error'); return; }
-
-  let aplicados = 0;
-  seleccionados.forEach(rut => {
-    const t = trabajadores.find(x => x.rut === rut);
-    if(!t) return;
-    if(epId)  t.empresa_propia_id = epId;
-    if(manId){ t.mandante_id = manId; t.empresa_rut = manId; t.empresa = manId; }
-    if(faena) t.faena_obra = faena;
-    if(cargo) t.funcion_cargo = cargo;
-    aplicados++;
-  });
-
-  guardarLocal();
-  toast(`✅ Empresa/mandante asignados a ${aplicados} trabajador${aplicados!==1?'es':''}`, 'exito');
-
-  // Sacar de la lista a los ya aplicados, dejar el modal abierto por si quedan grupos distintos
-  _ruts_asignacion_masiva = _ruts_asignacion_masiva.filter(r => !seleccionados.includes(r));
-  if(_ruts_asignacion_masiva.length){
-    abrirModalAsignacionMasiva(_ruts_asignacion_masiva);
-  } else {
-    cerrarModalAsignacionMasiva();
-  }
-
-  if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
-  if(typeof renderContratistas === 'function') renderContratistas();
-}
-
-/* Deshace la importación: elimina del sistema a los trabajadores de esta tanda
-   que todavía no han recibido ninguna asignación (si ya aplicaste a un subgrupo,
-   esos quedan — solo se borran los que siguen pendientes en este modal). */
-function deshacerImportacionMasiva(){
-  if(!_ruts_asignacion_masiva.length) return;
-  const n = _ruts_asignacion_masiva.length;
-  if(!confirm(`¿Deshacer la importación? Se eliminarán los ${n} trabajador${n!==1?'es':''} recién importado${n!==1?'s':''} que aún no ha${n!==1?'n':''} sido asignado${n!==1?'s':''}. Esta acción no se puede deshacer.`)) return;
-
-  trabajadores = trabajadores.filter(t => !_ruts_asignacion_masiva.includes(t.rut));
-  guardarLocal();
-
-  toast(`🗑️ ${n} trabajador${n!==1?'es':''} eliminado${n!==1?'s':''} — importación deshecha`, 'exito');
-
-  cerrarModalAsignacionMasiva();
-  if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
-  if(typeof renderContratistas === 'function') renderContratistas();
-}
-
-function cerrarModalAsignacionMasiva(){
-  const modal = document.getElementById('modal-asignacion-masiva');
-  if(modal) modal.style.display = 'none';
-  _ruts_asignacion_masiva = [];
-}
+/* Las funciones del modal "Asignación Masiva" (abrirModalAsignacionMasiva,
+   onCambioMandanteAsignacionMasiva, toggleSeleccionarTodosMasivo,
+   onCambioCargoAsignacionMasiva, aplicarAsignacionMasiva,
+   deshacerImportacionMasiva, cerrarModalAsignacionMasiva) se eliminaron
+   por completo — reemplazadas por el encabezado del lote antes de subir
+   el Excel (ver _actualizarEstadoLote, _loteCompleto más arriba, y
+   deshacerUltimaImportacionMasiva junto a subirMasivo). Hallazgo #12/#13.
 
 /* ════════════════════════════════════════════════════════
    RP-003 — BORRADOR AUTOMÁTICO DEL FORMULARIO
@@ -729,7 +682,7 @@ const _BORRADOR_KEY = 'rp_borrador_trabajador';
 const _CAMPOS_BORRADOR = [
   'm-rut','m-nombre','m-nacionalidad','m-otra-nac','m-fecha-nac','m-estado-civil',
   'm-correo','m-domicilio','m-afp','m-salud','m-empresa-contratista','m-empresa',
-  'm-faena','m-cargo','cargo-otro','m-fecha-ingreso',
+  'm-cargo','cargo-otro','m-fecha-ingreso',
   'm-tipo-doc-mig','m-num-doc-mig','m-fecha-venc-mig','m-rut-original',
 ];
 
@@ -800,7 +753,6 @@ function _recuperarBorrador(){
   evaluarCampos();
   mostrarCamposMigratorios();
   onCambioTipoDocMig();
-  onCambioMandanteRegistro(guardado.campos['m-faena']);
 
   const banner = document.getElementById('rp-banner-borrador');
   if(banner) banner.remove();
