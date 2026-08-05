@@ -273,7 +273,9 @@ function precargarContrato(){
   const cCargo = document.getElementById('c-cargo');
   const cFaena = document.getElementById('c-faena');
   if(cCargo) cCargo.value = t.funcion_cargo || '';
-  if(cFaena && !cFaena.value && t.faena_obra) cFaena.value = t.faena_obra;
+  // Prellenado de Faena desde t.faena_obra eliminado — ese campo ya no
+  // existe en el trabajador (Hallazgo Grande #13). La Faena se define
+  // directamente aquí, en el Contrato.
 
   // Precargar fecha inicio desde fecha_ingreso del trabajador
   const fechaInicio = t.fecha_ingreso || '';
@@ -1383,10 +1385,12 @@ function _agruparTrabajadoresMasivo(lista){
     const mandante = findMandante(t);
     const mandanteId = mandante?.id || 'sin-mandante';
     const mandanteNombre = mandante?.nombre || 'Sin mandante asignado';
-    const faena = t.faena_obra || 'Sin faena';
     const cargo = t.funcion_cargo || 'Sin cargo';
-    const key = `${mandanteId}||${faena}||${cargo}`;
-    (grupos[key] = grupos[key] || {key, mandanteId, mandanteNombre, faena, cargo, trabajadores:[]}).trabajadores.push(t);
+    // ✅ Ya no se agrupa por Faena (Hallazgo #13) — el trabajador ya no
+    // tiene ese dato. La Faena ahora se elige UNA VEZ POR SUB-GRUPO
+    // (Mandante+Cargo) en la configuración, no se infiere de cada persona.
+    const key = `${mandanteId}||${cargo}`;
+    (grupos[key] = grupos[key] || {key, mandanteId, mandanteNombre, cargo, trabajadores:[]}).trabajadores.push(t);
   });
   return grupos;
 }
@@ -1417,10 +1421,8 @@ function renderPiramideMasivo(){
   const porMandante = [];
   Object.values(grupos).forEach(g => {
     let m = porMandante.find(x => x.mandanteId === g.mandanteId);
-    if(!m){ m = {mandanteId:g.mandanteId, mandanteNombre:g.mandanteNombre, faenas:[]}; porMandante.push(m); }
-    let f = m.faenas.find(x => x.faena === g.faena);
-    if(!f){ f = {faena:g.faena, grupos:[]}; m.faenas.push(f); }
-    f.grupos.push(g);
+    if(!m){ m = {mandanteId:g.mandanteId, mandanteNombre:g.mandanteNombre, grupos:[]}; porMandante.push(m); }
+    m.grupos.push(g);
   });
 
   cont.innerHTML = porMandante.map(m => `
@@ -1428,30 +1430,24 @@ function renderPiramideMasivo(){
       <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">
         <i class="ti ti-building-skyscraper"></i> ${m.mandanteNombre}
       </div>
-      ${m.faenas.map(f => `
-        <div style="margin-left:10px;margin-bottom:8px;">
-          <div style="font-size:11px;font-weight:600;color:var(--texto3);margin-bottom:4px;">
-            <i class="ti ti-building-factory"></i> ${f.faena}
+      ${m.grupos.map(g => {
+        const gid = _grupoIdSafe(g.key);
+        return `
+        <div style="margin-left:10px;border:1px solid var(--borde);border-radius:8px;margin-bottom:8px;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;cursor:pointer;" onclick="_toggleAccordionMasivo('${gid}')">
+            <input type="checkbox" onclick="event.stopPropagation();_toggleGrupoMasivoCheck('${g.key}', this.checked)" style="width:auto;">
+            <span style="font-size:13px;font-weight:600;flex:1;">${g.cargo} (${g.trabajadores.length})</span>
+            <i class="ti ti-chevron-down" id="chev_${gid}"></i>
           </div>
-          ${f.grupos.map(g => {
-            const gid = _grupoIdSafe(g.key);
-            return `
-            <div style="margin-left:10px;border:1px solid var(--borde);border-radius:8px;margin-bottom:8px;overflow:hidden;">
-              <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;cursor:pointer;" onclick="_toggleAccordionMasivo('${gid}')">
-                <input type="checkbox" onclick="event.stopPropagation();_toggleGrupoMasivoCheck('${g.key}', this.checked)" style="width:auto;">
-                <span style="font-size:13px;font-weight:600;flex:1;">${g.cargo} (${g.trabajadores.length})</span>
-                <i class="ti ti-chevron-down" id="chev_${gid}"></i>
-              </div>
-              <div id="${gid}" style="display:none;">
-                ${g.trabajadores.map(t => `
-                  <label style="display:flex;align-items:center;gap:8px;padding:7px 12px 7px 32px;font-size:13px;border-top:1px solid var(--borde);cursor:pointer;">
-                    <input type="checkbox" class="masivo-check-trab" data-id="${t.id}" data-grupo="${g.key}" onchange="_toggleMasivoCheck('${t.id}', this.checked)" style="width:auto;">
-                    <span style="flex:1;">${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
-                  </label>`).join('')}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>`).join('')}
+          <div id="${gid}" style="display:none;">
+            ${g.trabajadores.map(t => `
+              <label style="display:flex;align-items:center;gap:8px;padding:7px 12px 7px 32px;font-size:13px;border-top:1px solid var(--borde);cursor:pointer;">
+                <input type="checkbox" class="masivo-check-trab" data-id="${t.id}" data-grupo="${g.key}" onchange="_toggleMasivoCheck('${t.id}', this.checked)" style="width:auto;">
+                <span style="flex:1;">${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
+              </label>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
     </div>`).join('');
 
   _masivoActualizarContador();
@@ -1499,13 +1495,20 @@ function abrirConfigGrupoMasivo(){
   const cont = document.getElementById('config-grupos-contenido');
   cont.innerHTML = grupos.map(g => {
     const gid = _grupoIdSafe(g.key);
-    const mandanteObj = findMandante(g.trabajadores[0]);
-    const vigenciaTxt = mandanteObj?.vigencia_contrato
-      ? `Vigencia del contrato con ${g.mandanteNombre}: hasta ${fmtFecha(mandanteObj.vigencia_contrato)}`
-      : '';
+    const mandanteObj = empresas.find(e => e.id === g.mandanteId || e.rut === g.mandanteId);
+    const faenasDelMandante = mandanteObj?.faenas || [];
     return `
     <div style="border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">${g.mandanteNombre} — ${g.faena} — ${g.cargo} (${g.trabajadores.length} trabajador${g.trabajadores.length!==1?'es':''})</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">${g.mandanteNombre} — ${g.cargo} (${g.trabajadores.length} trabajador${g.trabajadores.length!==1?'es':''})</div>
+      <div class="f-group" style="margin-bottom:10px;">
+        <label class="form-label">Faena *</label>
+        ${faenasDelMandante.length
+          ? `<select class="f-input" id="cfg-faena-${gid}">
+              <option value="">— Seleccionar faena —</option>
+              ${faenasDelMandante.map(f => `<option value="${f.nombre||f}">${f.nombre||f}</option>`).join('')}
+            </select>`
+          : `<input class="f-input" id="cfg-faena-${gid}" placeholder="Nombre de la faena (${g.mandanteNombre} no tiene faenas registradas)">`}
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <div class="f-group"><label class="form-label">Tipo de Contrato</label>
           <select class="f-input" id="cfg-tipo-${gid}" onchange="_onCambioTipoConfigGrupo('${gid}')">
@@ -1520,7 +1523,6 @@ function abrirConfigGrupoMasivo(){
         <div class="f-group" id="cfg-campo-temporada-${gid}"><label class="form-label">Temporada</label><input class="f-input" id="cfg-temporada-${gid}" placeholder="Ej: Temporada 2026"></div>
         <div class="f-group" id="cfg-campo-termino-${gid}"><label class="form-label">Fecha de término</label><input class="f-input" type="date" id="cfg-termino-${gid}"></div>
       </div>
-      ${vigenciaTxt ? `<div style="font-size:11px;color:var(--texto3);margin-bottom:8px;"><i class="ti ti-info-circle"></i> ${vigenciaTxt}</div>` : ''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <div class="f-group"><label class="form-label">Colación (minutos)</label><input class="f-input" id="cfg-colacion-${gid}" placeholder="30" onchange="_actualizarHorasGrupo('${gid}')"></div>
         <div class="f-group"><label class="form-label">Horas semanales (auto)</label><input class="f-input" id="cfg-horas-${gid}" readonly style="background:var(--gris-bg);"></div>
@@ -1679,6 +1681,8 @@ function generarContratosGrupoMasivo(){
     const firma = document.getElementById(`cfg-firma-${g.gid}`)?.value;
     const formaPago = document.getElementById(`cfg-formapago-${g.gid}`)?.value;
     const valor = document.getElementById(`cfg-valor-${g.gid}`)?.value;
+    const faena = document.getElementById(`cfg-faena-${g.gid}`)?.value.trim();
+    if(!faena){ toast(`⚠️ Ingresa/selecciona la Faena para "${g.cargo}"`, 'error'); return; }
     if(!ciudad){ toast(`⚠️ Ingresa la ciudad de firma para "${g.cargo}"`, 'error'); return; }
     if(tipo !== 'indefinido' && !termino){ toast(`⚠️ Ingresa la fecha de término para "${g.cargo}"`, 'error'); return; }
     if(tipo === 'temporada' && !temporada){ toast(`⚠️ Ingresa el nombre de la temporada para "${g.cargo}"`, 'error'); return; }
@@ -1687,13 +1691,11 @@ function generarContratosGrupoMasivo(){
     if(!formaPago){ toast(`⚠️ Selecciona la forma de pago para "${g.cargo}"`, 'error'); return; }
     if(!valor || parseInt(valor) <= 0){ toast(`⚠️ Ingresa el valor de la remuneración para "${g.cargo}"`, 'error'); return; }
 
-    if(termino){
-      const mandanteObj = findMandante(g.trabajadores[0]);
-      if(mandanteObj?.vigencia_contrato && termino > mandanteObj.vigencia_contrato){
-        toast(`⚠️ La fecha de término para "${g.cargo}" supera la vigencia del contrato con ${g.mandanteNombre} (vence el ${fmtFecha(mandanteObj.vigencia_contrato)})`, 'error');
-        return;
-      }
-    }
+    // Se eliminó la validación contra vigencia_contrato del Mandante:
+    // el contrato de trabajo es exclusivamente entre el trabajador y la
+    // Empresa Propia (Art. 183-A Código del Trabajo / Ley 20.123) — el
+    // Mandante no tiene rol legal en los términos del contrato de trabajo,
+    // así que no correspondía bloquear la fecha de término por esto.
   }
 
   cargarContratos();
@@ -1709,6 +1711,7 @@ function generarContratosGrupoMasivo(){
 
     const cfg = {
       tipo_contrato:  tipo,
+      faena:          document.getElementById(`cfg-faena-${gid}`).value.trim(),
       ciudad_firma:   document.getElementById(`cfg-ciudad-${gid}`).value.trim(),
       temporada:      tipo === 'temporada' ? document.getElementById(`cfg-temporada-${gid}`).value.trim() : '',
       fecha_termino:  tipo !== 'indefinido' ? document.getElementById(`cfg-termino-${gid}`).value : '',
@@ -1740,7 +1743,7 @@ function generarContratosGrupoMasivo(){
         ciudad_firma: cfg.ciudad_firma,
         fecha_firma: cfg.fecha_firma,
         funcion_cargo: t.funcion_cargo || '',
-        nombre_faena: t.faena_obra || '',
+        nombre_faena: cfg.faena || '',
         ubicacion_faena: [mandante?.direccion, mandante?.comuna].filter(Boolean).join(', '),
         region: mandante?.region || '',
         mandante_nombre: mandante?.nombre || '',
@@ -1782,7 +1785,7 @@ function generarContratosGrupoMasivo(){
         tipo:           'contrato',
         subtipo:        cfg.tipo_contrato,
         fecha_firma:    cfg.fecha_firma,
-        descripcion:    `Contrato ${tipoTxt} — ${t.faena_obra||''} (Masivo)`.trim(),
+        descripcion:    `Contrato ${tipoTxt} — ${cfg.faena||''} (Masivo)`.trim(),
       });
 
       const { htmlCompleto } = construirDocumentoContrato(t, emp, mandante, datos);
