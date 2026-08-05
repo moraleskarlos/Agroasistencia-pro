@@ -1138,6 +1138,7 @@ function switchTabContratos(tab){
     const activo = key === tab;
     btn.style.borderBottomColor = activo ? 'var(--azul)' : 'transparent';
     btn.style.color = activo ? 'var(--azul)' : 'var(--texto2)';
+    btn.style.background = activo ? 'var(--gris-bg)' : 'none';
   });
   Object.keys(subs).forEach(key => {
     const el = document.getElementById(subs[key]);
