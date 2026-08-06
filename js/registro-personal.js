@@ -71,7 +71,7 @@ function validarFormularioTrabajador(datos, idOriginal){
   // RP-001/002: RUT duplicado — solo se permite si estamos editando ESE mismo trabajador
   const existente = trabajadores.find(t => t.rut === datos.rut);
   if(existente && existente.id !== idOriginal){
-    return { ok:false, mensaje:`Ya existe un trabajador registrado con el RUT ${datos.rut} (${existente.nombre}). Usa "Buscar por RUT" para editarlo en vez de crear uno nuevo.` };
+    return { ok:false, mensaje:`Ya existe un trabajador registrado con el RUT ${datos.rut} (${existente.nombre}). Ve al módulo "Trabajadores" y usa "Editar ficha" en vez de crear uno nuevo.` };
   }
 
   if(!datos.nombre) return { ok:false, mensaje:'Ingresa el nombre del trabajador' };
@@ -165,13 +165,9 @@ function estadoDocumentoMigratorio(fecha){
   return map[sem] || map.verde;
 }
 
-async function buscarPorRUT(){
-  const rut=document.getElementById('rut-buscar').value.trim();
-  if(!rut){toast('⚠️ Ingresa un RUT','error');return;}
-  const t=trabajadores.find(w=>w.rut===rut);
-  if(!t){toast('⚠️ RUT no encontrado en el sistema','error');return;}
-  cargarEnFormulario(t); toast(`✅ Datos de ${t.nombre} cargados`,'exito');
-}
+// buscarPorRUT() eliminada (Hallazgo Grande #7) — perdió utilidad al
+// existir ya "Editar ficha" en Trabajadores, que hace exactamente lo
+// mismo desde el lugar correcto.
 
 function cargarEnFormulario(t){
   const set = (id,v) => { const el=document.getElementById(id); if(el) el.value=v||''; };
@@ -260,7 +256,6 @@ function cargarEnFormulario(t){
 
 function limpiarFormulario(){
   document.getElementById('form-trabajador').reset();
-  document.getElementById('rut-buscar').value='';
   const idField = document.getElementById('m-rut-original');
   if(idField) idField.value='';
   document.getElementById('btn-guardar-txt').textContent='Registrar trabajador';
@@ -479,7 +474,7 @@ function procesarExcel(event){
         }
         const yaExiste = trabajadores.find(t => t.rut === rut);
         if(yaExiste){
-          errores.push({ fila, nombre, mensaje:`El RUT "${rut}" ya está registrado (${yaExiste.nombre})`, correccion:'Esta fila no se importará para evitar sobrescribir al trabajador existente. Si necesitas actualizar sus datos, hazlo desde "Buscar por RUT" en el registro individual.' });
+          errores.push({ fila, nombre, mensaje:`El RUT "${rut}" ya está registrado (${yaExiste.nombre})`, correccion:'Esta fila no se importará para evitar sobrescribir al trabajador existente. Si necesitas actualizar sus datos, hazlo desde "Trabajadores" → "Editar ficha".' });
           return;
         }
         if(rutsVistosEnArchivo.has(rut)){
