@@ -534,6 +534,7 @@
 
         <!-- SUB-TAB EXTRANJEROS -->
         <div id="sub-tab-extranjeros-trab" style="display:none;">
+          <div id="kpi-extranjeros-zone" style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;"></div>
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
               <div class="card-title" style="margin:0;"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
@@ -658,31 +659,31 @@
       <div style="display:flex;gap:0;border-bottom:2px solid var(--borde);margin-bottom:16px;flex-wrap:wrap;">
         <button id="tab-ct-individual" onclick="switchTabContratos('ct-individual')"
           style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-          cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);">
+          cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);border-radius:6px 6px 0 0;">
           <i class="ti ti-user"></i> Contrato Individual
         </button>
         <button id="tab-ct-masivo" onclick="switchTabContratos('ct-masivo')"
           style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);border-radius:6px 6px 0 0;">
           <i class="ti ti-users"></i> Contratos Masivos
         </button>
         <button id="tab-ct-emitidos" onclick="switchTabContratos('ct-emitidos')"
           style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);border-radius:6px 6px 0 0;">
           <i class="ti ti-list"></i> Contratos Emitidos
           <span id="badge-tab-contratos" style="background:var(--gris-bg);color:var(--texto2);border-radius:99px;
             padding:1px 7px;font-size:11px;margin-left:6px;">0</span>
         </button>
         <button id="tab-anexos" onclick="switchTabContratos('anexos')"
           style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);border-radius:6px 6px 0 0;">
           <i class="ti ti-paperclip"></i> Anexos
           <span id="badge-tab-anexos" style="background:var(--gris-bg);color:var(--texto2);border-radius:99px;
             padding:1px 7px;font-size:11px;margin-left:6px;">0</span>
         </button>
         <button id="tab-epp" onclick="switchTabContratos('epp')"
           style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+          cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);border-radius:6px 6px 0 0;">
           <i class="ti ti-shield-check"></i> EPP
         </button>
       </div>
@@ -1042,14 +1043,14 @@
   <div style="display:flex;gap:0;border-bottom:2px solid var(--borde);margin-bottom:16px;">
     <button id="tab-mis-empresas" onclick="switchTabEmpresas('mis-empresas')"
       style="padding:10px 20px;border:none;background:var(--gris-bg);font-size:13px;font-weight:600;
-      cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);border-radius:8px 8px 0 0;">
+      cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);border-radius:6px 6px 0 0;">
       <i class="ti ti-building-skyscraper"></i> Mis Empresas
       <span id="badge-mis-empresas" style="background:var(--azul);color:#fff;border-radius:99px;
         padding:1px 7px;font-size:11px;margin-left:6px;">0</span>
     </button>
     <button id="tab-mandantes" onclick="switchTabEmpresas('mandantes')"
       style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-      cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);border-radius:8px 8px 0 0;">
+      cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);border-radius:6px 6px 0 0;">
       <i class="ti ti-building-factory"></i> Empresas Mandantes
       <span id="badge-mandantes-tab" style="background:var(--gris-bg);color:var(--texto2);border-radius:99px;
         padding:1px 7px;font-size:11px;margin-left:6px;">0</span>
@@ -1511,25 +1512,25 @@
         <!-- Tabs -->
         <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--borde);padding-bottom:0;">
           <button id="tab-rem-indicadores" onclick="switchTabRem('rem-indicadores')"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:700;cursor:pointer;color:var(--verde-dark);border-bottom:2px solid var(--verde-dark);margin-bottom:-2px;">
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:700;cursor:pointer;color:var(--verde-dark);border-bottom:2px solid var(--verde-dark);margin-bottom:-2px;border-radius:6px 6px 0 0;">
             📊 Indicadores Previsionales</button>
           <button id="tab-rem-liquidaciones" onclick="switchTabRem('rem-liquidaciones')"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;">
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;">
             📄 Liquidaciones</button>
           <button id="tab-rem-libro" onclick="switchTabRem('rem-libro')"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;">
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;">
             📒 Libro de Remuneraciones</button>
           <button id="tab-rem-previred" onclick="initPrevired()"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;">
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;">
             🏛️ Previred</button>
           <button id="tab-rem-centralizacion" onclick="initCentralizacion()"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;">
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;">
             🧮 Centralización</button>
           <button id="tab-rem-vacaciones" onclick="initVacaciones()"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;">
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;">
             🏖️ Vacaciones</button>
           <button id="tab-rem-finiquitos" onclick="initFiniquitos()"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;">
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:6px 6px 0 0;">
             📝 Finiquitos</button>
         </div>
 
@@ -2053,12 +2054,12 @@
         <div style="display:flex;gap:0;border-bottom:1px solid var(--borde);margin-bottom:16px;">
           <button id="tab-asist-dia" onclick="switchTabAsistencia('dia')"
             style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-            cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);">
+            cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);border-radius:6px 6px 0 0;">
             <i class="ti ti-calendar-check"></i> Asistencia del Día
           </button>
           <button id="tab-asist-manual" onclick="switchTabAsistencia('manual')"
             style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
-            cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);">
+            cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);border-radius:6px 6px 0 0;">
             <i class="ti ti-edit"></i> Registro Manual
           </button>
         </div>
@@ -2683,5 +2684,6 @@
       <div id="ba-contenido"></div>
     </div>
   </div>
+
 </body>
 </html>
