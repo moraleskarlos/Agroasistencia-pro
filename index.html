@@ -131,9 +131,8 @@
         <div class="g2">
           <div class="card">
             <div class="card-title"><i class="ti ti-user-plus"></i> Registro individual</div>
-            <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-end;">
-              <div class="form-group" style="flex:1;margin:0;"><label>Buscar RUT existente</label><input type="text" id="rut-buscar" placeholder="12.345.678-9" oninput="formatearRUT(this)" onkeydown="if(event.key==='Enter')buscarPorRUT()"></div>
-              <button class="btn btn-dark btn-sm" onclick="buscarPorRUT()"><i class="ti ti-search"></i> Buscar</button>
+            <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;display:flex;gap:8px;align-items:center;justify-content:space-between;">
+              <div style="font-size:12px;color:var(--texto2);"><i class="ti ti-info-circle"></i> ¿Vas a editar a alguien? Búscalo en el módulo <strong>Trabajadores</strong> y usa "Editar ficha".</div>
               <button class="btn btn-secondary btn-sm" onclick="limpiarFormulario()"><i class="ti ti-refresh"></i> Nuevo</button>
             </div>         
 
@@ -469,9 +468,9 @@
      del bloque de Reporte, que es donde realmente se usan. -->
 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--borde);">
   <span style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;">Filtros:</span>
-  <select id="filtro-empresa-propia" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todas las empresas</option></select>
-  <select id="filtro-empresa" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todos los mandantes</option></select>
-  <select id="filtro-estado" class="btn btn-secondary" style="font-size:13px;" onchange="cargarTrabajadores()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
+  <select id="filtro-empresa-propia" class="btn btn-secondary" style="font-size:13px;width:auto;max-width:220px;" onchange="cargarTrabajadores()"><option value="">Todas las empresas</option></select>
+  <select id="filtro-empresa" class="btn btn-secondary" style="font-size:13px;width:auto;max-width:220px;" onchange="cargarTrabajadores()"><option value="">Todos los mandantes</option></select>
+  <select id="filtro-estado" class="btn btn-secondary" style="font-size:13px;width:auto;max-width:180px;" onchange="cargarTrabajadores()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
   <button class="btn btn-secondary" onclick="exportarTrabajadoresExcel()"><i class="ti ti-download"></i> Excel</button>
 </div>
 
@@ -2068,7 +2067,7 @@
         <div id="sub-tab-asist-dia">
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
           <input type="date" id="asist-fecha" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()">
-          <select id="asist-empresa" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()"><option value="">Todos los mandantes</option></select>
+          <select id="asist-empresa" class="btn btn-secondary" style="font-size:13px;width:auto;max-width:220px;" onchange="cargarAsistencia()"><option value="">Todos los mandantes</option></select>
           <input type="text" id="asist-buscar" oninput="cargarAsistencia()" placeholder="Buscar nombre o RUT..." style="padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
           <button class="btn btn-secondary btn-sm" onclick="toggleRangoFechasAsistencia()"><i class="ti ti-calendar-stats"></i> Ver rango de fechas</button>
         </div>
@@ -2415,7 +2414,7 @@
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn btn-secondary" onclick="cerrarModalEmpresaPropia()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarEmpresaPropia()"><i class="ti ti-check"></i> Guardar</button>
+      <button class="btn btn-primary" id="btn-guardar-ep" onclick="guardarEmpresaPropia()"><i class="ti ti-check"></i> Guardar</button>
     </div>
   </div>
 </div>
@@ -2527,7 +2526,7 @@
     <input type="hidden" id="e-rut-original">
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
       <button class="btn btn-secondary" onclick="cerrarModalEmpresa()">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarEmpresa()"><i class="ti ti-cloud-upload"></i> Guardar empresa</button>
+      <button class="btn btn-primary" id="btn-guardar-e" onclick="guardarEmpresa()"><i class="ti ti-cloud-upload"></i> Guardar empresa</button>
     </div>
   </div>
 </div>
