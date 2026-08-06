@@ -174,9 +174,9 @@
     }
     /* TABS GESTIÓN LABORAL */
     #p-gestion-laboral [id^="tab-gl-"].activo {
-      color: var(--verde-dark) !important;
+      color: #fff !important;
       border-bottom-color: var(--verde-dark) !important;
-      background: var(--gris-bg) !important;
+      background: var(--verde-dark) !important;
       border-radius: var(--radius) var(--radius) 0 0;
     }
     #p-gestion-laboral [id^="tab-gl-"]:hover {
