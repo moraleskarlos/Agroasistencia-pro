@@ -449,6 +449,7 @@
 
         <!-- SUB-TAB TODOS -->
         <div id="sub-tab-todos-trab">
+        <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Resumen General</div>
         <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;">
           <div class="kpi azul"><div class="kpi-label">Total de trabajadores en sistema</div><div class="kpi-value" id="kpi-t-total">0</div><div class="kpi-sub">en el sistema</div></div>
           <div class="kpi verde"><div class="kpi-label">Trabajadores activos</div><div class="kpi-value" id="kpi-t-activos">0</div><div class="kpi-sub">trabajando</div></div>
@@ -464,38 +465,40 @@
 
 </div>
 
-<!-- Filtros — antes vivían sueltos arriba de la página, ahora dentro
-     del bloque de Reporte, que es donde realmente se usan. -->
-<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--borde);">
-  <span style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;">Filtros:</span>
-  <select id="filtro-empresa-propia" class="btn btn-secondary" style="font-size:13px;width:auto;max-width:220px;" onchange="cargarTrabajadores()"><option value="">Todas las empresas</option></select>
-  <select id="filtro-empresa" class="btn btn-secondary" style="font-size:13px;width:auto;max-width:220px;" onchange="cargarTrabajadores()"><option value="">Todos los mandantes</option></select>
-  <select id="filtro-estado" class="btn btn-secondary" style="font-size:13px;width:auto;max-width:180px;" onchange="cargarTrabajadores()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
-  <button class="btn btn-secondary" onclick="exportarTrabajadoresExcel()"><i class="ti ti-download"></i> Excel</button>
-</div>
-
-<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:12px;">
-
-  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-
-    <input type="text"
-           placeholder="Buscar nombre o RUT..."
-           id="buscar-trab"
-           style="width:190px;padding:7px 10px;font-size:12px;"
-           oninput="cargarTrabajadores()">
-
-    <label style="font-size:12px;color:var(--texto2);white-space:nowrap;display:flex;align-items:center;gap:5px;">
-      <i class="ti ti-calendar"></i> Ingreso:
-      <input type="date"
-             id="filtro-fecha-ingreso"
-             class="btn btn-secondary"
-             style="font-size:12px;padding:6px 10px;"
-             onchange="cargarTrabajadores()">
-      <button class="btn btn-sm" onclick="limpiarFiltroFecha()" title="Limpiar fecha" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
-    </label>
-
+<!-- Filtrar y buscar — etiqueta arriba de cada control, para que se
+     entienda de un vistazo qué hace cada cuadro (mismo criterio que ya
+     usa el formulario de Registro Personal). -->
+<div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--borde);">
+  <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Filtrar</div>
+  <div style="display:flex;flex-wrap:wrap;gap:12px;">
+    <div style="display:flex;flex-direction:column;gap:4px;min-width:170px;">
+      <label style="font-size:12px;font-weight:600;color:var(--texto2);">Empresa Contratista</label>
+      <select id="filtro-empresa-propia" class="btn btn-secondary" style="font-size:13px;width:100%;" onchange="cargarTrabajadores()"><option value="">Todas las empresas</option></select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;min-width:170px;">
+      <label style="font-size:12px;font-weight:600;color:var(--texto2);">Empresa Mandante</label>
+      <select id="filtro-empresa" class="btn btn-secondary" style="font-size:13px;width:100%;" onchange="cargarTrabajadores()"><option value="">Todos los mandantes</option></select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;min-width:150px;">
+      <label style="font-size:12px;font-weight:600;color:var(--texto2);">Estado</label>
+      <select id="filtro-estado" class="btn btn-secondary" style="font-size:13px;width:100%;" onchange="cargarTrabajadores()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:12px;font-weight:600;color:var(--texto2);">Exportar</label>
+      <button class="btn btn-secondary" onclick="exportarTrabajadoresExcel()"><i class="ti ti-download"></i> Excel</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;min-width:190px;">
+      <label style="font-size:12px;font-weight:600;color:var(--texto2);">Buscar por Nombre o RUT</label>
+      <input type="text" placeholder="Buscar nombre o RUT..." id="buscar-trab" style="width:100%;padding:7px 10px;font-size:12px;" oninput="cargarTrabajadores()">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:12px;font-weight:600;color:var(--texto2);">Fecha de Ingreso</label>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="date" id="filtro-fecha-ingreso" class="btn btn-secondary" style="font-size:12px;padding:6px 10px;" onchange="cargarTrabajadores()">
+        <button class="btn btn-sm" onclick="limpiarFiltroFecha()" title="Limpiar fecha" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+      </div>
+    </div>
   </div>
-
 </div>
 
           <div class="tabla-wrap">
@@ -534,20 +537,37 @@
 
         <!-- SUB-TAB EXTRANJEROS -->
         <div id="sub-tab-extranjeros-trab" style="display:none;">
+          <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Resumen de Documentos Migratorios</div>
           <div id="kpi-extranjeros-zone" style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;"></div>
           <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <select id="filtro-empresa-propia-ext" class="btn btn-secondary" style="font-size:13px;width:auto;min-width:170px;" onchange="renderTablaExtranjeros()"><option value="">Todas las empresas</option></select>
-                <select id="filtro-empresa-ext" class="btn btn-secondary" style="font-size:13px;width:auto;min-width:170px;" onchange="renderTablaExtranjeros()"><option value="">Todos los mandantes</option></select>
-                <select id="filtro-estado-ext" class="btn btn-secondary" style="font-size:13px;width:auto;min-width:140px;" onchange="renderTablaExtranjeros()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
-                <input type="text" id="buscar-extranjero" placeholder="Buscar nombre o RUT..."
-                  style="width:200px;padding:7px 10px;font-size:12px;"
-                  oninput="renderTablaExtranjeros()">
-                <button class="btn btn-secondary btn-sm" onclick="exportarExtranjerosExcel()"><i class="ti ti-download"></i> Excel</button>
+            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
+
+            <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--borde);">
+              <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Filtrar</div>
+              <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:170px;">
+                  <label style="font-size:12px;font-weight:600;color:var(--texto2);">Empresa Contratista</label>
+                  <select id="filtro-empresa-propia-ext" class="btn btn-secondary" style="font-size:13px;width:100%;" onchange="renderTablaExtranjeros()"><option value="">Todas las empresas</option></select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:170px;">
+                  <label style="font-size:12px;font-weight:600;color:var(--texto2);">Empresa Mandante</label>
+                  <select id="filtro-empresa-ext" class="btn btn-secondary" style="font-size:13px;width:100%;" onchange="renderTablaExtranjeros()"><option value="">Todos los mandantes</option></select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:150px;">
+                  <label style="font-size:12px;font-weight:600;color:var(--texto2);">Estado</label>
+                  <select id="filtro-estado-ext" class="btn btn-secondary" style="font-size:13px;width:100%;" onchange="renderTablaExtranjeros()"><option value="">Todos los estados</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:12px;font-weight:600;color:var(--texto2);">Exportar</label>
+                  <button class="btn btn-secondary btn-sm" onclick="exportarExtranjerosExcel()"><i class="ti ti-download"></i> Excel</button>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
+                  <label style="font-size:12px;font-weight:600;color:var(--texto2);">Buscar por Nombre o RUT</label>
+                  <input type="text" id="buscar-extranjero" placeholder="Buscar nombre o RUT..." style="width:100%;padding:7px 10px;font-size:12px;" oninput="renderTablaExtranjeros()">
+                </div>
               </div>
             </div>
+
             <div style="overflow-x:auto;">
               <table class="tabla" style="min-width:750px;">
                 <thead><tr>
@@ -2066,11 +2086,26 @@
 
         <!-- SUBMÓDULO ASISTENCIA DEL DÍA (centro de control en vivo) -->
         <div id="sub-tab-asist-dia">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <input type="date" id="asist-fecha" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()">
-          <select id="asist-empresa" class="btn btn-secondary" style="font-size:13px;width:auto;max-width:220px;" onchange="cargarAsistencia()"><option value="">Todos los mandantes</option></select>
-          <input type="text" id="asist-buscar" oninput="cargarAsistencia()" placeholder="Buscar nombre o RUT..." style="padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
-          <button class="btn btn-secondary btn-sm" onclick="toggleRangoFechasAsistencia()"><i class="ti ti-calendar-stats"></i> Ver rango de fechas</button>
+        <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--borde);">
+          <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Filtrar</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <label style="font-size:12px;font-weight:600;color:var(--texto2);">Fecha</label>
+              <input type="date" id="asist-fecha" class="btn btn-secondary" style="font-size:13px;" onchange="cargarAsistencia()">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;min-width:170px;">
+              <label style="font-size:12px;font-weight:600;color:var(--texto2);">Empresa Mandante</label>
+              <select id="asist-empresa" class="btn btn-secondary" style="font-size:13px;width:100%;" onchange="cargarAsistencia()"><option value="">Todos los mandantes</option></select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;min-width:190px;">
+              <label style="font-size:12px;font-weight:600;color:var(--texto2);">Buscar por Nombre o RUT</label>
+              <input type="text" id="asist-buscar" oninput="cargarAsistencia()" placeholder="Buscar nombre o RUT..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;justify-content:flex-end;">
+              <label style="font-size:12px;font-weight:600;color:var(--texto2);">&nbsp;</label>
+              <button class="btn btn-secondary btn-sm" onclick="toggleRangoFechasAsistencia()"><i class="ti ti-calendar-stats"></i> Ver rango de fechas</button>
+            </div>
+          </div>
         </div>
         <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--gris-bg);border-radius:8px;margin-bottom:14px;font-size:13px;font-weight:600;">
           <span>👥 <span id="asist-total">0</span> Trabajadores</span>
