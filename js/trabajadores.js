@@ -245,7 +245,34 @@ function switchTabTrabajadores(tab){
   if(tab === 'extranjeros') renderTablaExtranjeros();
 }
 
+/* ✅ NUEVO — KPIs de Extranjeros, reutilizando las mismas 4 categorías
+   (verde/amarillo/rojo/negro) que ya usa el semáforo de Registro
+   Personal y Alertas, para no inventar un criterio nuevo que no calce
+   con los badges que ya se ven fila por fila en esta misma tabla.
+   Son totales del sistema completo, sin filtrar por los selectores de
+   la tabla de abajo — mismo criterio que ya usan los KPIs de la
+   pestaña "Trabajadores". */
+function renderKpisExtranjeros(){
+  const zona = document.getElementById('kpi-extranjeros-zone');
+  if(!zona) return;
+
+  const extranjeros = trabajadores.filter(t => t.nacionalidad && t.nacionalidad !== 'Chileno');
+  const conteo = { verde:0, amarillo:0, rojo:0, negro:0, sinFecha:0 };
+  extranjeros.forEach(t => {
+    const sem = _calcularSemaforo(t.fecha_venc_migratorio);
+    if(sem === 'gris') conteo.sinFecha++;
+    else conteo[sem] = (conteo[sem]||0) + 1;
+  });
+
+  zona.innerHTML =
+    _kpiCard('Vigentes', conteo.verde, '🟢 más de 90 días', '#16a34a') +
+    _kpiCard('Iniciar trámite', conteo.amarillo, '🟡 31 a 90 días', '#d97706') +
+    _kpiCard('Urgentes', conteo.rojo, '🔴 30 días o menos', '#dc2626') +
+    _kpiCard('Vencidos', conteo.negro, '⚫ ya vencidos', '#dc2626');
+}
+
 function renderTablaExtranjeros(){
+  renderKpisExtranjeros();
   const buscar   = (document.getElementById('buscar-extranjero')?.value || '').toLowerCase();
   const fEmpProp = document.getElementById('filtro-empresa-propia-ext')?.value || '';
   const fEmp     = document.getElementById('filtro-empresa-ext')?.value || '';
