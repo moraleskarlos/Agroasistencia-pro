@@ -387,9 +387,9 @@ function switchTabPerfil(tab){
     if(!btn || !sub) return;
     const activo = key === tab;
     sub.style.display = activo ? 'block' : 'none';
-    btn.style.color = activo ? 'var(--azul)' : 'var(--texto2)';
+    btn.style.color = activo ? '#fff' : 'var(--texto2)';
     btn.style.borderBottom = activo ? '2px solid var(--azul)' : '2px solid transparent';
-    btn.style.background = activo ? 'var(--gris-bg)' : 'none';
+    btn.style.background = activo ? 'var(--azul)' : 'none';
   });
 
   if(tab === 'carpeta' && _perfil_rut_actual) _renderCarpetaTrabajador(_perfil_rut_actual);
