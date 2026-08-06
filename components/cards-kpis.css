@@ -104,6 +104,7 @@
   flex: 0 1 200px;
   min-width: 160px;
   max-width: 220px;
+  text-align: center;
 
   /* Mismo criterio que .card: contorno decorativo, la sombra
      reforzada asume la separación visual del fondo. */
