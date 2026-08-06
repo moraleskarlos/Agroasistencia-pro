@@ -202,6 +202,8 @@ function abrirModalEmpresa(idOrRut=null){
   const msgDupE = document.getElementById('e-rut-msg-dup');
   if(msgDupE) msgDupE.textContent = '';
   document.getElementById('e-rut').style.borderColor = '';
+  const btnGE = document.getElementById('btn-guardar-e');
+  if(btnGE) btnGE.disabled = false;
   const campos=['e-rut','e-nombre','e-rut-rep','e-nombre-rep','e-correo','e-telefono','e-fecha-inicio','e-vigencia','e-direccion','e-comuna','e-region'];
   if(!idOrRut){
     campos.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -388,15 +390,16 @@ function renderKpisMisEmpresas(){
   const activas   = empresas_propias.filter(e => e.estado !== 'inactivo').length;
   const inactivas = empresas_propias.filter(e => e.estado === 'inactivo').length;
 
-  // ✅ Tarjetas "Trabajadores" y "Contratos" eliminadas — esa información
-  // ya está visible por fila en la lista de abajo (columnas Total/Activos/
-  // Inactivos). Se deja solo el resumen de Mis Empresas.
-  // ✅ Grilla de ancho a contenido (igual criterio que .kpi-grid del resto
-  // del sistema) en vez de columnas fijas iguales.
+  // ✅ Antes era una sola tarjeta combinada "3/0" — tenía sentido cuando
+  // había 3 KPIs compitiendo por espacio, pero ahora que este es el único
+  // (o casi único) KPI de la zona, separarlas en 2 tarjetas se ve mejor,
+  // no saturado (decisión del usuario tras simplificar el resto).
   zona.style.display = 'flex';
   zona.style.flexWrap = 'wrap';
   zona.style.gap = '14px';
-  zona.innerHTML = _kpiActivoInactivo('Mis Empresas', activas, inactivas, 'empresas propias');
+  zona.innerHTML =
+    _kpiCard('Empresas Activas',   activas,   'empresas propias', 'var(--verde-dark)') +
+    _kpiCard('Empresas Inactivas', inactivas, 'dadas de baja',     inactivas>0?'#dc2626':'var(--texto3)');
 }
 
 function renderKpisMandantes(){
@@ -420,14 +423,15 @@ function renderKpisMandantes(){
   }).length;
   const vigTexto = vencidos > 0
     ? `${vencidos} vencido${vencidos>1?'s':''}`
-    : porVencer > 0 ? `${porVencer} por vencer` : '✅ Al día';
+    : porVencer > 0 ? `${porVencer} por vencer` : 'Al día';
   const vigColor = vencidos > 0 ? '#dc2626' : porVencer > 0 ? '#d97706' : 'var(--verde-dark)';
 
   zona.style.display = 'flex';
   zona.style.flexWrap = 'wrap';
   zona.style.gap = '14px';
   zona.innerHTML =
-    _kpiActivoInactivo('Empresas Mandantes', activos, inactivos, '') +
+    _kpiCard('Mandantes Activos',   activos,   'empresas mandante', 'var(--verde-dark)') +
+    _kpiCard('Mandantes Inactivos', inactivos, 'dados de baja',      inactivos>0?'#dc2626':'var(--texto3)') +
     `<div class="kpi" style="border-color:${vencidos>0?'#dc2626':porVencer>0?'#d97706':'var(--borde)'};">
       <div class="kpi-label">Vigencia de contratos</div>
       <div class="kpi-value" style="color:${vigColor};font-size:20px;">${vigTexto}</div>
@@ -445,7 +449,7 @@ function switchTabEmpresas(tab){
   const kpiMan  = document.getElementById('kpi-mandantes-zone');
 
   if(tab === 'mis-empresas'){
-    tabMis.style.borderBottomColor = 'var(--azul)';   tabMis.style.color = 'var(--azul)';   tabMis.style.background = 'var(--gris-bg)';
+    tabMis.style.borderBottomColor = 'var(--azul)';   tabMis.style.color = '#fff';   tabMis.style.background = 'var(--azul)';
     tabMan.style.borderBottomColor = 'transparent';    tabMan.style.color = 'var(--texto2)'; tabMan.style.background = 'none';
     subMis.style.display = '';    subMan.style.display = 'none';
     if(kpiMis) kpiMis.style.display = '';
@@ -453,7 +457,7 @@ function switchTabEmpresas(tab){
     renderKpisMisEmpresas();
     renderMisEmpresas();
   } else {
-    tabMan.style.borderBottomColor = 'var(--azul)';   tabMan.style.color = 'var(--azul)';   tabMan.style.background = 'var(--gris-bg)';
+    tabMan.style.borderBottomColor = 'var(--azul)';   tabMan.style.color = '#fff';   tabMan.style.background = 'var(--azul)';
     tabMis.style.borderBottomColor = 'transparent';    tabMis.style.color = 'var(--texto2)'; tabMis.style.background = 'none';
     subMan.style.display = '';    subMis.style.display = 'none';
     if(kpiMan) kpiMan.style.display = '';
@@ -577,6 +581,8 @@ function abrirModalEmpresaPropia(id){
   const msgDup = document.getElementById('ep-rut-msg-dup');
   if(msgDup) msgDup.textContent = '';
   document.getElementById('ep-rut').style.borderColor = '';
+  const btnGP = document.getElementById('btn-guardar-ep');
+  if(btnGP) btnGP.disabled = false;
 }
 
 function cerrarModalEmpresaPropia(){
@@ -595,8 +601,17 @@ function _validarRutDuplicadoEnVivo(input){
     msgEl.style.cssText = 'font-size:11px;color:var(--danger);margin-top:4px;';
     input.insertAdjacentElement('afterend', msgEl);
   }
+  // ✅ El aviso ahora también BLOQUEA el guardado (no solo avisa) —
+  // corrige el hallazgo de la verificación funcional: antes se podía
+  // seguir llenando y hasta guardar sin corregir el RUT.
+  const btnGuardar = document.getElementById(input.id === 'ep-rut' ? 'btn-guardar-ep' : 'btn-guardar-e');
   const rut = input.value.trim();
-  if(!rut){ msgEl.textContent = ''; input.style.borderColor = ''; return; }
+  if(!rut){
+    msgEl.textContent = '';
+    input.style.borderColor = '';
+    if(btnGuardar) btnGuardar.disabled = false;
+    return;
+  }
 
   const idExcluirEl = input.id === 'ep-rut'
     ? document.getElementById('ep-id-original')
@@ -605,11 +620,13 @@ function _validarRutDuplicadoEnVivo(input){
 
   const dup = _rutYaExiste(rut, idExcluir);
   if(dup){
-    msgEl.textContent = `⚠️ Este RUT ya está registrado en "${dup.registro.nombre}" (${dup.tipo})`;
+    msgEl.textContent = `⛔ Este RUT ya está registrado en "${dup.registro.nombre}" (${dup.tipo}) — corrígelo para poder guardar`;
     input.style.borderColor = 'var(--danger)';
+    if(btnGuardar) btnGuardar.disabled = true;
   } else {
     msgEl.textContent = '';
     input.style.borderColor = '';
+    if(btnGuardar) btnGuardar.disabled = false;
   }
 }
 
