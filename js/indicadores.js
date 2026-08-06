@@ -8,9 +8,9 @@
 function switchTabRem(tab){
   document.querySelectorAll('[id^="tab-rem-"]').forEach(btn => {
     const activo = btn.id === 'tab-' + tab;
-    btn.style.color            = activo ? 'var(--verde-dark)' : 'var(--texto2)';
+    btn.style.color            = activo ? '#fff' : 'var(--texto2)';
     btn.style.borderBottomColor= activo ? 'var(--verde-dark)' : 'transparent';
-    btn.style.background       = activo ? 'var(--gris-bg)' : 'none';
+    btn.style.background       = activo ? 'var(--verde-dark)' : 'none';
     btn.style.fontWeight       = activo ? '700' : '600';
   });
   document.querySelectorAll('[id^="panel-rem-"]').forEach(panel => {
