@@ -15,7 +15,8 @@ function switchTabRegistro(tab){
     if(!btn) return;
     const activo = key === tab;
     btn.style.borderBottomColor = activo ? 'var(--azul)' : 'transparent';
-    btn.style.color = activo ? 'var(--azul)' : 'var(--texto2)';
+    btn.style.color = activo ? '#fff' : 'var(--texto2)';
+    btn.style.background = activo ? 'var(--azul)' : 'none';
   });
   Object.keys(subs).forEach(key => {
     const el = document.getElementById(subs[key]);
