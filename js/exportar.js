@@ -102,6 +102,20 @@ function exportarExtranjerosExcel(){
 function descargarPlantilla(){
   const wb = XLSX.utils.book_new();
 
+  /* Hoja 0: Instrucciones — deja explícita la regla de cuadrilla homogénea
+     ANTES de que el usuario llene el archivo, para evitar el error de mezclar
+     Empresas/Cargos distintos en un mismo archivo. */
+  const instrucciones = [
+    { ' ':'Esta plantilla es para UNA cuadrilla: todos los trabajadores del archivo quedarán con la MISMA Empresa Contratista y el MISMO Cargo.' },
+    { ' ':'La Empresa y el Cargo se eligen en pantalla, después de subir el archivo — no van en este Excel.' },
+    { ' ':'La Empresa Mandante y la Faena NO se piden acá — se definen después, al generar el Contrato de cada trabajador.' },
+    { ' ':'¿Necesitás mezclar distintas Empresas, Mandantes o Cargos? Usá un archivo separado por cada combinación.' },
+    { ' ':'Completá los datos de cada trabajador en la hoja "1. Datos". La hoja "2. Valores válidos" indica el formato exacto de cada columna.' },
+  ];
+  const ws0 = XLSX.utils.json_to_sheet(instrucciones, {skipHeader:true});
+  ws0['!cols'] = [{wch:110}];
+  XLSX.utils.book_append_sheet(wb, ws0, '0. Instrucciones');
+
   /* Hoja 1: Ejemplo con trabajador de muestra */
   const ejemplo = [{
     'RUT':               '12.345.678-9',
@@ -149,7 +163,7 @@ function descargarPlantilla(){
   XLSX.utils.book_append_sheet(wb, ws2, '2. Valores válidos');
 
   XLSX.writeFile(wb, 'Plantilla_Trabajadores.xlsx');
-  toast('⬇️ Plantilla descargada — revisa las 2 hojas','exito');
+  toast('⬇️ Plantilla descargada — revisa las 3 hojas','exito');
 }
 
 /* ── 3. ASISTENCIA EXCEL ───────────────────────────────── */

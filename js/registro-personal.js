@@ -1,6 +1,29 @@
 /* ════ REGISTRO PERSONAL ════ */
 
 /* ════════════════════════════════════════════════════════
+   TABS — Registro Individual / Registro Masivo
+   Antes convivían en 2 columnas siempre visibles (.g2); separados
+   en sub-tabs (mismo patrón que Contratos) para ganar pantalla y
+   evitar que el usuario confunda un flujo con el otro.
+   ════════════════════════════════════════════════════════ */
+function switchTabRegistro(tab){
+  const tabs = { individual:'tab-reg-individual', masivo:'tab-reg-masivo' };
+  const subs = { individual:'sub-tab-reg-individual', masivo:'sub-tab-reg-masivo' };
+
+  Object.keys(tabs).forEach(key => {
+    const btn = document.getElementById(tabs[key]);
+    if(!btn) return;
+    const activo = key === tab;
+    btn.style.borderBottomColor = activo ? 'var(--azul)' : 'transparent';
+    btn.style.color = activo ? 'var(--azul)' : 'var(--texto2)';
+  });
+  Object.keys(subs).forEach(key => {
+    const el = document.getElementById(subs[key]);
+    if(el) el.style.display = (key === tab) ? '' : 'none';
+  });
+}
+
+/* ════════════════════════════════════════════════════════
    CARGO Y ESTADO CIVIL SEGÚN SEXO (Hallazgo Grande #9)
    Antes: una sola lista mezclada, solo Cosechero/Cosechera tenía
    ambas formas, el resto solo masculino. Ahora: pares completos,
@@ -368,11 +391,12 @@ async function guardarTrabajador(e){
 }
 
 /* ════════════════════════════════════════════════════════
-   ENCABEZADO DEL LOTE — Empresa Propia / Mandante / Cargo
-   Se elige ANTES de subir el Excel (Hallazgo Grande #12/#13).
-   Reemplaza al modal de "Asignación Masiva" posterior: todo el
-   archivo queda scopeado a este contexto desde el inicio, y ya
-   no hace falta "reconocer" a cada persona después de importar.
+   ENCABEZADO DE LA CUADRILLA — Empresa Propia / Cargo
+   Mandante eliminado de aquí (Bypass de Mandante) — se elige
+   recién al generar el Contrato de cada persona.
+   Se elige DESPUÉS de validar el Excel (Opción B) y se confirma
+   con el resumen antes de importar de verdad (ver
+   abrirConfirmacionRegistroMasivo / confirmarImportacionMasiva).
    ════════════════════════════════════════════════════════ */
 function _loteCompleto(){
   const ep     = document.getElementById('lote-empresa-propia')?.value || '';
@@ -640,6 +664,9 @@ function _renderAvisosImportacion(errores, advertencias){
 
 let _ultimosRutsImportadosMasivo = [];
 
+let _loteEmpresaPropiaPendiente = '';
+let _loteCargoPendiente = '';
+
 function subirMasivo(){
   if(!datosExcel.length){ toast('\u26a0\ufe0f No hay datos para importar','error'); return; }
 
@@ -666,7 +693,40 @@ function subirMasivo(){
     if(!ok) return;
   }
 
+  // Guardamos el encabezado validado para usarlo al confirmar — los
+  // selects podrían limpiarse/cambiar mientras el modal está abierto.
+  _loteEmpresaPropiaPendiente = loteEmpresaPropia;
+  _loteCargoPendiente = loteCargo;
+  abrirConfirmacionRegistroMasivo();
+}
+
+/* ✅ Pantalla de confirmación — mismo criterio que Contrato Masivo:
+   revisar el resumen (Empresa/Cargo/Trabajadores) antes de confirmar,
+   para pescar un encabezado mal elegido antes de importar de verdad. */
+function abrirConfirmacionRegistroMasivo(){
+  const epObj = empresas_propias.find(e => e.id === _loteEmpresaPropiaPendiente);
+  const total = datosExcel.length;
+
+  document.getElementById('conf-reg-masivo-empresa').textContent = epObj?.nombre || epObj?.razon_social || '—';
+  document.getElementById('conf-reg-masivo-cargo').textContent   = _loteCargoPendiente || '—';
+  document.getElementById('conf-reg-masivo-total').textContent   = total;
+  document.getElementById('conf-reg-masivo-frase').textContent   =
+    `Los ${total} trabajador${total!==1?'es':''} ser${total!==1?'án':'á'} contratado${total!==1?'s':''} con este mismo cargo y las mismas condiciones.`;
+
+  document.getElementById('modal-confirmacion-registro-masivo').style.display = 'flex';
+}
+
+function cerrarModalConfirmacionRegistroMasivo(){
+  document.getElementById('modal-confirmacion-registro-masivo').style.display = 'none';
+}
+
+/* Importación real — recién ocurre al confirmar en el modal de arriba. */
+function confirmarImportacionMasiva(){
+  const loteEmpresaPropia = _loteEmpresaPropiaPendiente;
+  const loteCargo = _loteCargoPendiente;
+
   let importados = 0;
+
   let omitidos = 0;
   const rutsImportados = [];
   datosExcel.forEach(trabajador => {
@@ -685,9 +745,11 @@ function subirMasivo(){
 
   guardarLocal(); poblarSelects();
 
+  cerrarModalConfirmacionRegistroMasivo();
+
   // ✅ Ya no se abre el modal de "Asignación Masiva" — todo el lote ya
   // quedó asignado desde el encabezado elegido antes de subir. Se deja
-  // un "Deshacer" simple como red de seguridad por si el lote se
+  // un "Deshacer" simple como red de seguridad por si la cuadrilla se
   // configuró mal, en vez del modal completo de antes.
   _ultimosRutsImportadosMasivo = rutsImportados;
   let msg = `\u2705 ${importados} trabajador${importados!==1?'es':''} importado${importados!==1?'s':''}`;
@@ -698,7 +760,7 @@ function subirMasivo(){
   if(avisoDeshacer && rutsImportados.length){
     avisoDeshacer.style.display = 'flex';
     avisoDeshacer.querySelector('span').textContent =
-      `${rutsImportados.length} trabajador${rutsImportados.length!==1?'es':''} recién importado${rutsImportados.length!==1?'s':''} — ¿el lote quedó mal configurado?`;
+      `${rutsImportados.length} trabajador${rutsImportados.length!==1?'es':''} recién importado${rutsImportados.length!==1?'s':''} — ¿la cuadrilla quedó mal configurada?`;
   }
 
   datosExcel = [];

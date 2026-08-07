@@ -535,7 +535,7 @@ function actualizarPrevia(){
     </div>
     <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 var(--radius) var(--radius);
       max-height:520px;overflow-y:auto;background:#fff;padding:20px;">
-      <style>#contrato-preview .doc-wrap{max-width:none;font-size:9.5pt;line-height:1.55;}</style>
+      <style>#contrato-preview .doc-wrap{max-width:none;font-size:9.5pt;line-height:1.55;overflow-wrap:break-word;word-break:break-word;}</style>
       <div class="doc-wrap">${docHTML}</div>
     </div>`;
 }
@@ -583,7 +583,7 @@ function construirDocumentoContrato(t, emp, mandante, datos){
   const sueldoFmt    = sueldoNum ? '$' + sueldoNum.toLocaleString('es-CL') : '$___________';
   const sueldoPalab  = sueldoNum
     ? numeroALetras(sueldoNum).trim() + ' pesos'
-    : '_______________________________________________';
+    : '_____________';
   const formaRemTxt  = datos.tipo_remuneracion === 'diaria' ? 'diaria' : 'mensual';
 
   // Jornada
@@ -854,7 +854,7 @@ function construirDocumentoContrato(t, emp, mandante, datos){
     *{ box-sizing:border-box; }
     body{ font-family:'Times New Roman',serif; font-size:11pt; line-height:1.75;
       margin:0; padding:0; color:#1a1a1a; }
-    .doc-wrap{ max-width:76ch; margin:0 auto; }
+    .doc-wrap{ max-width:76ch; margin:0 auto; overflow-wrap:break-word; word-break:break-word; }
     h1{ font-size:13pt; text-align:center; text-transform:uppercase;
       letter-spacing:1.2px; margin:0 0 4px; font-weight:bold; }
     h2{ font-size:11pt; text-align:center; text-transform:uppercase;
@@ -1916,7 +1916,7 @@ function _abrirVentanaContratosMasivo(contenidos){
     *{ box-sizing:border-box; }
     body{ font-family:'Times New Roman',serif; font-size:11pt; line-height:1.75;
       margin:0; padding:0; color:#1a1a1a; }
-    .doc-wrap{ max-width:76ch; margin:0 auto; }
+    .doc-wrap{ max-width:76ch; margin:0 auto; overflow-wrap:break-word; word-break:break-word; }
     h1{ font-size:13pt; text-align:center; text-transform:uppercase;
       letter-spacing:1.2px; margin:0 0 4px; font-weight:bold; }
     h2{ font-size:11pt; text-align:center; text-transform:uppercase;
