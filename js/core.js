@@ -242,8 +242,6 @@ function renderDashboard(){
   const max=Math.max(...vals,1);
   document.getElementById('chart-semanal').innerHTML=dias.map((d,i)=>`<div class="chart-col"><div class="chart-val">${vals[i]||''}</div><div class="chart-bar" style="height:${Math.round(vals[i]/max*60)+4}px;background:${i===idxHoy?'#2563EB':'#D1FAE5'}"></div><div class="chart-lbl">${d}</div></div>`).join('');
 
-  document.getElementById('badge-trabajadores').textContent=total;
-  document.getElementById('badge-contratistas').textContent=empresas_propias.length+empresas.length;
   const bMan=document.getElementById('badge-mandantes-tab'); if(bMan) bMan.textContent=empresas.length;
   const bMis=document.getElementById('badge-mis-empresas'); if(bMis) bMis.textContent=empresas_propias.length;
   poblarSelectsEmpresaPropia();
@@ -424,11 +422,9 @@ function poblarSelects(){
     if(val)el.value=val;
   });
 
-  document.getElementById('badge-contratistas').textContent=empresas_propias.length+empresas.length;
   const bMan=document.getElementById('badge-mandantes-tab'); if(bMan) bMan.textContent=empresas.length;
   const bMis=document.getElementById('badge-mis-empresas'); if(bMis) bMis.textContent=empresas_propias.length;
   poblarSelectsEmpresaPropia();
-  document.getElementById('badge-trabajadores').textContent=trabajadores.length;
 
   // Selector trabajador en liquidaciones
   const selLiqTrab = document.getElementById('liq-sel-trabajador');

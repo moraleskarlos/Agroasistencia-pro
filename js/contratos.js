@@ -120,8 +120,6 @@ function initContratos(rutPreseleccionado){
     if(sel && t){ sel.value = t.id; precargarContrato(); }
   }
   renderJornadaDias();
-  const b = document.getElementById('badge-contratos');
-  if(b) b.textContent = contratos.length;
 }
 
 function poblarSelectTrabajadoresContrato(){
@@ -403,8 +401,6 @@ function guardarContrato(){
   if(t) Object.assign(t, _leerFormularioEpp('cepp'));
   guardarLocal();
 
-  const b = document.getElementById('badge-contratos');
-  if(b) b.textContent = contratos.length;
 
   toast('✅ Contrato guardado correctamente','exito');
   limpiarContrato();
@@ -1798,8 +1794,6 @@ function generarContratosGrupoMasivo(){
   guardarContratos();
   guardarLocal();
 
-  const b = document.getElementById('badge-contratos');
-  if(b) b.textContent = contratos.length;
 
   cerrarModalConfigGruposMasivo();
   toast(`✅ ${generados} contrato${generados!==1?'s':''} generado${generados!==1?'s':''}`, 'exito');
