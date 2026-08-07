@@ -389,34 +389,15 @@ function _onCambioCargoLote(){
 }
 
 function _actualizarEstadoLote(){
-  const zona  = document.getElementById('zona-drop-excel');
-  const titulo= document.getElementById('drop-titulo');
-  if(!zona) return;
-  if(_loteCompleto()){
-    zona.style.opacity = '1';
-    if(titulo) titulo.textContent = 'Arrastra tu archivo Excel aquí';
-  } else {
-    zona.style.opacity = '0.5';
-    if(titulo) titulo.textContent = 'Completa Empresa y Cargo arriba primero';
-  }
+  const btn = document.getElementById('btn-subir-masivo');
+  if(btn) btn.disabled = !(_loteCompleto() && datosExcel.length);
 }
 
 function _clickZonaDropExcel(){
-  if(!_loteCompleto()){
-    toast('⚠️ Completa Empresa Contratista y Cargo antes de subir el archivo', 'error');
-    return;
-  }
   document.getElementById('archivo-excel').click();
 }
 
 function procesarExcel(event){
-  // Defensa: no debería poder llegar aquí sin el lote completo (el drop
-  // queda deshabilitado antes), pero se valida igual por si acaso.
-  if(!_loteCompleto()){
-    toast('⚠️ Completa Empresa Contratista y Cargo antes de subir el archivo', 'error');
-    event.target.value = '';
-    return;
-  }
   const file = event.target.files[0];
   if(!file) return;
 
@@ -429,11 +410,10 @@ function procesarExcel(event){
 
       if(!rows.length){ toast('\u26a0\ufe0f El archivo est\u00e1 vac\u00edo','error'); return; }
 
-      // Encabezado del lote — se aplica igual a todas las filas.
+      // ✅ Opción B (carga masiva): el Excel se valida completo ANTES de
+      // pedir Empresa Contratista y Cargo — ese encabezado se pide recién
+      // al final, dentro de la previsualización (ver subirMasivo()).
       // Mandante eliminado del encabezado — se define en Contratos.
-      const loteEmpresaPropia = document.getElementById('lote-empresa-propia').value;
-      let   loteCargo         = document.getElementById('lote-cargo').value;
-      if(loteCargo === 'otro') loteCargo = document.getElementById('lote-cargo-otro').value.trim();
 
       const norm = v => (v||'').toString().trim()
         .toLowerCase().replace(/^\w/, c => c.toUpperCase());
@@ -572,12 +552,10 @@ function procesarExcel(event){
           tipo_doc_migratorio:   tipo_doc_migratorio || null,
           num_doc_migratorio:    num_doc_migratorio || null,
           fecha_venc_migratorio: fecha_venc_migratorio || null,
-          // ✅ Empresa Propia y Cargo vienen del encabezado del lote
-          // (elegido antes de subir el archivo) — ya no se leen por fila
-          // del Excel. Mandante y Faena ya no existen aquí: ambos se
+          // ✅ Empresa Propia y Cargo ya NO se leen aquí — se piden al
+          // final, en subirMasivo(), después de validar todo el Excel
+          // (Opción B). Mandante y Faena tampoco existen aquí: ambos se
           // definen recién al generar el Contrato de cada persona.
-          empresa_propia_id: loteEmpresaPropia,
-          funcion_cargo:     loteCargo,
           fecha_ingreso,
           estado:            'activo'
         };
@@ -612,13 +590,13 @@ function procesarExcel(event){
       </tr>`;
       }).join('');
 
-      const epObj       = empresas_propias.find(e => e.id === loteEmpresaPropia);
-      let countMsg = `${datosExcel.length} trabajador${datosExcel.length!==1?'es':''} listo${datosExcel.length!==1?'s':''} para importar — ${epObj?.nombre||''} → ${loteCargo}`;
+      let countMsg = `${datosExcel.length} trabajador${datosExcel.length!==1?'es':''} listo${datosExcel.length!==1?'s':''} para importar`;
       if(errores.length) countMsg += ` \u00b7 ${errores.length} fila${errores.length!==1?'s':''} con error (omitida${errores.length!==1?'s':''})`;
       if(advertencias.length) countMsg += ` \u00b7 ${advertencias.length} aviso${advertencias.length!==1?'s':''}`;
       document.getElementById('preview-count').textContent = countMsg;
       document.getElementById('seccion-preview').style.display = 'block';
       _renderAvisosImportacion(errores, advertencias);
+      _actualizarEstadoLote();
 
     } catch(err){
       toast('\u274c Error al leer el archivo Excel','error');
@@ -665,6 +643,16 @@ let _ultimosRutsImportadosMasivo = [];
 function subirMasivo(){
   if(!datosExcel.length){ toast('\u26a0\ufe0f No hay datos para importar','error'); return; }
 
+  // ✅ Opción B — el encabezado (Empresa Contratista + Cargo) se valida
+  // recién aquí, al confirmar la importación, no antes de subir el Excel.
+  if(!_loteCompleto()){
+    toast('⚠️ Completa Empresa Contratista y Cargo antes de importar', 'error');
+    return;
+  }
+  const loteEmpresaPropia = document.getElementById('lote-empresa-propia').value;
+  let   loteCargo         = document.getElementById('lote-cargo').value;
+  if(loteCargo === 'otro') loteCargo = document.getElementById('lote-cargo-otro').value.trim();
+
   // RP-013: si el archivo tiene filas con error, nunca se importa en silencio —
   // se pide confirmación explícita indicando cuántos entran y cuántos se quedan fuera.
   if((errores||[]).length){
@@ -686,6 +674,10 @@ function subirMasivo(){
     // registró ese RUT (ej. por otra pestaña), no lo sobrescribimos.
     const yaExiste = trabajadores.find(t => t.rut === trabajador.rut);
     if(yaExiste){ omitidos++; return; }
+    // Empresa Propia y Cargo recién se aplican ahora, con el encabezado
+    // elegido al final (Opción B).
+    trabajador.empresa_propia_id = loteEmpresaPropia;
+    trabajador.funcion_cargo     = loteCargo;
     trabajadores.push(trabajador);
     rutsImportados.push(trabajador.rut);
     importados++;
@@ -716,6 +708,14 @@ function subirMasivo(){
   document.getElementById('archivo-excel').value = '';
   const avisos = document.getElementById('preview-avisos');
   if(avisos) avisos.innerHTML = '';
+  // Limpiar el encabezado para el próximo archivo, evita arrastrar por
+  // error la Empresa/Cargo de un lote anterior a uno nuevo.
+  const selEp = document.getElementById('lote-empresa-propia');
+  const selCargo = document.getElementById('lote-cargo');
+  const otroCargo = document.getElementById('lote-cargo-otro');
+  if(selEp) selEp.value = '';
+  if(selCargo) selCargo.value = '';
+  if(otroCargo){ otroCargo.value = ''; otroCargo.style.display = 'none'; }
 
   if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
   if(typeof renderContratistas === 'function') renderContratistas();
@@ -749,6 +749,12 @@ function cancelarMasivo(){
   document.getElementById('archivo-excel').value = '';
   const avisos = document.getElementById('preview-avisos');
   if(avisos) avisos.innerHTML = '';
+  const selEp = document.getElementById('lote-empresa-propia');
+  const selCargo = document.getElementById('lote-cargo');
+  const otroCargo = document.getElementById('lote-cargo-otro');
+  if(selEp) selEp.value = '';
+  if(selCargo) selCargo.value = '';
+  if(otroCargo){ otroCargo.value = ''; otroCargo.style.display = 'none'; }
 }
 
 
