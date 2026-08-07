@@ -410,11 +410,15 @@ async function cargarDatos(){
 
 function poblarSelects(){
   // Selects de mandantes (antes "contratistas")
-  const ids=['m-empresa','filtro-empresa','filtro-empresa-ext','asist-empresa','qr-filtro-empresa','lote-mandante'];
+  // ✅ Bypass de Mandante: m-empresa (Registro Personal individual) y
+  // lote-mandante (carga masiva de Registro Personal) ya no existen —
+  // el Mandante se elige en Contratos. Se agregan cp-mandante
+  // (Contrato Individual) y masivo-mandante (Contrato Masivo).
+  const ids=['cp-mandante','masivo-mandante','filtro-empresa','filtro-empresa-ext','asist-empresa','qr-filtro-empresa'];
   ids.forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
     const val=el.value;
-    const isFilter=(id!=='m-empresa' && id!=='lote-mandante');
+    const isFilter=(id!=='cp-mandante' && id!=='masivo-mandante');
     el.innerHTML=(isFilter
       ?'<option value="">Todos los mandantes</option>'
       :'<option value="">— Seleccionar mandante —</option>'

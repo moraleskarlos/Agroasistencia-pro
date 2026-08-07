@@ -126,8 +126,10 @@ function validarFormularioTrabajador(datos, idOriginal){
 
   // RP-005: campos obligatorios
   if(!datos.empresa_propia_id) return { ok:false, mensaje:'Selecciona la Empresa Contratista' };
-  if(!datos.mandante_id)       return { ok:false, mensaje:'Selecciona la Empresa Mandante' };
-  // Faena eliminada de aquí — ahora se define en Contratos (Hallazgo #13)
+  // Mandante eliminado de aquí — ahora se define en Contratos (Hallazgo
+  // Grande de Mandante, mismo criterio que Faena/Hallazgo #13). Igual
+  // que Faena, el Mandante es un dato del vínculo contractual, no de
+  // la persona; se fija recién al generar su primer Contrato.
   if(!datos.funcion_cargo)     return { ok:false, mensaje:'Ingresa el Cargo' };
   if(!datos.fecha_ingreso)     return { ok:false, mensaje:'Ingresa la Fecha de Ingreso' };
 
@@ -230,9 +232,9 @@ function cargarEnFormulario(t){
   const cont = document.getElementById('m-empresa-contratista');
   if(cont) cont.value = t.empresa_propia_id || '';
 
-  // Mandante
-  const selEmp = document.getElementById('m-empresa');
-  if(selEmp) selEmp.value = t.mandante_id || t.empresa_rut || '';
+  // Mandante eliminado de este formulario — vive en Contrato (ver
+  // findMandante() en core.js, que ahora resuelve desde el Contrato
+  // vigente vía la sincronización que hace contratos.js al guardar).
 
   // Campos migratorios — cargar ANTES de llamar mostrarCamposMigratorios
   const selTipoDoc = document.getElementById('m-tipo-doc-mig');
@@ -312,9 +314,9 @@ async function guardarTrabajador(e){
     afiliacion_afp:    document.getElementById('m-afp').value,
     sistema_salud:     document.getElementById('m-salud').value,
     empresa_propia_id: document.getElementById('m-empresa-contratista')?.value || '',
-    empresa_rut:       document.getElementById('m-empresa')?.value || '',
-    empresa:           document.getElementById('m-empresa')?.value || '',
-    mandante_id:       document.getElementById('m-empresa')?.value || '',
+    // Mandante eliminado de Registro Personal — se fija al generar el
+    // Contrato (contratos.js sincroniza mandante_id/empresa_rut/empresa
+    // hacia el trabajador cuando corresponda).
     funcion_cargo:     cargo || '',
     fecha_ingreso:     document.getElementById('m-fecha-ingreso')?.value || null,
     estado:            'activo',
@@ -374,10 +376,9 @@ async function guardarTrabajador(e){
    ════════════════════════════════════════════════════════ */
 function _loteCompleto(){
   const ep     = document.getElementById('lote-empresa-propia')?.value || '';
-  const man    = document.getElementById('lote-mandante')?.value || '';
   let   cargo  = document.getElementById('lote-cargo')?.value || '';
   if(cargo === 'otro') cargo = document.getElementById('lote-cargo-otro')?.value.trim() || '';
-  return !!(ep && man && cargo);
+  return !!(ep && cargo);
 }
 
 function _onCambioCargoLote(){
@@ -396,13 +397,13 @@ function _actualizarEstadoLote(){
     if(titulo) titulo.textContent = 'Arrastra tu archivo Excel aquí';
   } else {
     zona.style.opacity = '0.5';
-    if(titulo) titulo.textContent = 'Completa Empresa, Mandante y Cargo arriba primero';
+    if(titulo) titulo.textContent = 'Completa Empresa y Cargo arriba primero';
   }
 }
 
 function _clickZonaDropExcel(){
   if(!_loteCompleto()){
-    toast('⚠️ Completa Empresa Contratista, Mandante y Cargo antes de subir el archivo', 'error');
+    toast('⚠️ Completa Empresa Contratista y Cargo antes de subir el archivo', 'error');
     return;
   }
   document.getElementById('archivo-excel').click();
@@ -412,7 +413,7 @@ function procesarExcel(event){
   // Defensa: no debería poder llegar aquí sin el lote completo (el drop
   // queda deshabilitado antes), pero se valida igual por si acaso.
   if(!_loteCompleto()){
-    toast('⚠️ Completa Empresa Contratista, Mandante y Cargo antes de subir el archivo', 'error');
+    toast('⚠️ Completa Empresa Contratista y Cargo antes de subir el archivo', 'error');
     event.target.value = '';
     return;
   }
@@ -429,8 +430,8 @@ function procesarExcel(event){
       if(!rows.length){ toast('\u26a0\ufe0f El archivo est\u00e1 vac\u00edo','error'); return; }
 
       // Encabezado del lote — se aplica igual a todas las filas.
+      // Mandante eliminado del encabezado — se define en Contratos.
       const loteEmpresaPropia = document.getElementById('lote-empresa-propia').value;
-      const loteMandanteId    = document.getElementById('lote-mandante').value;
       let   loteCargo         = document.getElementById('lote-cargo').value;
       if(loteCargo === 'otro') loteCargo = document.getElementById('lote-cargo-otro').value.trim();
 
@@ -571,14 +572,11 @@ function procesarExcel(event){
           tipo_doc_migratorio:   tipo_doc_migratorio || null,
           num_doc_migratorio:    num_doc_migratorio || null,
           fecha_venc_migratorio: fecha_venc_migratorio || null,
-          // ✅ Empresa Propia, Mandante y Cargo vienen del encabezado del
-          // lote (elegido antes de subir el archivo) — ya no se leen por
-          // fila del Excel. Faena ya no existe aquí (Hallazgo #13): se
-          // define recién al generar el Contrato de cada persona.
+          // ✅ Empresa Propia y Cargo vienen del encabezado del lote
+          // (elegido antes de subir el archivo) — ya no se leen por fila
+          // del Excel. Mandante y Faena ya no existen aquí: ambos se
+          // definen recién al generar el Contrato de cada persona.
           empresa_propia_id: loteEmpresaPropia,
-          mandante_id:       loteMandanteId,
-          empresa_rut:       loteMandanteId,
-          empresa:           loteMandanteId,
           funcion_cargo:     loteCargo,
           fecha_ingreso,
           estado:            'activo'
@@ -614,9 +612,8 @@ function procesarExcel(event){
       </tr>`;
       }).join('');
 
-      const mandanteObj = empresas.find(e => e.id === loteMandanteId || e.rut === loteMandanteId);
       const epObj       = empresas_propias.find(e => e.id === loteEmpresaPropia);
-      let countMsg = `${datosExcel.length} trabajador${datosExcel.length!==1?'es':''} listo${datosExcel.length!==1?'s':''} para importar — ${epObj?.nombre||''} → ${mandanteObj?.nombre||''} → ${loteCargo}`;
+      let countMsg = `${datosExcel.length} trabajador${datosExcel.length!==1?'es':''} listo${datosExcel.length!==1?'s':''} para importar — ${epObj?.nombre||''} → ${loteCargo}`;
       if(errores.length) countMsg += ` \u00b7 ${errores.length} fila${errores.length!==1?'s':''} con error (omitida${errores.length!==1?'s':''})`;
       if(advertencias.length) countMsg += ` \u00b7 ${advertencias.length} aviso${advertencias.length!==1?'s':''}`;
       document.getElementById('preview-count').textContent = countMsg;
@@ -816,7 +813,7 @@ function _actualizarSemaforoMigratorio(){
 const _BORRADOR_KEY = 'rp_borrador_trabajador';
 const _CAMPOS_BORRADOR = [
   'm-rut','m-nombre','m-nacionalidad','m-otra-nac','m-fecha-nac','m-sexo','m-estado-civil',
-  'm-correo','m-domicilio','m-afp','m-salud','m-empresa-contratista','m-empresa',
+  'm-correo','m-domicilio','m-afp','m-salud','m-empresa-contratista',
   'm-cargo','cargo-otro','m-fecha-ingreso',
   'm-tipo-doc-mig','m-num-doc-mig','m-fecha-venc-mig','m-rut-original',
 ];

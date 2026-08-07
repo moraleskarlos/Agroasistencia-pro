@@ -198,7 +198,7 @@ function onCambioEmpresaFiltroContrato(){
   _renderListaVisualTrabajadorContrato();
   precargarContrato();
   _masivoSeleccionados.clear();
-  renderPiramideMasivo();
+  renderListaMasivo();
 }
 
 function _seleccionarTrabajadorContratoVisual(id){
@@ -258,14 +258,15 @@ function precargarContrato(){
   document.getElementById('cp-rep-nombre').value     = contratista.nombre_representante || '';
   document.getElementById('cp-rep-rut').value        = contratista.rut_representante || '';
 
-  // Precargar EMPRESA MANDANTE (según asignación del trabajador)
-  const mandante = empresas.find(e => e.id === (t.mandante_id||t.empresa_rut||t.empresa) || e.rut === (t.empresa_rut||t.empresa));
-  const setMan = (id,v) => { const el = document.getElementById(id); if(el) el.value = v || ''; };
-  setMan('cp-man-nombre',    mandante?.nombre);
-  setMan('cp-man-rut',       mandante?.rut);
-  setMan('cp-man-comuna',    mandante?.comuna);
-  setMan('cp-man-region',    mandante?.region);
-  setMan('cp-man-direccion', mandante ? [mandante.direccion, mandante.comuna, mandante.region].filter(Boolean).join(', ') : '');
+  // Precargar EMPRESA MANDANTE — ✅ Bypass de Mandante: ya no viene del
+  // trabajador (Registro Personal no lo pide). Se precarga con el
+  // Mandante del Contrato ya existente si lo hay (contratoPrevio,
+  // arriba) o con t.mandante_id si el trabajador ya tiene uno
+  // sincronizado de un Contrato anterior — pero sigue siendo 100%
+  // editable acá, es el selector el que manda.
+  const mandanteSel = document.getElementById('cp-mandante');
+  if(mandanteSel) mandanteSel.value = contratoPrevio?.mandante_id || t.mandante_id || t.empresa_rut || '';
+  _onCambioMandanteContrato();
 
   // Precargar Cargo y Faena automáticamente desde el trabajador (vienen de Registro Personal)
   const cCargo = document.getElementById('c-cargo');
@@ -282,6 +283,20 @@ function precargarContrato(){
   if(contratoExistente) cargarContratoEnFormulario(contratoExistente);
 
   actualizarPrevia();
+}
+
+/* ✅ Bypass de Mandante — al elegir un Mandante en el selector del
+   Contrato, refleja sus datos (RUT/comuna/región/dirección) en los
+   campos de solo lectura de abajo. El nombre ya se ve en el propio
+   selector, por eso no tiene campo aparte. */
+function _onCambioMandanteContrato(){
+  const mandante = _mandanteSeleccionadoContrato();
+  const set = (elId,v) => { const el = document.getElementById(elId); if(el) el.value = v || ''; };
+  set('cp-man-rut',       mandante?.rut);
+  set('cp-man-comuna',    mandante?.comuna);
+  set('cp-man-region',    mandante?.region);
+  set('cp-man-direccion', mandante ? [mandante.direccion, mandante.comuna, mandante.region].filter(Boolean).join(', ') : '');
+  if(typeof actualizarPrevia === 'function') actualizarPrevia();
 }
 
 function cargarContratoEnFormulario(c){
@@ -310,6 +325,27 @@ function cargarContratoEnFormulario(c){
   contratoEditandoId = c.id;
 }
 
+/* ✅ Bypass de Mandante — helper único: el Mandante del Contrato
+   Individual siempre sale del selector cp-mandante, nunca del
+   trabajador (que ya no lo guarda como fuente primaria). Se usa
+   tanto al guardar como en la vista previa/PDF, para que ambos
+   coincidan siempre con lo que el usuario ve en pantalla. */
+function _mandanteSeleccionadoContrato(){
+  const id = document.getElementById('cp-mandante')?.value || '';
+  return empresas.find(e => e.id === id || e.rut === id) || null;
+}
+
+/* Resuelve el Mandante de un Contrato YA GUARDADO (para listados
+   históricos como "Contratos Emitidos") — usa el mandante_id propio
+   del contrato, no el del trabajador, porque el trabajador puede
+   haber tenido Mandantes distintos en Contratos sucesivos (ciclo de
+   Reingreso). Con contratos antiguos guardados antes de este campo,
+   cae de respaldo al mandante_rut ya guardado. */
+function _mandanteDeContrato(c){
+  if(!c) return null;
+  return empresas.find(e => (c.mandante_id && e.id === c.mandante_id) || e.rut === c.mandante_rut) || null;
+}
+
 function obtenerDatosFormulario(){
 const trabajadorId = document.getElementById('c-trabajador').value;
 
@@ -322,25 +358,29 @@ const t = trabajadores.find(
   if(document.getElementById('ben-transporte').checked)  beneficios.push('transporte');
   if(document.getElementById('ben-luz').checked)         beneficios.push('luz');
 
+  // ✅ Mandante ya no se lee del trabajador (Bypass de Mandante) — se
+  // elige directamente en este formulario, vía el selector cp-mandante.
+  const mandanteId  = document.getElementById('cp-mandante')?.value || '';
+  const mandanteObj = _mandanteSeleccionadoContrato();
+
   return {
     trabajador_id:       trabajadorId,
     trabajador_rut:      t?.rut || '',
-    empresa_rut:         t?.empresa || t?.empresa_rut || '',
+    empresa_rut:         mandanteObj?.rut || '',
     empresa_propia_id:   document.getElementById('c-empresa-propia')?.value || t?.empresa_propia_id || '',
     tipo:                document.getElementById('c-tipo').value,
     ciudad_firma:        document.getElementById('c-ciudad').value.trim(),
     fecha_firma:         document.getElementById('c-fecha-firma').value,
     funcion_cargo:       document.getElementById('c-cargo').value.trim(),
     nombre_faena:        document.getElementById('c-faena').value.trim(),
-    ubicacion_faena:     [empresas.find(e=>e.id===(t?.mandante_id||t?.empresa_rut||t?.empresa)||e.rut===(t?.empresa_rut||t?.empresa))?.direccion,
-                           empresas.find(e=>e.id===(t?.mandante_id||t?.empresa_rut||t?.empresa)||e.rut===(t?.empresa_rut||t?.empresa))?.comuna]
-                          .filter(Boolean).join(', '),
-    region:              empresas.find(e=>e.id===(t?.mandante_id||t?.empresa_rut||t?.empresa)||e.rut===(t?.empresa_rut||t?.empresa))?.region || '',
-          mandante_nombre:     empresas.find(e=>e.id===(t?.mandante_id||t?.empresa_rut||t?.empresa)||e.rut===(t?.empresa_rut||t?.empresa))?.nombre || '',
-            mandante_rut:        t?.empresa_rut || t?.empresa || '',
-            mandante_direccion:  empresas.find(e=>e.id===(t?.mandante_id||t?.empresa_rut||t?.empresa)||e.rut===(t?.empresa_rut||t?.empresa))?.direccion || '',
-           mandante_comuna:     empresas.find(e=>e.id===(t?.mandante_id||t?.empresa_rut||t?.empresa)||e.rut===(t?.empresa_rut||t?.empresa))?.comuna || '',
-           mandante_region:     empresas.find(e=>e.id===(t?.mandante_id||t?.empresa_rut||t?.empresa)||e.rut===(t?.empresa_rut||t?.empresa))?.region || '',
+    ubicacion_faena:     [mandanteObj?.direccion, mandanteObj?.comuna].filter(Boolean).join(', '),
+    region:              mandanteObj?.region || '',
+    mandante_id:         mandanteId,
+    mandante_nombre:     mandanteObj?.nombre || '',
+    mandante_rut:        mandanteObj?.rut || '',
+    mandante_direccion:  mandanteObj?.direccion || '',
+    mandante_comuna:     mandanteObj?.comuna || '',
+    mandante_region:     mandanteObj?.region || '',
     temporada:           document.getElementById('c-temporada').value.trim(),
     fecha_inicio:        t?.fecha_ingreso || '',
     fecha_termino:       document.getElementById('c-fecha-termino').value,
@@ -372,6 +412,9 @@ function guardarContrato(){
   const faena = document.getElementById('c-faena').value.trim();
   if(!faena){ toast('⚠️ Ingresa el nombre de la faena','error'); return; }
 
+  const mandanteSel = document.getElementById('cp-mandante')?.value || '';
+  if(!mandanteSel){ toast('⚠️ Selecciona la Empresa Mandante','error'); return; }
+
   const termino = document.getElementById('c-fecha-termino').value;
   if(!termino){ toast('⚠️ Ingresa la fecha de término','error'); return; }
 
@@ -398,7 +441,19 @@ function guardarContrato(){
 
   // Guardar EPP/IRL en la misma acción (evita un segundo viaje a la pestaña EPP/IRL)
   const t = trabajadores.find(x => x.rut === id || x.id === id);
-  if(t) Object.assign(t, _leerFormularioEpp('cepp'));
+  if(t){
+    Object.assign(t, _leerFormularioEpp('cepp'));
+    // ✅ Sincronización del Bypass de Mandante: el trabajador ya no elige
+    // su Mandante en Registro Personal — se fija aquí, al guardar el
+    // Contrato, y queda reflejado en t.mandante_id (más empresa_rut/
+    // empresa por compatibilidad) para que el resto del sistema
+    // (Dashboard, Empresas, Asistencia, Trabajadores, Alertas, QR,
+    // Exportar) siga funcionando sin cambios. Se actualiza siempre al
+    // valor del Contrato más reciente/vigente.
+    t.mandante_id  = datos.mandante_id;
+    t.empresa_rut  = datos.mandante_id;
+    t.empresa      = datos.mandante_id;
+  }
   guardarLocal();
 
 
@@ -413,7 +468,8 @@ function limpiarContrato(){
     'c-temporada','c-fecha-termino','c-horas','c-distribucion','c-colacion',
     'c-sueldo','c-sueldo-escrito','cp-rut','cp-nombre','cp-nacionalidad',
     'cp-estado-civil','cp-afp','cp-salud','cp-empresa-rut','cp-empresa-nombre',
-    'cp-rep-nombre','cp-rep-rut'];
+    'cp-rep-nombre','cp-rep-rut','cp-mandante','cp-man-rut','cp-man-comuna',
+    'cp-man-region','cp-man-direccion'];
   campos.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   ['ben-alojamiento','ben-alimentacion','ben-transporte','ben-luz'].forEach(id => {
     const el = document.getElementById(id); if(el) el.checked = false;
@@ -467,7 +523,7 @@ function actualizarPrevia(){
   const t        = trabajadores.find(x => x.id === id);
   const epId     = document.getElementById('c-empresa-propia')?.value || t?.empresa_propia_id || '';
   const emp      = getEmpresaEmpleadora(epId);
-  const mandante = findMandante(t);
+  const mandante = _mandanteSeleccionadoContrato();
   const datos    = obtenerDatosFormulario();
 
   const { htmlCompleto } = construirDocumentoContrato(t, emp, mandante, datos);
@@ -1092,7 +1148,7 @@ function generarPDFContrato(soloContenido){
   const t        = trabajadores.find(x => x.id === id);
   const epId     = document.getElementById('c-empresa-propia')?.value || t?.empresa_propia_id || '';
   const emp      = getEmpresaEmpleadora(epId);
-  const mandante = findMandante(t);
+  const mandante = _mandanteSeleccionadoContrato();
 
   if(!datos.funcion_cargo){ toast('⚠️ Ingresa la función/cargo','error'); return; }
   if(!datos.nombre_faena){  toast('⚠️ Ingresa el nombre de la faena','error'); return; }
@@ -1180,8 +1236,7 @@ function _initTabContratosEmitidos(){
     const val = selMandante.value;
     const mandantes = [];
     (contratos||[]).forEach(c => {
-      const t = trabajadores.find(x => x.id === c.trabajador_id);
-      const m = t && findMandante(t);
+      const m = _mandanteDeContrato(c);
       if(m && !mandantes.some(x => x.id === m.id)) mandantes.push(m);
     });
     mandantes.sort((a,b) => a.nombre.localeCompare(b.nombre));
@@ -1219,7 +1274,7 @@ function renderContratosEmitidos(){
 
   let lista = (contratos||[]).map(c => {
     const t = trabajadores.find(x => x.id === c.trabajador_id || x.rut === c.trabajador_rut);
-    const mandante = t ? findMandante(t) : null;
+    const mandante = _mandanteDeContrato(c);
     return { c, t, mandante, tags: _estadoTagsContrato(c, t||{}) };
   });
 
@@ -1360,10 +1415,21 @@ function _initTabContratoIndividual(){
   poblarSelectTrabajadoresContrato();
 }
 
+/* ════════════════════════════════════════════════════════
+   CONTRATO MASIVO — Empresa Propia → Mandante → Cargo → lista
+   Simplificado tras el Bypass de Mandante: ya no se agrupa por
+   Mandante (un trabajador sin Contrato todavía no tiene Mandante).
+   El Mandante y el Cargo se ELIGEN una vez para todo el lote — no
+   se leen de cada trabajador. "Masivo" es, por diseño, un lote
+   homogéneo (mismo Cargo, mismas condiciones); un caso único (ej.
+   un Supervisor) se sube por Contrato Individual.
+   ════════════════════════════════════════════════════════ */
+
 /* Se llama al abrir la pestaña "Contratos Masivos" */
 function _initTabContratoMasivo(){
   _masivoSeleccionados.clear();
-  renderPiramideMasivo();
+  _poblarCargoMasivo();
+  renderListaMasivo();
 }
 
 /* Un trabajador tiene contrato vigente si existe un documento tipo 'contrato' en su carpeta laboral */
@@ -1374,101 +1440,89 @@ function _tieneContratoVigente(rut){
 let _masivoSeleccionados = new Set();
 let _configGruposActuales = [];
 
-function _grupoIdSafe(key){ return 'grp_' + key.replace(/[^a-zA-Z0-9]/g, '_'); }
-
-function _agruparTrabajadoresMasivo(lista){
-  const grupos = {};
-  lista.forEach(t => {
-    const mandante = findMandante(t);
-    const mandanteId = mandante?.id || 'sin-mandante';
-    const mandanteNombre = mandante?.nombre || 'Sin mandante asignado';
-    const cargo = t.funcion_cargo || 'Sin cargo';
-    // ✅ Ya no se agrupa por Faena (Hallazgo #13) — el trabajador ya no
-    // tiene ese dato. La Faena ahora se elige UNA VEZ POR SUB-GRUPO
-    // (Mandante+Cargo) en la configuración, no se infiere de cada persona.
-    const key = `${mandanteId}||${cargo}`;
-    (grupos[key] = grupos[key] || {key, mandanteId, mandanteNombre, cargo, trabajadores:[]}).trabajadores.push(t);
-  });
-  return grupos;
+/* Candidatos base: activos, de la Empresa Propia elegida arriba, sin Contrato vigente */
+function _candidatosMasivoBase(){
+  const epId = document.getElementById('c-empresa-propia')?.value || '';
+  if(!epId) return [];
+  return trabajadores.filter(t => t.estado === 'activo' && (t.empresa_propia_id||'') === epId && !_tieneContratoVigente(t.rut));
 }
 
-function renderPiramideMasivo(){
-  const epId = document.getElementById('c-empresa-propia')?.value || '';
-  const cont = document.getElementById('piramide-masivo');
-  const vacio = document.getElementById('piramide-masivo-vacio');
+/* El Cargo se arma con los cargos que realmente tienen candidatos disponibles —
+   evita ofrecer cargos vacíos y se adapta solo a los pares Cosechero/Cosechera, etc. */
+function _poblarCargoMasivo(){
+  const sel = document.getElementById('masivo-cargo');
+  if(!sel) return;
+  const val = sel.value;
+  const cargos = [...new Set(_candidatosMasivoBase().map(t => t.funcion_cargo).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML = '<option value="">— Seleccionar cargo —</option>' + cargos.map(c => `<option value="${c}">${c}</option>`).join('');
+  if(val && cargos.includes(val)) sel.value = val;
+}
+
+function _onCambioMandanteMasivo(){ renderListaMasivo(); }
+function _onCambioCargoMasivo(){ renderListaMasivo(); }
+
+function renderListaMasivo(){
+  _masivoSeleccionados.clear();
+  const epId  = document.getElementById('c-empresa-propia')?.value || '';
+  const manId = document.getElementById('masivo-mandante')?.value || '';
+  const cargo = document.getElementById('masivo-cargo')?.value || '';
+  const cont  = document.getElementById('masivo-lista-trabajadores');
+  const vacio = document.getElementById('masivo-lista-vacio');
   if(!cont) return;
 
   if(!epId){
     cont.innerHTML = '';
-    if(vacio) vacio.style.display = 'block';
+    if(vacio){ vacio.style.display = 'block'; vacio.textContent = 'Selecciona una Empresa Contratista arriba para ver sus trabajadores sin contrato.'; }
+    _masivoActualizarContador();
+    return;
+  }
+  if(!manId || !cargo){
+    cont.innerHTML = '';
+    if(vacio){ vacio.style.display = 'block'; vacio.textContent = 'Elige Empresa Mandante y Cargo para ver los trabajadores disponibles.'; }
+    _masivoActualizarContador();
+    return;
+  }
+
+  const lista = _candidatosMasivoBase().filter(t => t.funcion_cargo === cargo);
+  if(!lista.length){
+    cont.innerHTML = '';
+    if(vacio){ vacio.style.display = 'block'; vacio.textContent = `No hay trabajadores activos sin contrato con el cargo "${cargo}" en esta empresa.`; }
     _masivoActualizarContador();
     return;
   }
   if(vacio) vacio.style.display = 'none';
 
-  const lista = trabajadores.filter(t => t.estado === 'activo' && (t.empresa_propia_id||'') === epId && !_tieneContratoVigente(t.rut));
-
-  if(!lista.length){
-    cont.innerHTML = `<div style="padding:20px;text-align:center;color:var(--texto3);font-size:13px;">Esta empresa no tiene trabajadores activos sin contrato.</div>`;
-    _masivoActualizarContador();
-    return;
-  }
-
-  const grupos = _agruparTrabajadoresMasivo(lista);
-  const porMandante = [];
-  Object.values(grupos).forEach(g => {
-    let m = porMandante.find(x => x.mandanteId === g.mandanteId);
-    if(!m){ m = {mandanteId:g.mandanteId, mandanteNombre:g.mandanteNombre, grupos:[]}; porMandante.push(m); }
-    m.grupos.push(g);
-  });
-
-  cont.innerHTML = porMandante.map(m => `
-    <div style="margin-bottom:14px;">
-      <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">
-        <i class="ti ti-building-skyscraper"></i> ${m.mandanteNombre}
-      </div>
-      ${m.grupos.map(g => {
-        const gid = _grupoIdSafe(g.key);
-        return `
-        <div style="margin-left:10px;border:1px solid var(--borde);border-radius:8px;margin-bottom:8px;overflow:hidden;">
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;cursor:pointer;" onclick="_toggleAccordionMasivo('${gid}')">
-            <input type="checkbox" onclick="event.stopPropagation();_toggleGrupoMasivoCheck('${g.key}', this.checked)" style="width:auto;">
-            <span style="font-size:13px;font-weight:600;flex:1;">${g.cargo} (${g.trabajadores.length})</span>
-            <i class="ti ti-chevron-down" id="chev_${gid}"></i>
-          </div>
-          <div id="${gid}" style="display:none;">
-            ${g.trabajadores.map(t => `
-              <label style="display:flex;align-items:center;gap:8px;padding:7px 12px 7px 32px;font-size:13px;border-top:1px solid var(--borde);cursor:pointer;">
-                <input type="checkbox" class="masivo-check-trab" data-id="${t.id}" data-grupo="${g.key}" onchange="_toggleMasivoCheck('${t.id}', this.checked)" style="width:auto;">
-                <span style="flex:1;">${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
-              </label>`).join('')}
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`).join('');
+  lista.sort((a,b) => a.nombre?.localeCompare(b.nombre));
+  cont.innerHTML = `
+    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border:1px solid var(--borde);border-radius:8px 8px 0 0;cursor:pointer;">
+      <input type="checkbox" id="masivo-check-todos" onchange="_toggleMasivoTodos(this.checked)" style="width:auto;">
+      <span style="font-size:13px;font-weight:600;">Seleccionar todos (${lista.length})</span>
+    </label>
+    <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;overflow:hidden;max-height:320px;overflow-y:auto;">
+      ${lista.map(t => `
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;border-top:1px solid var(--borde);cursor:pointer;">
+          <input type="checkbox" class="masivo-check-trab" data-id="${t.id}" onchange="_toggleMasivoCheck('${t.id}', this.checked)" style="width:auto;">
+          <span style="flex:1;">${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
+        </label>`).join('')}
+    </div>`;
 
   _masivoActualizarContador();
 }
 
-function _toggleAccordionMasivo(gid){
-  const el = document.getElementById(gid);
-  const chev = document.getElementById('chev_'+gid);
-  if(!el) return;
-  const abierto = el.style.display !== 'none';
-  el.style.display = abierto ? 'none' : 'block';
-  if(chev) chev.className = abierto ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
+function _toggleMasivoTodos(val){
+  document.querySelectorAll('.masivo-check-trab').forEach(c => {
+    c.checked = val;
+    if(val) _masivoSeleccionados.add(c.dataset.id); else _masivoSeleccionados.delete(c.dataset.id);
+  });
+  _masivoActualizarContador();
 }
 
 function _toggleMasivoCheck(id, val){
   if(val) _masivoSeleccionados.add(id); else _masivoSeleccionados.delete(id);
-  _masivoActualizarContador();
-}
-
-function _toggleGrupoMasivoCheck(grupoKey, val){
-  document.querySelectorAll(`.masivo-check-trab[data-grupo="${grupoKey}"]`).forEach(c => {
-    c.checked = val;
-    if(val) _masivoSeleccionados.add(c.dataset.id); else _masivoSeleccionados.delete(c.dataset.id);
-  });
+  if(!val){
+    const todos = document.getElementById('masivo-check-todos');
+    if(todos) todos.checked = false;
+  }
   _masivoActualizarContador();
 }
 
@@ -1480,23 +1534,24 @@ function _masivoActualizarContador(){
   if(btn) btn.disabled = n === 0;
 }
 
-/* ── CONFIGURACIÓN POR GRUPO (una vez por grupo, no por trabajador) ─────── */
+/* ── CONFIGURACIÓN DEL LOTE (una sola vez, no por trabajador) ───────────── */
 function abrirConfigGrupoMasivo(){
   if(!_masivoSeleccionados.size){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
 
+  const manId = document.getElementById('masivo-mandante')?.value || '';
+  const cargo = document.getElementById('masivo-cargo')?.value || '';
+  const mandanteObj = empresas.find(e => e.id === manId || e.rut === manId);
   const idsSel = Array.from(_masivoSeleccionados);
   const trabsSel = idsSel.map(id => trabajadores.find(t => t.id === id)).filter(Boolean);
-  const gruposMap = _agruparTrabajadoresMasivo(trabsSel);
-  const grupos = Object.values(gruposMap);
+
+  const gid = 'masivo';
+  _configGruposActuales = [{ gid, mandanteId: manId, mandanteNombre: mandanteObj?.nombre || '', cargo, trabajadores: trabsSel }];
+  const faenasDelMandante = mandanteObj?.faenas || [];
 
   const cont = document.getElementById('config-grupos-contenido');
-  cont.innerHTML = grupos.map(g => {
-    const gid = _grupoIdSafe(g.key);
-    const mandanteObj = empresas.find(e => e.id === g.mandanteId || e.rut === g.mandanteId);
-    const faenasDelMandante = mandanteObj?.faenas || [];
-    return `
-    <div style="border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:14px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">${g.mandanteNombre} — ${g.cargo} (${g.trabajadores.length} trabajador${g.trabajadores.length!==1?'es':''})</div>
+  cont.innerHTML = `
+    <div style="border:1px solid var(--borde);border-radius:10px;padding:14px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">${mandanteObj?.nombre||''} — ${cargo} (${trabsSel.length} trabajador${trabsSel.length!==1?'es':''})</div>
       <div class="f-group" style="margin-bottom:10px;">
         <label class="form-label">Faena *</label>
         ${faenasDelMandante.length
@@ -1504,7 +1559,7 @@ function abrirConfigGrupoMasivo(){
               <option value="">— Seleccionar faena —</option>
               ${faenasDelMandante.map(f => `<option value="${f.nombre||f}">${f.nombre||f}</option>`).join('')}
             </select>`
-          : `<input class="f-input" id="cfg-faena-${gid}" placeholder="Nombre de la faena (${g.mandanteNombre} no tiene faenas registradas)">`}
+          : `<input class="f-input" id="cfg-faena-${gid}" placeholder="Nombre de la faena (${mandanteObj?.nombre||'este mandante'} no tiene faenas registradas)">`}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <div class="f-group"><label class="form-label">Tipo de Contrato</label>
@@ -1543,37 +1598,33 @@ function abrirConfigGrupoMasivo(){
 
       <div id="cfg-epp-${gid}"></div>
     </div>`;
-  }).join('');
 
-  _configGruposActuales = grupos.map(g => ({...g, gid:_grupoIdSafe(g.key)}));
-  _configGruposActuales.forEach(g => {
-    _renderJornadaDiasGrupo(g.gid);
-    const eppCont = document.getElementById(`cfg-epp-${g.gid}`);
-    if(eppCont){
-      eppCont.innerHTML = _htmlFormularioEpp(`cfg-${g.gid}`, {irl_declarado:true});
-      // La fecha de inducción RIOHS/IRL y la fecha de entrega EPP usan la misma
-      // Fecha de Firma del grupo — se ocultan los campos propios de
-      // _htmlFormularioEpp para no pedirlas dos veces.
-      const indInput = document.getElementById(`cfg-${g.gid}-irl-fecha-induccion`);
-      if(indInput) indInput.closest('.form-group').style.display = 'none';
-      const eppFechaInput = document.getElementById(`cfg-${g.gid}-epp-fecha-entrega`);
-      if(eppFechaInput) eppFechaInput.closest('.form-group').style.display = 'none';
-      // Selector de Tipo de Inducción RIOHS/IRL (formulario oficial)
-      if(indInput){
-        const tipoInduccionHTML = `
-          <div class="f-group" style="margin-bottom:10px;">
-            <label class="form-label">Tipo de Inducción</label>
-            <select class="f-input" id="cfg-${g.gid}-irl-tipo">
-              <option value="nueva">Persona trabajadora nueva</option>
-              <option value="ausencia_prolongada">Persona trabajadora con ausencia prolongada</option>
-              <option value="reubicada">Persona trabajadora reubicada en nuevo cargo</option>
-              <option value="cambio_proceso">Por cambio de proceso, tecnología, materiales o sustancias</option>
-            </select>
-          </div>`;
-        indInput.closest('.form-grid').insertAdjacentHTML('beforebegin', tipoInduccionHTML);
-      }
+  _renderJornadaDiasGrupo(gid);
+  const eppCont = document.getElementById(`cfg-epp-${gid}`);
+  if(eppCont){
+    eppCont.innerHTML = _htmlFormularioEpp(`cfg-${gid}`, {irl_declarado:true});
+    // La fecha de inducción RIOHS/IRL y la fecha de entrega EPP usan la misma
+    // Fecha de Firma del lote — se ocultan los campos propios de
+    // _htmlFormularioEpp para no pedirlas dos veces.
+    const indInput = document.getElementById(`cfg-${gid}-irl-fecha-induccion`);
+    if(indInput) indInput.closest('.form-group').style.display = 'none';
+    const eppFechaInput = document.getElementById(`cfg-${gid}-epp-fecha-entrega`);
+    if(eppFechaInput) eppFechaInput.closest('.form-group').style.display = 'none';
+    // Selector de Tipo de Inducción RIOHS/IRL (formulario oficial)
+    if(indInput){
+      const tipoInduccionHTML = `
+        <div class="f-group" style="margin-bottom:10px;">
+          <label class="form-label">Tipo de Inducción</label>
+          <select class="f-input" id="cfg-${gid}-irl-tipo">
+            <option value="nueva">Persona trabajadora nueva</option>
+            <option value="ausencia_prolongada">Persona trabajadora con ausencia prolongada</option>
+            <option value="reubicada">Persona trabajadora reubicada en nuevo cargo</option>
+            <option value="cambio_proceso">Por cambio de proceso, tecnología, materiales o sustancias</option>
+          </select>
+        </div>`;
+      indInput.closest('.form-grid').insertAdjacentHTML('beforebegin', tipoInduccionHTML);
     }
-  });
+  }
 
   document.getElementById('modal-config-grupos-masivo').style.display = 'flex';
 }
@@ -1666,141 +1717,184 @@ function _actualizarAvisoFirmaGrupo(gid){
   }
 }
 
-/* ── GENERACIÓN DIRECTA DE CONTRATOS (sin Excel de por medio) ───────────── */
+/* ── VALIDACIÓN + PANTALLA DE CONFIRMACIÓN (antes de generar nada) ──────── */
 function generarContratosGrupoMasivo(){
-  // Validar cada grupo antes de generar
-  for(const g of _configGruposActuales){
-    const tipo = document.getElementById(`cfg-tipo-${g.gid}`)?.value;
-    const ciudad = document.getElementById(`cfg-ciudad-${g.gid}`)?.value.trim();
-    const termino = document.getElementById(`cfg-termino-${g.gid}`)?.value;
-    const temporada = document.getElementById(`cfg-temporada-${g.gid}`)?.value.trim();
-    const colacion = document.getElementById(`cfg-colacion-${g.gid}`)?.value.trim();
-    const firma = document.getElementById(`cfg-firma-${g.gid}`)?.value;
-    const formaPago = document.getElementById(`cfg-formapago-${g.gid}`)?.value;
-    const valor = document.getElementById(`cfg-valor-${g.gid}`)?.value;
-    const faena = document.getElementById(`cfg-faena-${g.gid}`)?.value.trim();
-    if(!faena){ toast(`⚠️ Ingresa/selecciona la Faena para "${g.cargo}"`, 'error'); return; }
-    if(!ciudad){ toast(`⚠️ Ingresa la ciudad de firma para "${g.cargo}"`, 'error'); return; }
-    if(tipo !== 'indefinido' && !termino){ toast(`⚠️ Ingresa la fecha de término para "${g.cargo}"`, 'error'); return; }
-    if(tipo === 'temporada' && !temporada){ toast(`⚠️ Ingresa el nombre de la temporada para "${g.cargo}"`, 'error'); return; }
-    if(!colacion){ toast(`⚠️ Ingresa la colación para "${g.cargo}"`, 'error'); return; }
-    if(!firma){ toast(`⚠️ Ingresa la fecha de firma para "${g.cargo}"`, 'error'); return; }
-    if(!formaPago){ toast(`⚠️ Selecciona la forma de pago para "${g.cargo}"`, 'error'); return; }
-    if(!valor || parseInt(valor) <= 0){ toast(`⚠️ Ingresa el valor de la remuneración para "${g.cargo}"`, 'error'); return; }
+  const g = _configGruposActuales[0];
+  if(!g){ toast('⚠️ Vuelve a abrir "Configurar y generar contratos"', 'error'); return; }
+  const gid = g.gid;
 
-    // Se eliminó la validación contra vigencia_contrato del Mandante:
-    // el contrato de trabajo es exclusivamente entre el trabajador y la
-    // Empresa Propia (Art. 183-A Código del Trabajo / Ley 20.123) — el
-    // Mandante no tiene rol legal en los términos del contrato de trabajo,
-    // así que no correspondía bloquear la fecha de término por esto.
+  const tipo = document.getElementById(`cfg-tipo-${gid}`)?.value;
+  const ciudad = document.getElementById(`cfg-ciudad-${gid}`)?.value.trim();
+  const termino = document.getElementById(`cfg-termino-${gid}`)?.value;
+  const temporada = document.getElementById(`cfg-temporada-${gid}`)?.value.trim();
+  const colacion = document.getElementById(`cfg-colacion-${gid}`)?.value.trim();
+  const firma = document.getElementById(`cfg-firma-${gid}`)?.value;
+  const formaPago = document.getElementById(`cfg-formapago-${gid}`)?.value;
+  const valor = document.getElementById(`cfg-valor-${gid}`)?.value;
+  const faena = document.getElementById(`cfg-faena-${gid}`)?.value.trim();
+  if(!faena){ toast(`⚠️ Ingresa/selecciona la Faena para "${g.cargo}"`, 'error'); return; }
+  if(!ciudad){ toast(`⚠️ Ingresa la ciudad de firma para "${g.cargo}"`, 'error'); return; }
+  if(tipo !== 'indefinido' && !termino){ toast(`⚠️ Ingresa la fecha de término para "${g.cargo}"`, 'error'); return; }
+  if(tipo === 'temporada' && !temporada){ toast(`⚠️ Ingresa el nombre de la temporada para "${g.cargo}"`, 'error'); return; }
+  if(!colacion){ toast(`⚠️ Ingresa la colación para "${g.cargo}"`, 'error'); return; }
+  if(!firma){ toast(`⚠️ Ingresa la fecha de firma para "${g.cargo}"`, 'error'); return; }
+  if(!formaPago){ toast(`⚠️ Selecciona la forma de pago para "${g.cargo}"`, 'error'); return; }
+  if(!valor || parseInt(valor) <= 0){ toast(`⚠️ Ingresa el valor de la remuneración para "${g.cargo}"`, 'error'); return; }
+
+  // Se eliminó la validación contra vigencia_contrato del Mandante:
+  // el contrato de trabajo es exclusivamente entre el trabajador y la
+  // Empresa Propia (Art. 183-A Código del Trabajo / Ley 20.123) — el
+  // Mandante no tiene rol legal en los términos del contrato de trabajo,
+  // así que no correspondía bloquear la fecha de término por esto.
+
+  // Todo validado — se abre la confirmación en vez de generar directo.
+  abrirConfirmacionMasivo(g);
+}
+
+function abrirConfirmacionMasivo(g){
+  const epId = document.getElementById('c-empresa-propia')?.value || '';
+  const emp = getEmpresaEmpleadora(epId);
+
+  document.getElementById('conf-masivo-empresa').textContent  = emp?.razon_social || emp?.nombre || '—';
+  document.getElementById('conf-masivo-mandante').textContent = g.mandanteNombre || '—';
+  document.getElementById('conf-masivo-cargo').textContent    = g.cargo || '—';
+
+  const resumen = document.getElementById('conf-masivo-trab-resumen');
+  if(resumen) resumen.textContent = `Trabajadores seleccionados (${g.trabajadores.length}) ▼`;
+  const lista = document.getElementById('conf-masivo-trab-lista');
+  if(lista){
+    lista.innerHTML = g.trabajadores
+      .slice().sort((a,b) => a.nombre?.localeCompare(b.nombre))
+      .map(t => `<li>${t.nombre} <span style="color:var(--texto3);font-family:monospace;">(${t.rut})</span></li>`)
+      .join('');
   }
+
+  document.getElementById('modal-confirmacion-masivo').style.display = 'flex';
+}
+
+function cerrarModalConfirmacionMasivo(){
+  document.getElementById('modal-confirmacion-masivo').style.display = 'none';
+}
+
+/* ── GENERACIÓN DIRECTA DE CONTRATOS (sin Excel de por medio) ───────────── */
+function confirmarYGenerarContratosMasivo(){
+  const g = _configGruposActuales[0];
+  if(!g){ toast('⚠️ Vuelve a abrir "Configurar y generar contratos"', 'error'); return; }
+  const gid = g.gid;
 
   cargarContratos();
   const contenidos = [];
   let generados = 0;
 
-  _configGruposActuales.forEach(g => {
-    const gid = g.gid;
-    const tipo = document.getElementById(`cfg-tipo-${gid}`).value;
-    const { jornada_dias, horas_semanales, distribucion_jornada } = _leerJornadaGrupo(gid);
-    const fechaFirma = document.getElementById(`cfg-firma-${gid}`).value;
-    const eppDatos = _leerFormularioEpp(`cfg-${gid}`);
+  const tipo = document.getElementById(`cfg-tipo-${gid}`).value;
+  const { jornada_dias, horas_semanales, distribucion_jornada } = _leerJornadaGrupo(gid);
+  const fechaFirma = document.getElementById(`cfg-firma-${gid}`).value;
+  const eppDatos = _leerFormularioEpp(`cfg-${gid}`);
+  const mandanteObj = empresas.find(e => e.id === g.mandanteId || e.rut === g.mandanteId);
 
-    const cfg = {
-      tipo_contrato:  tipo,
-      faena:          document.getElementById(`cfg-faena-${gid}`).value.trim(),
-      ciudad_firma:   document.getElementById(`cfg-ciudad-${gid}`).value.trim(),
-      temporada:      tipo === 'temporada' ? document.getElementById(`cfg-temporada-${gid}`).value.trim() : '',
-      fecha_termino:  tipo !== 'indefinido' ? document.getElementById(`cfg-termino-${gid}`).value : '',
-      colacion:       document.getElementById(`cfg-colacion-${gid}`).value.trim(),
-      jornada_dias, horas_semanales, distribucion_jornada,
-      fecha_firma:    fechaFirma,
-      forma_pago:     document.getElementById(`cfg-formapago-${gid}`).value,
-      valor:          parseInt(document.getElementById(`cfg-valor-${gid}`).value) || 0,
-      epp_entregados: eppDatos.epp_entregados,
-      epp_otro:       eppDatos.epp_otro,
-      epp_fecha_entrega: fechaFirma, // misma fecha que la firma, según lo acordado
-      irl_fecha_induccion: fechaFirma, // misma fecha que la firma, según lo acordado
-      irl_tipo:       document.getElementById(`cfg-${gid}-irl-tipo`)?.value || '',
-      irl_declarado:  eppDatos.irl_declarado,
+  const cfg = {
+    tipo_contrato:  tipo,
+    faena:          document.getElementById(`cfg-faena-${gid}`).value.trim(),
+    ciudad_firma:   document.getElementById(`cfg-ciudad-${gid}`).value.trim(),
+    temporada:      tipo === 'temporada' ? document.getElementById(`cfg-temporada-${gid}`).value.trim() : '',
+    fecha_termino:  tipo !== 'indefinido' ? document.getElementById(`cfg-termino-${gid}`).value : '',
+    colacion:       document.getElementById(`cfg-colacion-${gid}`).value.trim(),
+    jornada_dias, horas_semanales, distribucion_jornada,
+    fecha_firma:    fechaFirma,
+    forma_pago:     document.getElementById(`cfg-formapago-${gid}`).value,
+    valor:          parseInt(document.getElementById(`cfg-valor-${gid}`).value) || 0,
+    epp_entregados: eppDatos.epp_entregados,
+    epp_otro:       eppDatos.epp_otro,
+    epp_fecha_entrega: fechaFirma, // misma fecha que la firma, según lo acordado
+    irl_fecha_induccion: fechaFirma, // misma fecha que la firma, según lo acordado
+    irl_tipo:       document.getElementById(`cfg-${gid}-irl-tipo`)?.value || '',
+    irl_declarado:  eppDatos.irl_declarado,
+  };
+
+  const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[cfg.tipo_contrato] || cfg.tipo_contrato;
+
+  g.trabajadores.forEach(t => {
+    const emp = getEmpresaEmpleadora(t.empresa_propia_id);
+
+    const datos = {
+      trabajador_id: t.id,
+      trabajador_rut: t.rut,
+      empresa_rut: mandanteObj?.rut || '',
+      empresa_propia_id: t.empresa_propia_id || '',
+      tipo: cfg.tipo_contrato,
+      ciudad_firma: cfg.ciudad_firma,
+      fecha_firma: cfg.fecha_firma,
+      funcion_cargo: t.funcion_cargo || '',
+      nombre_faena: cfg.faena || '',
+      ubicacion_faena: [mandanteObj?.direccion, mandanteObj?.comuna].filter(Boolean).join(', '),
+      region: mandanteObj?.region || '',
+      mandante_id: g.mandanteId || '',
+      mandante_nombre: mandanteObj?.nombre || '',
+      mandante_rut: mandanteObj?.rut || '',
+      mandante_direccion: mandanteObj?.direccion || '',
+      mandante_comuna: mandanteObj?.comuna || '',
+      mandante_region: mandanteObj?.region || '',
+      temporada: cfg.temporada || '',
+      fecha_inicio: t.fecha_ingreso || '',
+      fecha_termino: cfg.fecha_termino || '',
+      horas_semanales: cfg.horas_semanales,
+      distribucion_jornada: cfg.distribucion_jornada,
+      jornada_dias: cfg.jornada_dias,
+      colacion: cfg.colacion,
+      tipo_remuneracion: cfg.forma_pago,
+      sueldo_monto: cfg.valor,
+      sueldo_escrito: numeroALetras(cfg.valor).trim() + ' pesos',
+      beneficios: [],
+      estado: 'activo',
+      creado_en: new Date().toISOString(),
     };
 
-    const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[cfg.tipo_contrato] || cfg.tipo_contrato;
+    const existe = contratos.findIndex(c => c.trabajador_id === t.id);
+    if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
+    else contratos.push({id: Date.now().toString() + '_' + t.id, numero_contrato: _siguienteNumeroContrato(datos.empresa_propia_id), ...datos});
 
-    g.trabajadores.forEach(t => {
-      const mandante = findMandante(t);
-      const emp = getEmpresaEmpleadora(t.empresa_propia_id);
-
-      const datos = {
-        trabajador_id: t.id,
-        trabajador_rut: t.rut,
-        empresa_rut: t.empresa || t.empresa_rut || '',
-        empresa_propia_id: t.empresa_propia_id || '',
-        tipo: cfg.tipo_contrato,
-        ciudad_firma: cfg.ciudad_firma,
-        fecha_firma: cfg.fecha_firma,
-        funcion_cargo: t.funcion_cargo || '',
-        nombre_faena: cfg.faena || '',
-        ubicacion_faena: [mandante?.direccion, mandante?.comuna].filter(Boolean).join(', '),
-        region: mandante?.region || '',
-        mandante_nombre: mandante?.nombre || '',
-        mandante_rut: mandante?.rut || '',
-        mandante_direccion: mandante?.direccion || '',
-        mandante_comuna: mandante?.comuna || '',
-        mandante_region: mandante?.region || '',
-        temporada: cfg.temporada || '',
-        fecha_inicio: t.fecha_ingreso || '',
-        fecha_termino: cfg.fecha_termino || '',
-        horas_semanales: cfg.horas_semanales,
-        distribucion_jornada: cfg.distribucion_jornada,
-        jornada_dias: cfg.jornada_dias,
-        colacion: cfg.colacion,
-        tipo_remuneracion: cfg.forma_pago,
-        sueldo_monto: cfg.valor,
-        sueldo_escrito: numeroALetras(cfg.valor).trim() + ' pesos',
-        beneficios: [],
-        estado: 'activo',
-        creado_en: new Date().toISOString(),
-      };
-
-      const existe = contratos.findIndex(c => c.trabajador_id === t.id);
-      if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
-      else contratos.push({id: Date.now().toString() + '_' + t.id, numero_contrato: _siguienteNumeroContrato(datos.empresa_propia_id), ...datos});
-
-      Object.assign(t, {
-        epp_entregados: cfg.epp_entregados,
-        epp_otro: cfg.epp_otro,
-        epp_fecha_entrega: cfg.epp_fecha_entrega,
-        irl_fecha_induccion: cfg.irl_fecha_induccion,
-        irl_tipo: cfg.irl_tipo,
-        irl_declarado: cfg.irl_declarado,
-      });
-
-      registrarDocumentoCarpeta({
-        trabajador_id:  t.id,
-        trabajador_rut: t.rut,
-        tipo:           'contrato',
-        subtipo:        cfg.tipo_contrato,
-        fecha_firma:    cfg.fecha_firma,
-        descripcion:    `Contrato ${tipoTxt} — ${cfg.faena||''} (Masivo)`.trim(),
-      });
-
-      const { htmlCompleto } = construirDocumentoContrato(t, emp, mandante, datos);
-      if(htmlCompleto) contenidos.push(htmlCompleto);
-      generados++;
+    // ✅ Sincronización del Bypass de Mandante — mismo criterio que en el
+    // Contrato Individual: el trabajador refleja el Mandante de su
+    // Contrato más reciente, para que el resto del sistema siga
+    // funcionando sin cambios (Dashboard, Empresas, Asistencia,
+    // Trabajadores, Alertas, QR, Exportar).
+    Object.assign(t, {
+      mandante_id: g.mandanteId || '',
+      empresa_rut: g.mandanteId || '',
+      empresa:     g.mandanteId || '',
+      epp_entregados: cfg.epp_entregados,
+      epp_otro: cfg.epp_otro,
+      epp_fecha_entrega: cfg.epp_fecha_entrega,
+      irl_fecha_induccion: cfg.irl_fecha_induccion,
+      irl_tipo: cfg.irl_tipo,
+      irl_declarado: cfg.irl_declarado,
     });
+
+    registrarDocumentoCarpeta({
+      trabajador_id:  t.id,
+      trabajador_rut: t.rut,
+      tipo:           'contrato',
+      subtipo:        cfg.tipo_contrato,
+      fecha_firma:    cfg.fecha_firma,
+      descripcion:    `Contrato ${tipoTxt} — ${cfg.faena||''} (Masivo)`.trim(),
+    });
+
+    const { htmlCompleto } = construirDocumentoContrato(t, emp, mandanteObj, datos);
+    if(htmlCompleto) contenidos.push(htmlCompleto);
+    generados++;
   });
 
   guardarContratos();
   guardarLocal();
 
-
+  cerrarModalConfirmacionMasivo();
   cerrarModalConfigGruposMasivo();
   toast(`✅ ${generados} contrato${generados!==1?'s':''} generado${generados!==1?'s':''}`, 'exito');
 
   _abrirVentanaContratosMasivo(contenidos);
   _masivoSeleccionados.clear();
-  renderPiramideMasivo();
+  _poblarCargoMasivo();
+  renderListaMasivo();
 }
 
 

@@ -528,7 +528,7 @@ function _verDocumentoCarpeta(indice){
     if(typeof cargarContratos === 'function') cargarContratos();
     if(typeof poblarSelectTrabajadoresContrato === 'function') poblarSelectTrabajadoresContrato();
     const sel = document.getElementById('c-trabajador');
-    if(sel && d.trabajador_id){ sel.value = d.trabajador_id; generarPDFContrato(); }
+    if(sel && d.trabajador_id){ sel.value = d.trabajador_id; if(typeof precargarContrato === 'function') precargarContrato(); generarPDFContrato(); }
     else toast('⚠️ No se pudo ubicar el contrato de este trabajador', 'error');
     return;
   }

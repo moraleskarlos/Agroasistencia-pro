@@ -94,11 +94,11 @@ function calcularAlertas(){
         'Sin empresa contratista asignada', `${t.nombre} no tiene empresa contratista asignada`,
         () => verPerfilTrabajador(t.rut)));
     }
-    if(!(t.mandante_id || t.empresa_rut || t.empresa)){
-      alertas.push(_alerta('critico','Trabajadores',`sin_mandante_${t.rut}`,
-        'Sin mandante asignado', `${t.nombre} no tiene mandante asignado`,
-        () => verPerfilTrabajador(t.rut)));
-    }
+    // Alerta "sin_mandante" eliminada — el Mandante ya no vive en el
+    // trabajador (Registro Personal), sino que se fija al generar su
+    // Contrato. La alerta "sin_contrato" (más abajo) cubre exactamente
+    // el mismo caso: sin Contrato no hay Mandante, así que mantener
+    // ambas alertas duplicaba el aviso para el mismo trabajador.
     if(!t.domicilio){
       alertas.push(_alerta('critico','Trabajadores',`sin_domicilio_${t.rut}`,
         'Sin domicilio registrado', `${t.nombre} no tiene domicilio registrado`,
