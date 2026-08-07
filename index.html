@@ -128,8 +128,23 @@
       <!-- REGISTRO -->
       <div id="p-registro" class="pagina">
         <div class="sec-header"><div><div class="sec-title">Registro de Personal</div><div class="sec-sub">Ingresa trabajadores de forma individual o carga masiva desde Excel</div></div></div>
-        <div class="g2">
-          <div class="card">
+
+        <!-- TABS -->
+        <div style="display:flex;gap:0;border-bottom:2px solid var(--borde);margin-bottom:16px;flex-wrap:wrap;">
+          <button id="tab-reg-individual" onclick="switchTabRegistro('individual')"
+            style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
+            cursor:pointer;border-bottom:2px solid var(--azul);margin-bottom:-2px;color:var(--azul);border-radius:6px 6px 0 0;">
+            <i class="ti ti-user-plus"></i> Registro Individual
+          </button>
+          <button id="tab-reg-masivo" onclick="switchTabRegistro('masivo')"
+            style="padding:10px 20px;border:none;background:none;font-size:13px;font-weight:600;
+            cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--texto2);border-radius:6px 6px 0 0;">
+            <i class="ti ti-table-import"></i> Registro Masivo
+          </button>
+        </div>
+
+        <div id="sub-tab-reg-individual">
+        <div class="card">
             <div class="card-title"><i class="ti ti-user-plus"></i> Registro individual</div>
             <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;display:flex;gap:8px;align-items:center;justify-content:space-between;">
               <div style="font-size:12px;color:var(--texto2);"><i class="ti ti-info-circle"></i> ¿Vas a editar a alguien? Búscalo en el módulo <strong>Trabajadores</strong> y usa "Editar ficha".</div>
@@ -358,9 +373,15 @@
 </form>
 <div id="form-trabajador-anchor"></div>
           </div>
-          <div class="card">
-            <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva desde Excel</div>
+        </div><!-- /sub-tab-reg-individual -->
 
+        <div id="sub-tab-reg-masivo" style="display:none;">
+          <div class="card">
+            <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva desde Excel — una cuadrilla, un cargo</div>
+
+            <div style="font-size:11px;color:var(--texto3);margin-bottom:10px;">
+              <i class="ti ti-info-circle"></i> Pensado para cuadrillas homogéneas: todos los trabajadores del archivo quedan con la misma Empresa y el mismo Cargo. Si necesitás mezclar cargos o empresas distintas, subí archivos separados.
+            </div>
             <div class="excel-hint"><strong>📋 Columnas del Excel:</strong><ul><li>RUT · Nombre · Nacionalidad · Fecha Nacimiento · Sexo</li><li>Estado Civil · Domicilio · Correo · AFP · Salud · Fecha Ingreso</li></ul></div>
             <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" onclick="descargarPlantilla()"><i class="ti ti-file-download"></i> Descargar plantilla Excel</button>
             <div class="zona-drop" id="zona-drop-excel" onclick="_clickZonaDropExcel()">
@@ -380,7 +401,7 @@
               <div id="preview-avisos" style="margin-bottom:10px;"></div>
               <div class="tabla-wrap" style="max-height:240px;overflow-y:auto;margin-bottom:14px;"><table class="tabla" id="tabla-excel"><thead></thead><tbody></tbody></table></div>
 
-              <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;border-top:1px solid var(--borde);padding-top:14px;">Asignar a todo el lote</div>
+              <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;border-top:1px solid var(--borde);padding-top:14px;">Asignar a toda la cuadrilla</div>
               <div class="form-grid" style="margin-bottom:10px;">
                 <div class="form-group"><label>Empresa Contratista *</label>
                   <select id="lote-empresa-propia" onchange="_actualizarEstadoLote()">
@@ -388,7 +409,7 @@
                   </select></div>
                 <!-- Empresa Mandante eliminada del encabezado del lote —
                      se elige en Contratos, no en Registro Personal. -->
-                <div class="form-group full"><label>Cargo del lote *</label>
+                <div class="form-group full"><label>Cargo de la cuadrilla *</label>
                   <select id="lote-cargo" onchange="_onCambioCargoLote()">
                     <option value="">— Seleccionar cargo —</option>
                     <option value="Cosechero">Cosechero</option>
@@ -421,7 +442,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </div><!-- /sub-tab-reg-masivo -->
       </div>
 
       <!-- TRABAJADORES -->
@@ -2728,11 +2749,27 @@
       </div>
     </div>
   </div>
+  <!-- MODAL CONFIRMACIÓN — Registro Masivo -->
+  <div id="modal-confirmacion-registro-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:1001;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:14px;padding:24px;width:440px;max-width:96vw;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px;">Revise la información antes de continuar</div>
+      <div style="display:grid;gap:6px;font-size:13px;background:var(--gris-bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+        <div>• <span style="color:var(--texto3);">Empresa:</span> <strong id="conf-reg-masivo-empresa"></strong></div>
+        <div>• <span style="color:var(--texto3);">Cargo:</span> <strong id="conf-reg-masivo-cargo"></strong></div>
+        <div>• <span style="color:var(--texto3);">Trabajadores:</span> <strong id="conf-reg-masivo-total"></strong></div>
+      </div>
+      <p style="font-size:13px;color:var(--texto2);margin-bottom:16px;" id="conf-reg-masivo-frase"></p>
+      <p style="font-size:13px;font-weight:600;margin-bottom:16px;">¿Desea continuar?</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalConfirmacionRegistroMasivo()">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="confirmarImportacionMasiva()"><i class="ti ti-cloud-upload"></i> Confirmar e importar</button>
+      </div>
+    </div>
+  </div>
   <!-- MODAL CONFIRMACIÓN — Contratación Masiva -->
   <div id="modal-confirmacion-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:1001;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:24px;width:460px;max-width:96vw;">
-      <div style="font-size:16px;font-weight:700;margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Confirmación de contratación masiva</div>
-      <p style="font-size:13px;color:var(--texto2);margin:10px 0;">Está a punto de generar contratos para el siguiente lote:</p>
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Confirmación de contratación masiva</div>      <p style="font-size:13px;color:var(--texto2);margin:10px 0;">Está a punto de generar contratos para el siguiente lote:</p>
       <div style="display:grid;gap:6px;font-size:13px;background:var(--gris-bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
         <div><span style="color:var(--texto3);">Empresa (Empleador):</span> <strong id="conf-masivo-empresa"></strong></div>
         <div><span style="color:var(--texto3);">Empresa Mandante:</span> <strong id="conf-masivo-mandante"></strong></div>
