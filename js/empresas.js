@@ -84,14 +84,14 @@ function renderContratistas(){
   if(empRutEl) empRutEl.textContent = cfg.empresa?.rut ? 'RUT: ' + cfg.empresa.rut : 'Ve a Configuración para ingresar los datos de tu empresa';
 
   if(!empresas.length){
-    el.innerHTML='<div style="font-size:13px;color:var(--texto3);text-align:center;padding:32px;">Sin mandantes registrados — haz clic en "Nuevo Mandante"</div>';
+    el.innerHTML='<div style="font-size:13px;color:var(--texto-secundario);text-align:center;padding:32px;">Sin mandantes registrados — haz clic en "Nuevo Mandante"</div>';
     return;
   }
 
   const colors=[['#DBEAFE','#1D4ED8'],['#D1FAE5','#065F46'],['#FEF3C7','#92400E'],['#EDE9FE','#5B21B6'],['#FCE7F3','#9D174D']];
 
   el.innerHTML=`
-    <div style="background:var(--gris-bg);display:flex;padding:10px 16px;font-size:11px;font-weight:600;color:var(--texto3);border-bottom:2px solid var(--borde);text-transform:uppercase;letter-spacing:0.4px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
+    <div style="background:var(--gris-bg);display:flex;padding:10px 16px;font-size:11px;font-weight:600;color:var(--texto-secundario);border-bottom:2px solid var(--borde);text-transform:uppercase;letter-spacing:0.4px;border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
       <div style="flex:1.5;">Empresa</div>
       <div style="flex:0.7;">RUT</div>
       <div style="flex:1;">Faena</div>
@@ -114,7 +114,7 @@ function renderContratistas(){
       const ini=e.nombre.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
       const faenas=e.faenas||[];
       const faenaColHTML = !faenas.length
-        ? '<span style="color:var(--texto3);font-size:12px;">— sin faena —</span>'
+        ? '<span style="color:var(--texto-secundario);font-size:12px;">— sin faena —</span>'
         : faenas.length===1
           ? `<span style="font-size:12px;">${faenas[0].nombre||faenas[0]}</span>`
           : `<span onclick="_toggleFaenasFila('${empId}')" style="cursor:pointer;font-size:12px;font-weight:600;color:var(--azul);">
@@ -136,15 +136,15 @@ function renderContratistas(){
           <div style="width:38px;height:38px;border-radius:9px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${ini}</div>
           <div>
             <div style="font-weight:600;font-size:13px;">${e.nombre}${venc.badge}</div>
-            <div style="font-size:11px;color:var(--texto3);">${e.correo||''}</div>
+            <div style="font-size:11px;color:var(--texto-secundario);">${e.correo||''}</div>
           </div>
         </div>
-        <div style="flex:0.7;font-family:monospace;font-size:11px;color:var(--texto2);">${e.rut}</div>
+        <div style="flex:0.7;font-family:monospace;font-size:11px;color:var(--texto-secundario);">${e.rut}</div>
         <div style="flex:1;min-width:0;">${faenaColHTML}</div>
         <div style="flex:0.6;min-width:0;">
           ${e.fecha_inicio_contrato
             ? `<div style="font-size:12px;font-weight:600;color:#2563EB;white-space:nowrap;">${new Date(e.fecha_inicio_contrato).toLocaleDateString('es-CL')}</div>`
-            : '<span style="color:var(--texto3);font-size:12px;">—</span>'}
+            : '<span style="color:var(--texto-secundario);font-size:12px;">—</span>'}
         </div>
         <div style="flex:0.7;min-width:0;">
           <div style="font-size:12px;font-weight:600;color:${venc.color};white-space:nowrap;">${venc.texto}</div>
@@ -240,7 +240,7 @@ function _renderFaenasEnEdicion(){
   if(!cont) return;
 
   if(!_faenasEnEdicion.length){
-    cont.innerHTML = '<div style="font-size:12px;color:var(--texto3);padding:6px 0;">Sin faenas agregadas</div>';
+    cont.innerHTML = '<div style="font-size:12px;color:var(--texto-secundario);padding:6px 0;">Sin faenas agregadas</div>';
     return;
   }
 
@@ -378,7 +378,7 @@ function _kpiActivoInactivo(label, activas, inactivas, sub){
   return `<div class="kpi">
     <div class="kpi-label">${label}</div>
     <div class="kpi-value">
-      <span style="color:var(--verde-dark);">${activas}</span><span style="color:var(--texto3);font-weight:400;"> / </span><span style="color:${inactivas>0?'#dc2626':'var(--texto3)'};">${inactivas}</span>
+      <span style="color:var(--verde-dark);">${activas}</span><span style="color:var(--texto-secundario);font-weight:400;"> / </span><span style="color:${inactivas>0?'#dc2626':'var(--texto-secundario)'};">${inactivas}</span>
     </div>
     <div class="kpi-sub">${sub ? sub + ' ' : ''}(activas / inactivas)</div>
   </div>`;
@@ -399,7 +399,7 @@ function renderKpisMisEmpresas(){
   zona.style.gap = '14px';
   zona.innerHTML =
     _kpiCard('Empresas Activas',   activas,   'empresas propias', 'var(--verde-dark)') +
-    _kpiCard('Empresas Inactivas', inactivas, 'dadas de baja',     inactivas>0?'#dc2626':'var(--texto3)');
+    _kpiCard('Empresas Inactivas', inactivas, 'dadas de baja',     inactivas>0?'#dc2626':'var(--texto-secundario)');
 }
 
 function renderKpisMandantes(){
@@ -431,7 +431,7 @@ function renderKpisMandantes(){
   zona.style.gap = '14px';
   zona.innerHTML =
     _kpiCard('Mandantes Activos',   activos,   'empresas mandante', 'var(--verde-dark)') +
-    _kpiCard('Mandantes Inactivos', inactivos, 'dados de baja',      inactivos>0?'#dc2626':'var(--texto3)') +
+    _kpiCard('Mandantes Inactivos', inactivos, 'dados de baja',      inactivos>0?'#dc2626':'var(--texto-secundario)') +
     `<div class="kpi" style="border-color:${vencidos>0?'#dc2626':porVencer>0?'#d97706':'var(--borde)'};">
       <div class="kpi-label">Vigencia de contratos</div>
       <div class="kpi-value" style="color:${vigColor};font-size:20px;">${vigTexto}</div>
@@ -450,7 +450,7 @@ function switchTabEmpresas(tab){
 
   if(tab === 'mis-empresas'){
     tabMis.style.borderBottomColor = 'var(--azul)';   tabMis.style.color = '#fff';   tabMis.style.background = 'var(--azul)';
-    tabMan.style.borderBottomColor = 'transparent';    tabMan.style.color = 'var(--texto2)'; tabMan.style.background = 'none';
+    tabMan.style.borderBottomColor = 'transparent';    tabMan.style.color = 'var(--texto-secundario)'; tabMan.style.background = 'none';
     subMis.style.display = '';    subMan.style.display = 'none';
     if(kpiMis) kpiMis.style.display = '';
     if(kpiMan) kpiMan.style.display = 'none';
@@ -458,7 +458,7 @@ function switchTabEmpresas(tab){
     renderMisEmpresas();
   } else {
     tabMan.style.borderBottomColor = 'var(--azul)';   tabMan.style.color = '#fff';   tabMan.style.background = 'var(--azul)';
-    tabMis.style.borderBottomColor = 'transparent';    tabMis.style.color = 'var(--texto2)'; tabMis.style.background = 'none';
+    tabMis.style.borderBottomColor = 'transparent';    tabMis.style.color = 'var(--texto-secundario)'; tabMis.style.background = 'none';
     subMan.style.display = '';    subMis.style.display = 'none';
     if(kpiMan) kpiMan.style.display = '';
     if(kpiMis) kpiMis.style.display = 'none';
@@ -478,7 +478,7 @@ function renderMisEmpresas(){
   if(bMan) bMan.textContent = empresas.length;
 
   if(!empresas_propias.length){
-    el.innerHTML = `<div style="font-size:13px;color:var(--texto3);text-align:center;padding:40px;">
+    el.innerHTML = `<div style="font-size:13px;color:var(--texto-secundario);text-align:center;padding:40px;">
       <i class="ti ti-building-skyscraper" style="font-size:36px;display:block;margin-bottom:12px;opacity:0.3;"></i>
       Sin empresas propias registradas.<br>Utiliza "Nueva Empresa" para comenzar.
     </div>`;
@@ -489,7 +489,7 @@ function renderMisEmpresas(){
   el.innerHTML = `
     <div style="display:flex;gap:0;padding:8px 14px;background:var(--gris-bg);
       border-radius:var(--radius);margin-bottom:6px;font-size:11px;
-      font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;">
+      font-weight:700;color:var(--texto-secundario);text-transform:uppercase;letter-spacing:0.4px;">
       <div style="flex:2;">Empresa</div>
       <div style="flex:1;">RUT</div>
       <div style="flex:0.5;text-align:center;">Total</div>
@@ -516,10 +516,10 @@ function renderMisEmpresas(){
             color:#fff;font-size:12px;font-weight:700;flex-shrink:0;">${ini}</div>
           <div>
             <div style="font-weight:600;font-size:13px;">${ep.nombre||'—'}</div>
-            <div style="font-size:11px;color:var(--texto2);">${ep.correo||ep.telefono||''}</div>
+            <div style="font-size:11px;color:var(--texto-secundario);">${ep.correo||ep.telefono||''}</div>
           </div>
         </div>
-        <div style="flex:1;font-family:monospace;font-size:11px;color:var(--texto2);">${ep.rut||'—'}</div>
+        <div style="flex:1;font-family:monospace;font-size:11px;color:var(--texto-secundario);">${ep.rut||'—'}</div>
         <div style="flex:0.5;text-align:center;font-weight:700;font-size:14px;">${trabEp.length}</div>
         <div style="flex:0.5;text-align:center;">
           <span style="background:#D1FAE5;color:#065F46;border-radius:99px;
@@ -527,7 +527,7 @@ function renderMisEmpresas(){
         </div>
         <div style="flex:0.5;text-align:center;">
           <span style="background:${inactivos>0?'#FEE2E2':'#F1F5F9'};
-            color:${inactivos>0?'#991B1B':'var(--texto3)'};
+            color:${inactivos>0?'#991B1B':'var(--texto-secundario)'};
             border-radius:99px;padding:2px 8px;font-size:11px;font-weight:600;">${inactivos}</span>
         </div>
         <div style="flex:2;display:flex;gap:5px;justify-content:flex-end;" onclick="event.stopPropagation()">
@@ -775,7 +775,7 @@ function abrirModalMandante(){
 // eliminarlo (ver bitácora, Hallazgo #13).
 
 function estadoVencimiento(fecha){
-  if(!fecha) return {texto:'Sin fecha',color:'var(--texto3)',badge:'',dias:null};
+  if(!fecha) return {texto:'Sin fecha',color:'var(--texto-secundario)',badge:'',dias:null};
   const dias=(new Date(fecha)-new Date())/(1000*60*60*24);
   const txt=new Date(fecha).toLocaleDateString('es-CL');
   if(dias<0)   return{texto:txt,color:'#dc2626',badge:'<span style="background:#FEE2E2;color:#dc2626;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:6px;">🔴 VENCIDO</span>',dias};
