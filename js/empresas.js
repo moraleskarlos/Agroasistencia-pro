@@ -447,10 +447,17 @@ function switchTabEmpresas(tab){
   const subMan  = document.getElementById('sub-mandantes');
   const kpiMis  = document.getElementById('kpi-mis-empresas-zone');
   const kpiMan  = document.getElementById('kpi-mandantes-zone');
+  const badgeMis = document.getElementById('badge-mis-empresas');
+  const badgeMan = document.getElementById('badge-mandantes-tab');
 
   if(tab === 'mis-empresas'){
     tabMis.style.borderBottomColor = 'var(--azul)';   tabMis.style.color = '#fff';   tabMis.style.background = 'var(--azul)';
     tabMan.style.borderBottomColor = 'transparent';    tabMan.style.color = 'var(--texto-secundario)'; tabMan.style.background = 'none';
+    // ✅ El número del badge sigue el mismo criterio que el resto del
+    // texto de la pestaña: blanco cuando está seleccionada, azul cuando
+    // no — antes quedaban fijos, sin relación con el estado activo.
+    if(badgeMis){ badgeMis.style.background = 'rgba(255,255,255,0.2)'; badgeMis.style.color = '#fff'; }
+    if(badgeMan){ badgeMan.style.background = '#EFF6FF'; badgeMan.style.color = 'var(--azul)'; }
     subMis.style.display = '';    subMan.style.display = 'none';
     if(kpiMis) kpiMis.style.display = '';
     if(kpiMan) kpiMan.style.display = 'none';
@@ -459,6 +466,8 @@ function switchTabEmpresas(tab){
   } else {
     tabMan.style.borderBottomColor = 'var(--azul)';   tabMan.style.color = '#fff';   tabMan.style.background = 'var(--azul)';
     tabMis.style.borderBottomColor = 'transparent';    tabMis.style.color = 'var(--texto-secundario)'; tabMis.style.background = 'none';
+    if(badgeMan){ badgeMan.style.background = 'rgba(255,255,255,0.2)'; badgeMan.style.color = '#fff'; }
+    if(badgeMis){ badgeMis.style.background = '#EFF6FF'; badgeMis.style.color = 'var(--azul)'; }
     subMan.style.display = '';    subMis.style.display = 'none';
     if(kpiMan) kpiMan.style.display = '';
     if(kpiMis) kpiMis.style.display = 'none';
