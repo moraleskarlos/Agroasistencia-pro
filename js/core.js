@@ -99,6 +99,7 @@ function irA(idPagina, botonEl) {
       if(idPagina === 'gestion-laboral' || idPagina === 'p-gestion-laboral'){ initGestionLaboral(); }
       if(idPagina === 'remuneraciones' || idPagina === 'p-remuneraciones'){ initIndicadores(); initLiquidaciones(); initLibro(); switchTabRem('rem-indicadores'); }
       if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); poblarSelectsEmpresaPropia(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
+      if(idPagina === 'registro'      || idPagina === 'p-registro'){      poblarSelects(); poblarSelectsEmpresaPropia(); switchTabRegistro('individual'); }
       if(idPagina === 'p-perfil-trabajador'){ /* contenido se carga desde verPerfilTrabajador */ }
       if(idPagina === 'contratistas' || idPagina === 'p-contratistas'){ switchTabEmpresas(tabEmpresasActivo||'mis-empresas'); }
       if(idPagina === 'qr'           || idPagina === 'p-qr'){           poblarSelects(); cargarListaQR(); }
