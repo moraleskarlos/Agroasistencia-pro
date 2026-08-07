@@ -361,45 +361,11 @@
           <div class="card">
             <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva desde Excel</div>
 
-            <div class="form-grid" style="margin-bottom:10px;">
-              <div class="form-group"><label>Empresa Contratista *</label>
-                <select id="lote-empresa-propia" onchange="_actualizarEstadoLote()">
-                  <option value="">— Seleccionar —</option>
-                </select></div>
-              <!-- Empresa Mandante eliminada del encabezado del lote —
-                   se elige en Contratos, no en Registro Personal. -->
-              <div class="form-group full"><label>Cargo del lote *</label>
-                <select id="lote-cargo" onchange="_onCambioCargoLote()">
-                  <option value="">— Seleccionar cargo —</option>
-                  <option value="Cosechero">Cosechero</option>
-                  <option value="Cosechera">Cosechera</option>
-                  <option value="Podador">Podador</option>
-                  <option value="Raleador">Raleador</option>
-                  <option value="Operario de Packing">Operario de Packing</option>
-                  <option value="Seleccionador">Seleccionador</option>
-                  <option value="Amarrador">Amarrador</option>
-                  <option value="Regador">Regador</option>
-                  <option value="Fumigador">Fumigador</option>
-                  <option value="Tractorista">Tractorista</option>
-                  <option value="Jefe de Cuadrilla">Jefe de Cuadrilla</option>
-                  <option value="Supervisor de Campo">Supervisor de Campo</option>
-                  <option value="Encargado de Bodega">Encargado de Bodega</option>
-                  <option value="Estibador">Estibador</option>
-                  <option value="Chofer">Chofer</option>
-                  <option value="otro">Otro (especificar)</option>
-                </select>
-                <input type="text" id="lote-cargo-otro" placeholder="Especifica el cargo" style="display:none;margin-top:8px;">
-              </div>
-            </div>
-            <div style="font-size:11px;color:var(--texto3);margin-bottom:12px;">
-              <i class="ti ti-info-circle"></i> Todos los trabajadores de este archivo quedarán asignados a la Empresa y Cargo elegidos arriba. La Empresa Mandante y la Faena se definen después, al generar sus Contratos. Si necesitas mezclar distintos cargos, súbelos en archivos separados.
-            </div>
-
             <div class="excel-hint"><strong>📋 Columnas del Excel:</strong><ul><li>RUT · Nombre · Nacionalidad · Fecha Nacimiento · Sexo</li><li>Estado Civil · Domicilio · Correo · AFP · Salud · Fecha Ingreso</li></ul></div>
             <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" onclick="descargarPlantilla()"><i class="ti ti-file-download"></i> Descargar plantilla Excel</button>
-            <div class="zona-drop" id="zona-drop-excel" onclick="_clickZonaDropExcel()" style="opacity:0.5;">
+            <div class="zona-drop" id="zona-drop-excel" onclick="_clickZonaDropExcel()">
               <i class="ti ti-file-spreadsheet"></i>
-              <div class="drop-title" id="drop-titulo">Completa Empresa y Cargo arriba primero</div>
+              <div class="drop-title" id="drop-titulo">Arrastra tu archivo Excel aquí</div>
               <div class="drop-sub">o haz clic para explorar · .xlsx / .xls</div>
             </div>
             <input type="file" id="archivo-excel" accept=".xlsx,.xls" style="display:none;" onchange="procesarExcel(event)">
@@ -410,15 +376,49 @@
               </button>
             </div>
             <div id="seccion-preview" style="display:none;margin-top:14px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <span style="font-size:13px;font-weight:600;" id="preview-count"></span>
-                <div style="display:flex;gap:8px;">
-                  <button class="btn btn-secondary btn-sm" onclick="cancelarMasivo()"><i class="ti ti-x"></i> Cancelar</button>
-                  <button class="btn btn-primary btn-sm" onclick="subirMasivo()"><i class="ti ti-cloud-upload"></i> Subir a la nube</button>
+              <div style="font-size:13px;font-weight:600;margin-bottom:10px;" id="preview-count"></div>
+              <div id="preview-avisos" style="margin-bottom:10px;"></div>
+              <div class="tabla-wrap" style="max-height:240px;overflow-y:auto;margin-bottom:14px;"><table class="tabla" id="tabla-excel"><thead></thead><tbody></tbody></table></div>
+
+              <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;border-top:1px solid var(--borde);padding-top:14px;">Asignar a todo el lote</div>
+              <div class="form-grid" style="margin-bottom:10px;">
+                <div class="form-group"><label>Empresa Contratista *</label>
+                  <select id="lote-empresa-propia" onchange="_actualizarEstadoLote()">
+                    <option value="">— Seleccionar —</option>
+                  </select></div>
+                <!-- Empresa Mandante eliminada del encabezado del lote —
+                     se elige en Contratos, no en Registro Personal. -->
+                <div class="form-group full"><label>Cargo del lote *</label>
+                  <select id="lote-cargo" onchange="_onCambioCargoLote()">
+                    <option value="">— Seleccionar cargo —</option>
+                    <option value="Cosechero">Cosechero</option>
+                    <option value="Cosechera">Cosechera</option>
+                    <option value="Podador">Podador</option>
+                    <option value="Raleador">Raleador</option>
+                    <option value="Operario de Packing">Operario de Packing</option>
+                    <option value="Seleccionador">Seleccionador</option>
+                    <option value="Amarrador">Amarrador</option>
+                    <option value="Regador">Regador</option>
+                    <option value="Fumigador">Fumigador</option>
+                    <option value="Tractorista">Tractorista</option>
+                    <option value="Jefe de Cuadrilla">Jefe de Cuadrilla</option>
+                    <option value="Supervisor de Campo">Supervisor de Campo</option>
+                    <option value="Encargado de Bodega">Encargado de Bodega</option>
+                    <option value="Estibador">Estibador</option>
+                    <option value="Chofer">Chofer</option>
+                    <option value="otro">Otro (especificar)</option>
+                  </select>
+                  <input type="text" id="lote-cargo-otro" placeholder="Especifica el cargo" style="display:none;margin-top:8px;" oninput="_actualizarEstadoLote()">
                 </div>
               </div>
-              <div class="tabla-wrap" style="max-height:240px;overflow-y:auto;"><table class="tabla" id="tabla-excel"><thead></thead><tbody></tbody></table></div>
-              <div id="preview-avisos" style="margin-top:10px;"></div>
+              <div style="font-size:11px;color:var(--texto3);margin-bottom:12px;">
+                <i class="ti ti-info-circle"></i> Todos los trabajadores válidos de este archivo quedarán asignados a la Empresa y Cargo elegidos aquí. La Empresa Mandante y la Faena se definen después, al generar sus Contratos.
+              </div>
+
+              <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button class="btn btn-secondary btn-sm" onclick="cancelarMasivo()"><i class="ti ti-x"></i> Cancelar</button>
+                <button class="btn btn-primary btn-sm" id="btn-subir-masivo" onclick="subirMasivo()" disabled><i class="ti ti-cloud-upload"></i> Subir a la nube</button>
+              </div>
             </div>
           </div>
         </div>
