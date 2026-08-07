@@ -310,12 +310,9 @@
       </select>
     </div>
 
-    <div class="form-group">
-      <label>Empresa Mandante *</label>
-      <select id="m-empresa" required>
-        <option value="">— Seleccionar mandante —</option>
-      </select>
-    </div>
+    <!-- Campo Empresa Mandante eliminado — ahora vive en Contratos,
+         donde se elige al generar el Contrato de cada persona (mismo
+         criterio ya aplicado a Faena, Hallazgo Grande #13). -->
 
     <!-- Campo Faena eliminado — ahora vive en Contratos, donde
          realmente se usa (Hallazgo Grande #13 de la bitácora). -->
@@ -369,10 +366,8 @@
                 <select id="lote-empresa-propia" onchange="_actualizarEstadoLote()">
                   <option value="">— Seleccionar —</option>
                 </select></div>
-              <div class="form-group"><label>Empresa Mandante *</label>
-                <select id="lote-mandante" onchange="_actualizarEstadoLote()">
-                  <option value="">— Seleccionar —</option>
-                </select></div>
+              <!-- Empresa Mandante eliminada del encabezado del lote —
+                   se elige en Contratos, no en Registro Personal. -->
               <div class="form-group full"><label>Cargo del lote *</label>
                 <select id="lote-cargo" onchange="_onCambioCargoLote()">
                   <option value="">— Seleccionar cargo —</option>
@@ -397,14 +392,14 @@
               </div>
             </div>
             <div style="font-size:11px;color:var(--texto3);margin-bottom:12px;">
-              <i class="ti ti-info-circle"></i> Todos los trabajadores de este archivo quedarán asignados a la Empresa, Mandante y Cargo elegidos arriba. La Faena se define después, al generar sus Contratos. Si necesitas mezclar distintos cargos, súbelos en archivos separados.
+              <i class="ti ti-info-circle"></i> Todos los trabajadores de este archivo quedarán asignados a la Empresa y Cargo elegidos arriba. La Empresa Mandante y la Faena se definen después, al generar sus Contratos. Si necesitas mezclar distintos cargos, súbelos en archivos separados.
             </div>
 
             <div class="excel-hint"><strong>📋 Columnas del Excel:</strong><ul><li>RUT · Nombre · Nacionalidad · Fecha Nacimiento · Sexo</li><li>Estado Civil · Domicilio · Correo · AFP · Salud · Fecha Ingreso</li></ul></div>
             <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" onclick="descargarPlantilla()"><i class="ti ti-file-download"></i> Descargar plantilla Excel</button>
             <div class="zona-drop" id="zona-drop-excel" onclick="_clickZonaDropExcel()" style="opacity:0.5;">
               <i class="ti ti-file-spreadsheet"></i>
-              <div class="drop-title" id="drop-titulo">Completa Empresa, Mandante y Cargo arriba primero</div>
+              <div class="drop-title" id="drop-titulo">Completa Empresa y Cargo arriba primero</div>
               <div class="drop-sub">o haz clic para explorar · .xlsx / .xls</div>
             </div>
             <input type="file" id="archivo-excel" accept=".xlsx,.xls" style="display:none;" onchange="procesarExcel(event)">
@@ -751,12 +746,17 @@
             </div>
             <hr style="border:none;border-top:1px solid var(--borde);margin:8px 0;">
             <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;"><i class="ti ti-building-skyscraper"></i> Empresa Mandante</div>
+            <div class="f-group" style="margin-bottom:8px;">
+              <label class="form-label">Empresa Mandante *</label>
+              <select class="f-input" id="cp-mandante" onchange="_onCambioMandanteContrato()">
+                <option value="">— Seleccionar mandante —</option>
+              </select>
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div class="f-group"><label class="form-label">Mandante</label><input class="f-input" id="cp-man-nombre" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">RUT mandante</label><input class="f-input" id="cp-man-rut" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Comuna</label><input class="f-input" id="cp-man-comuna" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Región mandante</label><input class="f-input" id="cp-man-region" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
-              <div class="f-group" style="grid-column:span 2;"><label class="form-label">Dirección mandante</label><input class="f-input" id="cp-man-direccion" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
+              <div class="f-group"><label class="form-label">Dirección mandante</label><input class="f-input" id="cp-man-direccion" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
             </div>
           </div>
           <div class="card">
@@ -819,11 +819,26 @@
       <!-- SUBMÓDULO CONTRATOS MASIVOS -->
       <div id="sub-tab-ct-masivo" style="display:none;">
         <div class="card" style="margin-bottom:14px;">
-          <div class="card-title"><i class="ti ti-sitemap"></i> Trabajadores sin contrato — agrupados por Mandante → Faena → Cargo</div>
-          <div id="piramide-masivo-vacio" style="display:none;padding:20px;text-align:center;color:var(--texto3);font-size:13px;">
+          <div class="card-title"><i class="ti ti-users"></i> Contrato Masivo — mismo Cargo, mismas condiciones</div>
+          <div style="font-size:12px;color:var(--texto3);margin-bottom:12px;">
+            <i class="ti ti-info-circle"></i> Pensado para lotes homogéneos (ej. 18 cosecheros con el mismo sueldo). Un caso único (ej. un Supervisor) se sube por Contrato Individual.
+          </div>
+          <div class="form-grid" style="margin-bottom:12px;">
+            <div class="form-group"><label>Empresa Mandante *</label>
+              <select id="masivo-mandante" onchange="_onCambioMandanteMasivo()">
+                <option value="">— Seleccionar mandante —</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Cargo *</label>
+              <select id="masivo-cargo" onchange="_onCambioCargoMasivo()">
+                <option value="">— Seleccionar cargo —</option>
+              </select>
+            </div>
+          </div>
+          <div id="masivo-lista-vacio" style="display:none;padding:20px;text-align:center;color:var(--texto3);font-size:13px;">
             Selecciona una Empresa Contratista arriba para ver sus trabajadores sin contrato.
           </div>
-          <div id="piramide-masivo"></div>
+          <div id="masivo-lista-trabajadores"></div>
           <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;">
             <div id="masivo-contador" style="font-size:12px;color:var(--texto3);"></div>
             <button class="btn btn-primary btn-sm" id="btn-config-descarga-masivo" onclick="abrirConfigGrupoMasivo()" disabled><i class="ti ti-settings"></i> Configurar y generar contratos</button>
@@ -2696,20 +2711,41 @@
   <!-- Modal de Asignación Masiva eliminado — reemplazado por el
        encabezado del lote (Empresa/Mandante/Cargo) en Registro Personal,
        elegido ANTES de subir el Excel. Ver Hallazgo Grande #12/#13. -->
-  <!-- MODAL CONFIGURACIÓN DE GRUPOS — Contratos Masivo -->
+  <!-- MODAL CONFIGURACIÓN — Contratos Masivo -->
   <div id="modal-config-grupos-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:14px;padding:24px;width:820px;max-width:96vw;max-height:90vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <div style="font-size:16px;font-weight:700;">Configurar condiciones por grupo</div>
+        <div style="font-size:16px;font-weight:700;">Configurar condiciones del lote</div>
         <button class="btn btn-secondary btn-sm" onclick="cerrarModalConfigGruposMasivo()"><i class="ti ti-x"></i></button>
       </div>
       <div style="font-size:12px;color:var(--texto3);margin-bottom:14px;">
-        Estos datos son compartidos por todos los trabajadores de cada grupo (mismo cargo, misma faena) y se completan una sola vez.
+        Estos datos son compartidos por todos los trabajadores seleccionados (mismo cargo, misma faena) y se completan una sola vez.
       </div>
       <div id="config-grupos-contenido"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button class="btn btn-secondary btn-sm" onclick="cerrarModalConfigGruposMasivo()">Cancelar</button>
         <button class="btn btn-primary btn-sm" onclick="generarContratosGrupoMasivo()"><i class="ti ti-file-check"></i> Generar contratos</button>
+      </div>
+    </div>
+  </div>
+  <!-- MODAL CONFIRMACIÓN — Contratación Masiva -->
+  <div id="modal-confirmacion-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:1001;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:14px;padding:24px;width:460px;max-width:96vw;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Confirmación de contratación masiva</div>
+      <p style="font-size:13px;color:var(--texto2);margin:10px 0;">Está a punto de generar contratos para el siguiente lote:</p>
+      <div style="display:grid;gap:6px;font-size:13px;background:var(--gris-bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+        <div><span style="color:var(--texto3);">Empresa (Empleador):</span> <strong id="conf-masivo-empresa"></strong></div>
+        <div><span style="color:var(--texto3);">Empresa Mandante:</span> <strong id="conf-masivo-mandante"></strong></div>
+        <div><span style="color:var(--texto3);">Cargo:</span> <strong id="conf-masivo-cargo"></strong></div>
+      </div>
+      <details style="margin-bottom:12px;">
+        <summary id="conf-masivo-trab-resumen" style="cursor:pointer;font-size:13px;font-weight:600;color:var(--azul);">Trabajadores seleccionados (0) ▼</summary>
+        <ul id="conf-masivo-trab-lista" style="margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--texto2);max-height:180px;overflow-y:auto;"></ul>
+      </details>
+      <p style="font-size:12px;color:var(--texto3);margin-bottom:16px;">Todos los trabajadores seleccionados recibirán las mismas condiciones contractuales definidas para este lote.</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-secondary btn-sm" onclick="cerrarModalConfirmacionMasivo()">Cancelar</button>
+        <button class="btn btn-primary btn-sm" onclick="confirmarYGenerarContratosMasivo()"><i class="ti ti-file-check"></i> Confirmar y generar contratos</button>
       </div>
     </div>
   </div>
