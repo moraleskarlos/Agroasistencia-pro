@@ -122,6 +122,42 @@
     .chart-val{font-size:10px;font-weight:600;color:var(--texto2)}
     /* FORMULARIO */
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    /* ═══════════════════════════════════════════════════════
+       ANCHO POR CONTENIDO — piloto en Registro Individual
+       "El espacio vacío también es diseño": en vez de que los
+       campos SIEMPRE llenen el 100% del contenedor, estas 2
+       clases dejan que cada fila ocupe solo lo que necesita.
+       - .fila-compacta: para selects/fechas de opciones cortas,
+         ambos campos se achican a su contenido.
+       - .fila-mixta: para un campo corto + un input de texto
+         libre — el corto se achica, el de texto se lleva TODO
+         el resto del espacio (no una proporción fija).
+       Se aplican fila por fila, revisando cada módulo — no es
+       un reemplazo global de .form-grid.
+       ═══════════════════════════════════════════════════════ */
+    .fila-compacta{display:grid;grid-template-columns:max-content max-content;gap:16px;justify-content:start;align-items:start}
+    .fila-compacta .form-group select,
+    .fila-compacta .form-group input{width:auto;min-width:200px}
+
+    .fila-mixta{display:grid;grid-template-columns:max-content 1fr;gap:16px;align-items:start}
+    .fila-mixta .form-group:first-child input,
+    .fila-mixta .form-group:first-child select{width:auto;min-width:180px}
+
+    /* Empresa Contratista puede tener razones sociales largas —
+       mínimo más generoso que el resto de los selects compactos. */
+    #m-empresa-contratista{min-width:320px}
+
+    /* Campo suelto de texto libre (Correo, Domicilio) — no llena
+       todo el ancho de la tarjeta, pero se queda con un espacio
+       cómodo de lectura, no un tope arbitrario chico. */
+    .fila-ancha{display:grid;grid-template-columns:minmax(280px,520px);gap:16px}
+
+    @media(max-width:640px){
+      .fila-compacta,.fila-mixta,.fila-ancha{grid-template-columns:1fr}
+      .fila-compacta .form-group select,.fila-compacta .form-group input,
+      .fila-mixta .form-group:first-child input,.fila-mixta .form-group:first-child select{width:100%;min-width:0}
+    }
     .form-group{display:flex;flex-direction:column;gap:5px}
     .form-group.full{grid-column:span 2}
     label{font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:0.3px}
