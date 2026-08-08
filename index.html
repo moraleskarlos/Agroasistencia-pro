@@ -29,7 +29,9 @@
       <button class="sb-item" onclick="irA('qr',this)"><i class="ti ti-qrcode"></i><span>Generar QR</span></button>
       <button class="sb-item" onclick="irA('contratos',this)"><i class="ti ti-file-text"></i><span>Contratos</span></button>
       <div class="sb-section">Operaciones</div>
-      <button class="sb-item" onclick="irA('gestion-laboral',this)"><i class="ti ti-clipboard-list"></i><span>Haberes, Descuentos y Ausencias</span></button>
+      <button class="sb-item" onclick="irA('ausencias',this)"><i class="ti ti-calendar-off"></i><span>Ausencias y Permisos</span></button>
+      <button class="sb-item" onclick="irA('bonos',this)"><i class="ti ti-cash"></i><span>Bonos y Horas Extras</span></button>
+      <button class="sb-item" onclick="irA('descuentos',this)"><i class="ti ti-minus"></i><span>Descuentos</span></button>
       <button class="sb-item" onclick="irA('remuneraciones',this)"><i class="ti ti-calculator"></i><span>Remuneraciones</span></button>
       <div class="sb-section">Reportes</div>
       <button class="sb-item" onclick="irA('asistencia',this)"><i class="ti ti-calendar-stats"></i><span>Asistencia</span></button>
@@ -380,7 +382,7 @@
             <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva desde Excel — una cuadrilla, un cargo</div>
 
             <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#1E40AF;line-height:1.6;">
-              <i class="ti ti-info-circle"></i> <strong>Pensado para cuadrillas homogéneas:</strong> todos los trabajadores del archivo quedan con la misma Empresa y el mismo Cargo. Si necesitás mezclar cargos o empresas distintas, subí archivos separados.
+              <i class="ti ti-info-circle"></i> <strong>Pensado para cuadrillas completas:</strong> todos los trabajadores del archivo quedan con la misma Empresa y el mismo Cargo. Si necesitás mezclar cargos o empresas distintas, subí archivos separados.
             </div>
             <div class="excel-hint"><strong>📋 Columnas del Excel:</strong><ul><li>RUT · Nombre · Nacionalidad · Fecha Nacimiento · Sexo</li><li>Estado Civil · Domicilio · Correo · AFP · Salud · Fecha Ingreso</li></ul></div>
             <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" onclick="descargarPlantilla()"><i class="ti ti-file-download"></i> Descargar plantilla Excel</button>
@@ -1184,57 +1186,22 @@
 
       <!-- ASISTENCIA -->
 <!-- GESTIÓN LABORAL -->
-      <div id="p-gestion-laboral" class="pagina">
+      <!-- AUSENCIAS Y PERMISOS -->
+      <div id="p-ausencias" class="pagina">
         <div class="sec-header">
           <div>
-            <div class="sec-title">Bonificaciones, Descuentos y Ausencias</div>
-            <div class="sec-sub">Faltas y permisos, bonificaciones, descuentos y horas extras</div>
+            <div class="sec-title">Ausencias y Permisos</div>
+            <div class="sec-sub">Faltas, licencias, permisos y otras ausencias del trabajador</div>
           </div>
         </div>
-        <!-- El filtro global "Revisar mes / Elegir empresa" se eliminó por
-             completo. Cada submódulo es autocontenido: tiene su propia fila
-             [Mes] [Empresa] [Trabajador] [Tipo] dentro de su panel. -->
 
-        <!-- KPIs — 4 por submódulo, se muestran/ocultan según la pestaña activa -->
-        <div class="kpi-grid" id="gl-kpis-wrap">
+        <div class="kpi-grid" id="aus-kpis-wrap">
           <div class="kpi azul" id="gl-kpi-goce"><div class="kpi-label">Permiso con goce</div><div class="kpi-value">0</div><div class="kpi-sub">trabajadores</div></div>
           <div class="kpi amarillo" id="gl-kpi-singoce"><div class="kpi-label">Permiso sin goce</div><div class="kpi-value">0</div><div class="kpi-sub">trabajadores</div></div>
           <div class="kpi verde" id="gl-kpi-licencia"><div class="kpi-label">Licencia médica</div><div class="kpi-value">0</div><div class="kpi-sub">trabajadores</div></div>
           <div class="kpi rojo" id="gl-kpi-inasistencia"><div class="kpi-label">Inasistencia</div><div class="kpi-value">0</div><div class="kpi-sub">trabajadores</div></div>
-
-          <div class="kpi verde" id="gl-kpi-haberes"><div class="kpi-label">Bonificaciones</div><div class="kpi-value">$0</div><div class="kpi-sub">total período</div></div>
-          <div class="kpi" id="gl-kpi-hab-trabajadores"><div class="kpi-label">Trabajadores</div><div class="kpi-value">0</div><div class="kpi-sub">bonificados</div></div>
-          <div class="kpi" id="gl-kpi-hab-registros"><div class="kpi-label">Registros</div><div class="kpi-value">0</div><div class="kpi-sub">bonificaciones</div></div>
-          <div class="kpi" id="gl-kpi-hab-promedio"><div class="kpi-label">Promedio</div><div class="kpi-value">$0</div><div class="kpi-sub">por registro</div></div>
-
-          <div class="kpi rojo" id="gl-kpi-descuentos"><div class="kpi-label">Descuentos</div><div class="kpi-value">$0</div><div class="kpi-sub">total período</div></div>
-          <div class="kpi" id="gl-kpi-des-trabajadores"><div class="kpi-label">Trabajadores</div><div class="kpi-value">0</div><div class="kpi-sub">con descuento</div></div>
-          <div class="kpi" id="gl-kpi-des-cuotas"><div class="kpi-label">Cuotas activas</div><div class="kpi-value">0</div><div class="kpi-sub">en curso</div></div>
-          <div class="kpi amarillo" id="gl-kpi-des-saldo"><div class="kpi-label">Saldo pendiente</div><div class="kpi-value">$0</div><div class="kpi-sub">por cobrar</div></div>
-
-          <div class="kpi amarillo" id="gl-kpi-hextra"><div class="kpi-label">Horas Extra</div><div class="kpi-value">0.0 h</div><div class="kpi-sub">total período</div></div>
-          <div class="kpi" id="gl-kpi-jor-trabajadores"><div class="kpi-label">Trabajadores</div><div class="kpi-value">0</div><div class="kpi-sub">con horas extra</div></div>
-          <div class="kpi" id="gl-kpi-jor-registros"><div class="kpi-label">Registros</div><div class="kpi-value">0</div><div class="kpi-sub">horas extra</div></div>
-          <div class="kpi rojo" id="gl-kpi-jor-recargo100"><div class="kpi-label">Recargo 100%</div><div class="kpi-value">0.0 h</div><div class="kpi-sub">festivo/domingo</div></div>
         </div>
 
-        <!-- Tabs -->
-        <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--borde);padding-bottom:0;">
-          <button id="tab-gl-novedades" onclick="switchTabGL('gl-novedades')"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;"
-            class="activo">📋 Faltas y Permisos</button>
-          <button id="tab-gl-haberes" onclick="switchTabGL('gl-haberes')"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
-            💰 Bonificaciones</button>
-          <button id="tab-gl-descuentos" onclick="switchTabGL('gl-descuentos')"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
-            ➖ Descuentos</button>
-          <button id="tab-gl-jornada" onclick="switchTabGL('gl-jornada')"
-            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
-            ⏱️ Horas Extras</button>
-        </div>
-
-        <!-- ═══════════════ PANEL FALTAS Y PERMISOS ═══════════════ -->
         <div id="panel-gl-novedades">
           <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;">
@@ -1316,8 +1283,40 @@
             </div>
           </div>
         </div>
+      </div><!-- /p-ausencias -->
 
-        <!-- ═══════════════ PANEL BONIFICACIONES ═══════════════ -->
+      <!-- BONOS Y HORAS EXTRAS -->
+      <div id="p-bonos" class="pagina">
+        <div class="sec-header">
+          <div>
+            <div class="sec-title">Bonos y Horas Extras</div>
+            <div class="sec-sub">Conceptos que aumentan el pago del trabajador</div>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="bonos-kpis-wrap">
+          <div class="kpi verde" id="gl-kpi-haberes"><div class="kpi-label">Bonificaciones</div><div class="kpi-value">$0</div><div class="kpi-sub">total período</div></div>
+          <div class="kpi" id="gl-kpi-hab-trabajadores"><div class="kpi-label">Trabajadores</div><div class="kpi-value">0</div><div class="kpi-sub">bonificados</div></div>
+          <div class="kpi" id="gl-kpi-hab-registros"><div class="kpi-label">Registros</div><div class="kpi-value">0</div><div class="kpi-sub">bonificaciones</div></div>
+          <div class="kpi" id="gl-kpi-hab-promedio"><div class="kpi-label">Promedio</div><div class="kpi-value">$0</div><div class="kpi-sub">por registro</div></div>
+
+          <div class="kpi amarillo" id="gl-kpi-hextra"><div class="kpi-label">Horas Extra</div><div class="kpi-value">0.0 h</div><div class="kpi-sub">total período</div></div>
+          <div class="kpi" id="gl-kpi-jor-trabajadores"><div class="kpi-label">Trabajadores</div><div class="kpi-value">0</div><div class="kpi-sub">con horas extra</div></div>
+          <div class="kpi" id="gl-kpi-jor-registros"><div class="kpi-label">Registros</div><div class="kpi-value">0</div><div class="kpi-sub">horas extra</div></div>
+          <div class="kpi rojo" id="gl-kpi-jor-recargo100"><div class="kpi-label">Recargo 100%</div><div class="kpi-value">0.0 h</div><div class="kpi-sub">festivo/domingo</div></div>
+        </div>
+
+        <!-- Tabs internos: Bonos y Horas Extras comparten página porque ambos
+             "aumentan el pago", pero son formularios distintos. -->
+        <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--borde);padding-bottom:0;">
+          <button id="tab-gl-haberes" onclick="switchTabBonos('gl-haberes')"
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;"
+            class="activo">💰 Bonificaciones</button>
+          <button id="tab-gl-jornada" onclick="switchTabBonos('gl-jornada')"
+            style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">
+            ⏱️ Horas Extras</button>
+        </div>
+
         <div id="panel-gl-haberes" style="display:none;">
           <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;">
@@ -1399,8 +1398,100 @@
           </div>
         </div>
 
-        <!-- ═══════════════ PANEL DESCUENTOS ═══════════════ -->
-        <div id="panel-gl-descuentos" style="display:none;">
+        <div id="panel-gl-jornada" style="display:none;">
+          <!-- BLOQUE 1 — Registrar -->
+          <div class="card" style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+              <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Horas Extras</div>
+              <button class="btn btn-primary btn-sm" onclick="toggleFormJornada()"><i class="ti ti-plus"></i> Registrar Horas Extras</button>
+            </div>
+            <div id="gl-jor-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;">
+              <form id="form-jornada" onsubmit="event.preventDefault();guardarJornada();">
+                <div class="form-grid" style="margin-bottom:10px;">
+                  <div class="form-group"><label>Empresa</label>
+                    <select id="gl-jor-reg-empresa"><option value="">— Seleccionar empresa —</option></select></div>
+                  <div class="form-group" style="position:relative;"><label>Trabajador</label>
+                    <input type="text" id="gl-jor-reg-trabajador-input" placeholder="Buscar por nombre o RUT..." autocomplete="off">
+                    <input type="hidden" id="gl-jor-reg-trabajador">
+                    <div id="gl-jor-reg-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
+                  </div>
+                  <div class="form-group"><label>Tipo</label>
+                    <select id="gl-jor-tipo" onchange="onCambioTipoJornada()">
+                      <option value="">— Seleccionar —</option>
+                      <option value="hora_extra">⏱️ Horas extra</option>
+                      <option value="hora_compensada">🔄 Horas compensadas</option>
+                      <option value="cambio_turno">🔀 Cambio de turno</option>
+                      <option value="turno_especial">📋 Turno especial</option>
+                    </select></div>
+                  <div class="form-group"><label>Fecha</label>
+                    <input type="date" id="gl-jor-fecha" class="campo-fecha"></div>
+                  <div class="form-group"><label>Horas</label>
+                    <input type="number" id="gl-jor-horas" class="campo-corto" placeholder="0.0" min="0" step="0.5"></div>
+                  <div class="form-group" id="gl-jor-recargo-grp" style="display:none;"><label>Recargo hora extra</label>
+                    <select id="gl-jor-recargo" class="campo-selector-corto">
+                      <option value="50">50% (día hábil)</option>
+                      <option value="100">100% (festivo/domingo)</option>
+                    </select></div>
+                  <div class="form-group full"><label>Observación</label>
+                    <input type="text" id="gl-jor-obs" placeholder="Motivo del registro"></div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Guardar</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFormJornada()">Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
+          <div class="card">
+            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-clock-hour-4"></i> Horas Extras del período</div>
+            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
+              <div class="form-group"><label>Mes</label>
+                <input type="month" id="gl-jor-rev-mes" class="campo-fecha"></div>
+              <div class="form-group"><label>Empresa</label>
+                <select id="gl-jor-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
+              <div class="form-group" style="position:relative;"><label>Trabajador</label>
+                <input type="text" id="gl-jor-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <input type="hidden" id="gl-jor-rev-trabajador">
+                <div id="gl-jor-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
+              </div>
+              <div class="form-group"><label>Tipo</label>
+                <select id="gl-jor-rev-tipo">
+                  <option value="">Todos los tipos</option>
+                  <option value="hora_extra">⏱️ Horas extra</option>
+                  <option value="hora_compensada">🔄 Horas compensadas</option>
+                  <option value="cambio_turno">🔀 Cambio de turno</option>
+                  <option value="turno_especial">📋 Turno especial</option>
+                </select></div>
+            </div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:850px;">
+                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Fecha</th><th style="text-align:center;">Horas</th><th style="text-align:center;">Recargo</th><th>Monto</th><th>Observación</th><th></th></tr></thead>
+                <tbody id="tbody-jornada"><tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div><!-- /p-bonos -->
+
+      <!-- DESCUENTOS -->
+      <div id="p-descuentos" class="pagina">
+        <div class="sec-header">
+          <div>
+            <div class="sec-title">Descuentos</div>
+            <div class="sec-sub">Montos que se descuentan del pago del trabajador</div>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="descuentos-kpis-wrap">
+          <div class="kpi rojo" id="gl-kpi-descuentos"><div class="kpi-label">Descuentos</div><div class="kpi-value">$0</div><div class="kpi-sub">total período</div></div>
+          <div class="kpi" id="gl-kpi-des-trabajadores"><div class="kpi-label">Trabajadores</div><div class="kpi-value">0</div><div class="kpi-sub">con descuento</div></div>
+          <div class="kpi" id="gl-kpi-des-cuotas"><div class="kpi-label">Cuotas activas</div><div class="kpi-value">0</div><div class="kpi-sub">en curso</div></div>
+          <div class="kpi amarillo" id="gl-kpi-des-saldo"><div class="kpi-label">Saldo pendiente</div><div class="kpi-value">$0</div><div class="kpi-sub">por cobrar</div></div>
+        </div>
+
+        <div id="panel-gl-descuentos">
           <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -1477,85 +1568,7 @@
             </div>
           </div>
         </div>
-
-        <!-- ═══════════════ PANEL HORAS EXTRAS ═══════════════ -->
-        <div id="panel-gl-jornada" style="display:none;">
-          <!-- BLOQUE 1 — Registrar -->
-          <div class="card" style="margin-bottom:14px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Horas Extras</div>
-              <button class="btn btn-primary btn-sm" onclick="toggleFormJornada()"><i class="ti ti-plus"></i> Registrar Horas Extras</button>
-            </div>
-            <div id="gl-jor-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;">
-              <form id="form-jornada" onsubmit="event.preventDefault();guardarJornada();">
-                <div class="form-grid" style="margin-bottom:10px;">
-                  <div class="form-group"><label>Empresa</label>
-                    <select id="gl-jor-reg-empresa"><option value="">— Seleccionar empresa —</option></select></div>
-                  <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                    <input type="text" id="gl-jor-reg-trabajador-input" placeholder="Buscar por nombre o RUT..." autocomplete="off">
-                    <input type="hidden" id="gl-jor-reg-trabajador">
-                    <div id="gl-jor-reg-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
-                  </div>
-                  <div class="form-group"><label>Tipo</label>
-                    <select id="gl-jor-tipo" onchange="onCambioTipoJornada()">
-                      <option value="">— Seleccionar —</option>
-                      <option value="hora_extra">⏱️ Horas extra</option>
-                      <option value="hora_compensada">🔄 Horas compensadas</option>
-                      <option value="cambio_turno">🔀 Cambio de turno</option>
-                      <option value="turno_especial">📋 Turno especial</option>
-                    </select></div>
-                  <div class="form-group"><label>Fecha</label>
-                    <input type="date" id="gl-jor-fecha" class="campo-fecha"></div>
-                  <div class="form-group"><label>Horas</label>
-                    <input type="number" id="gl-jor-horas" class="campo-corto" placeholder="0.0" min="0" step="0.5"></div>
-                  <div class="form-group" id="gl-jor-recargo-grp" style="display:none;"><label>Recargo hora extra</label>
-                    <select id="gl-jor-recargo" class="campo-selector-corto">
-                      <option value="50">50% (día hábil)</option>
-                      <option value="100">100% (festivo/domingo)</option>
-                    </select></div>
-                  <div class="form-group full"><label>Observación</label>
-                    <input type="text" id="gl-jor-obs" placeholder="Motivo del registro"></div>
-                </div>
-                <div style="display:flex;gap:8px;">
-                  <button type="submit" class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Guardar</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFormJornada()">Cancelar</button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
-          <div class="card">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-clock-hour-4"></i> Horas Extras del período</div>
-            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
-              <div class="form-group"><label>Mes</label>
-                <input type="month" id="gl-jor-rev-mes" class="campo-fecha"></div>
-              <div class="form-group"><label>Empresa</label>
-                <select id="gl-jor-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
-              <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                <input type="text" id="gl-jor-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
-                <input type="hidden" id="gl-jor-rev-trabajador">
-                <div id="gl-jor-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
-              </div>
-              <div class="form-group"><label>Tipo</label>
-                <select id="gl-jor-rev-tipo">
-                  <option value="">Todos los tipos</option>
-                  <option value="hora_extra">⏱️ Horas extra</option>
-                  <option value="hora_compensada">🔄 Horas compensadas</option>
-                  <option value="cambio_turno">🔀 Cambio de turno</option>
-                  <option value="turno_especial">📋 Turno especial</option>
-                </select></div>
-            </div>
-            <div class="tabla-wrap">
-              <table class="tabla" style="min-width:850px;">
-                <thead><tr><th>Trabajador</th><th>Tipo</th><th>Fecha</th><th style="text-align:center;">Horas</th><th style="text-align:center;">Recargo</th><th>Monto</th><th>Observación</th><th></th></tr></thead>
-                <tbody id="tbody-jornada"><tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Cargando...</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /p-gestion-laboral -->
+      </div><!-- /p-descuentos -->
       <!-- REMUNERACIONES -->
       <div id="p-remuneraciones" class="pagina">
         <div class="sec-header">
