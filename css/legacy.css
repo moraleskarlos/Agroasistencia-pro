@@ -30,7 +30,7 @@
     .sb-logo-icon{width:40px;height:40px;background:transparent;border-radius:0;display:flex;align-items:center;justify-content:center;margin-bottom:9px}
     .sb-logo-icon i{font-size:18px;color:#fff}
     .sb-logo-title{font-size:14px;font-weight:600;color:#fff}
-    .sb-logo-sub{font-size:11px;color:rgba(255,255,255,0.35);margin-top:2px}
+    .sb-logo-sub{font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px}
     .sb-nav{padding:12px 10px;flex:1}
     .sb-section{font-size:10px;font-weight:600;color:rgba(255,255,255,0.28);letter-spacing:0.9px;text-transform:uppercase;padding:0 10px;margin:14px 0 5px}
     .sb-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;color:#ffffff;cursor:pointer;font-size:13px;border:none;background:none;width:100%;text-align:left;font-family:inherit;transition:background 0.15s;margin-bottom:2px}
@@ -163,6 +163,8 @@
     .form-group.full{grid-column:span 2}
     label{font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:0.3px}
     input,select,textarea{padding:9px 11px;border:1px solid var(--borde);border-radius:var(--radius);font-size:13px;color:var(--texto);background:var(--gris-bg);font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}
+    input::placeholder,textarea::placeholder{color:var(--texto3);opacity:1}
+    input:disabled,select:disabled,textarea:disabled,button:disabled,.btn:disabled{opacity:0.5;cursor:not-allowed;background:var(--gris-bg)}
     input:focus,select:focus{border-color:var(--verde);background:var(--blanco)}
     .campo-especificar{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:8px 10px;margin-top:5px}
     .campo-especificar label{color:#1E40AF}
