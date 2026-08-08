@@ -173,13 +173,13 @@
       .form-grid{grid-template-columns:1fr}
     }
     /* TABS GESTIÓN LABORAL */
-    #p-gestion-laboral [id^="tab-gl-"].activo {
+    #p-bonos [id^="tab-gl-"].activo {
       color: #fff !important;
       border-bottom-color: var(--verde-dark) !important;
       background: var(--verde-dark) !important;
       border-radius: var(--radius) var(--radius) 0 0;
     }
-    #p-gestion-laboral [id^="tab-gl-"]:hover {
+    #p-bonos [id^="tab-gl-"]:hover {
       color: var(--texto) !important;
       background: var(--gris-bg) !important;
     border-radius: var(--radius) var(--radius) 0 0;
