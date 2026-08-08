@@ -99,7 +99,11 @@ function irA(idPagina, botonEl) {
       if(idPagina === 'ausencias'  || idPagina === 'p-ausencias'){  initAusencias(); }
       if(idPagina === 'bonos'      || idPagina === 'p-bonos'){      initBonos(); }
       if(idPagina === 'descuentos' || idPagina === 'p-descuentos'){ initDescuentos(); }
-      if(idPagina === 'remuneraciones' || idPagina === 'p-remuneraciones'){ initIndicadores(); initLiquidaciones(); initLibro(); switchTabRem('rem-indicadores'); }
+      if(idPagina === 'remuneraciones'  || idPagina === 'p-remuneraciones'){  initLiquidaciones(); }
+      if(idPagina === 'libro'           || idPagina === 'p-libro'){           initLibro(); }
+      if(idPagina === 'prevision'       || idPagina === 'p-prevision'){       initIndicadores(); initPrevired(); switchTabPrevision('rem-indicadores'); }
+      if(idPagina === 'centralizacion'  || idPagina === 'p-centralizacion'){  initCentralizacion(); }
+      if(idPagina === 'finiquitos'      || idPagina === 'p-finiquitos'){      initFiniquitos(); }
       if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); poblarSelectsEmpresaPropia(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
       if(idPagina === 'registro'      || idPagina === 'p-registro'){      poblarSelects(); poblarSelectsEmpresaPropia(); switchTabRegistro('individual'); }
       if(idPagina === 'p-perfil-trabajador'){ /* contenido se carga desde verPerfilTrabajador */ }

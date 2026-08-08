@@ -27,7 +27,6 @@ function guardarVacacionesExtra(){
 function initVacaciones(){
   cargarGestionLaboral();
   cargarVacacionesExtra();
-  switchTabRem('rem-vacaciones');
 
   const sel = document.getElementById('vac-empresa-selector');
   if(sel) _poblarFiltroEmpresaVacaciones();

@@ -32,7 +32,6 @@ function initLiquidaciones(){
 
   _poblarSelectsLiquidacion();
   renderListaLiquidaciones();
-  switchTabRem('rem-liquidaciones');
 }
 
 function _poblarSelectsLiquidacion(){

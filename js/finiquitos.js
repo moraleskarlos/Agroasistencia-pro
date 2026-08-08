@@ -44,7 +44,6 @@ function initFiniquitos(){
   cargarGestionLaboral();
   cargarIndicadores();
   cargarVacacionesExtra();
-  switchTabRem('rem-finiquitos');
   _poblarSelectTrabajadorFiniquito();
   renderListaFiniquitos();
 }

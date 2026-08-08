@@ -5,16 +5,24 @@
    ════════════════════════════════════════════════════════ */
 
 /* ── TABS DEL MÓDULO REMUNERACIONES ────────────────────── */
-function switchTabRem(tab){
-  document.querySelectorAll('[id^="tab-rem-"]').forEach(btn => {
-    const activo = btn.id === 'tab-' + tab;
-    btn.style.color            = activo ? '#fff' : 'var(--texto2)';
-    btn.style.borderBottomColor= activo ? 'var(--verde-dark)' : 'transparent';
-    btn.style.background       = activo ? 'var(--verde-dark)' : 'none';
-    btn.style.fontWeight       = activo ? '700' : '600';
-  });
-  document.querySelectorAll('[id^="panel-rem-"]').forEach(panel => {
-    panel.style.display = panel.id === 'panel-' + tab ? 'block' : 'none';
+/* Alterna entre Indicadores Previsionales y Previred — los 2 sub-tabs que
+   quedaron juntos en la página "Previsión" (Paso 3 de la reorganización:
+   antes eran 2 de los 7 sub-tabs de "Remuneraciones"). Usa una lista
+   explícita (no un query por prefijo "panel-rem-") porque ese prefijo
+   ahora también lo comparten Libro/Centralización/Finiquitos/Remuneraciones
+   — que ya viven en páginas separadas y no deben verse afectados. */
+function switchTabPrevision(tab){
+  ['rem-indicadores','rem-previred'].forEach(id => {
+    const btn   = document.getElementById('tab-' + id);
+    const panel = document.getElementById('panel-' + id);
+    const activo = id === tab;
+    if(btn){
+      btn.style.color            = activo ? '#fff' : 'var(--texto2)';
+      btn.style.borderBottomColor= activo ? 'var(--verde-dark)' : 'transparent';
+      btn.style.background       = activo ? 'var(--verde-dark)' : 'none';
+      btn.style.fontWeight       = activo ? '700' : '600';
+    }
+    if(panel) panel.style.display = activo ? 'block' : 'none';
   });
 }
 
@@ -69,7 +77,7 @@ function verificarAlertaIndicadores(){
             Actualiza los valores antes de procesar liquidaciones de este período.
           </div>
         </div>
-        <button onclick="irA('remuneraciones',null)" class="btn btn-sm"
+        <button onclick="irA('prevision',null)" class="btn btn-sm"
           style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);flex-shrink:0;">
           <i class="ti ti-arrow-right"></i> Ir ahora
         </button>`;
@@ -133,7 +141,7 @@ function parsearDecimal(str){
 /* ── INIT DEL MÓDULO ────────────────────────────────────── */
 function initIndicadores(){
   cargarIndicadores();
-  switchTabRem('rem-indicadores');
+  switchTabPrevision('rem-indicadores');
   verificarAlertaIndicadores();
 
   // Período por defecto: mes actual

@@ -400,8 +400,8 @@ const AYUDA_CONTENIDO = {
     ]
   },
 
-  remuneraciones: {
-    titulo: '💰 Remuneraciones — Indicadores',
+  'prevision': {
+    titulo: '💰 Previsión — Indicadores',
     secciones: [
       {
         icono: '🎯',

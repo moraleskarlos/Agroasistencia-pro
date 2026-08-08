@@ -8,7 +8,6 @@
 function initLibro(){
   cargarLiquidaciones();
   cargarIndicadores();
-  switchTabRem('rem-libro');
 
   const hoy    = new Date();
   const mesAnt = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
@@ -58,7 +57,7 @@ function renderLibro(){
   if(!lista.length){
     cont.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--texto3);">
       Sin liquidaciones generadas para este período.<br><br>
-      <button class="btn btn-primary btn-sm" onclick="switchTabRem('rem-liquidaciones')">
+      <button class="btn btn-primary btn-sm" onclick="irA('remuneraciones')">
         <i class="ti ti-file-invoice"></i> Ir a Liquidaciones
       </button>
     </div>`;

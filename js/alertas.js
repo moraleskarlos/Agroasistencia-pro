@@ -161,10 +161,10 @@ function calcularAlertas(){
 
   // Indicadores previsionales del período
   if(typeof getIndicadoresPorPeriodo === 'function' && !getIndicadoresPorPeriodo(periodoActual)){
-    alertas.push(_alerta('critico','Remuneraciones','indicadores_faltantes',
+    alertas.push(_alerta('critico','Previsión','indicadores_faltantes',
       'Indicadores previsionales no cargados',
       `Faltan los indicadores de ${typeof getNombreMes==='function' ? getNombreMes(periodoActual) : periodoActual}`,
-      () => irA('remuneraciones')));
+      () => irA('prevision')));
   }
 
   // Liquidación del período vigente
@@ -228,7 +228,7 @@ function calcularAlertas(){
     if(f.estado !== 'ratificado'){
       alertas.push(_alerta('importante','Finiquitos',`finiquito_sin_ratificar_${f.folio}`,
         'Finiquito sin ratificar', `El finiquito de ${f.nombre} (folio ${f.folio}) sigue pendiente de ratificación`,
-        () => irA('remuneraciones')));
+        () => irA('finiquitos')));
     }
   });
 
@@ -256,7 +256,7 @@ function calcularAlertas(){
       if(!vac.error && vac.dias_saldo > 20){
         alertas.push(_alerta('preventivo','Vacaciones',`vacaciones_alto_${t.rut}`,
           'Saldo de vacaciones alto', `${t.nombre} acumula ${vac.dias_saldo} días de vacaciones pendientes`,
-          () => irA('remuneraciones')));
+          () => { irA('ausencias'); if(typeof switchTabAusencias==='function') switchTabAusencias('rem-vacaciones'); }));
       }
     }
   });

@@ -40,8 +40,11 @@ function initAusencias(){
   cargarGestionLaboral();
   _poblarSelectsGL();
   _initBuscadoresGL();
-  renderNovedades();
-  _renderKPIsGL();
+  // ✅ Paso 4 — Vacaciones se movió aquí desde Remuneraciones. Se
+  // precarga su data/selects igual que antes, pero la pestaña que se
+  // muestra por defecto sigue siendo Faltas y Permisos.
+  if(typeof initVacaciones === 'function') initVacaciones();
+  switchTabAusencias('gl-novedades');
 }
 
 function initBonos(){
@@ -57,6 +60,36 @@ function initDescuentos(){
   _initBuscadoresGL();
   renderDescuentos();
   _renderKPIsGL();
+}
+
+/* Alterna entre Faltas y Permisos, y Vacaciones — los 2 sub-tabs que
+   quedaron juntos en "Ausencias y Permisos" (Paso 4: Vacaciones se movió
+   aquí desde Remuneraciones, porque es una ausencia del trabajador).
+   Usa ids explícitos, no un prefijo — 'rem-vacaciones' viene de otro
+   archivo (vacaciones.js) que antes vivía junto a Libro/Previred/etc. */
+function switchTabAusencias(tab){
+  const pares = { 'gl-novedades': { tabId:'tab-gl-novedades', panelId:'panel-gl-novedades' },
+                  'rem-vacaciones': { tabId:'tab-rem-vacaciones', panelId:'panel-rem-vacaciones' } };
+  Object.keys(pares).forEach(id => {
+    const { tabId, panelId } = pares[id];
+    const btn    = document.getElementById(tabId);
+    const panel  = document.getElementById(panelId);
+    const activo = id === tab;
+    if(btn){
+      btn.style.color            = activo ? '#fff' : 'var(--texto2)';
+      btn.style.borderBottomColor= activo ? 'var(--verde-dark)' : 'transparent';
+      btn.style.background       = activo ? 'var(--verde-dark)' : 'none';
+      btn.style.fontWeight       = activo ? '700' : '600';
+    }
+    if(panel) panel.style.display = activo ? 'block' : 'none';
+  });
+  // El grid de KPIs de Ausencias (aus-kpis-wrap) es propio de Faltas y
+  // Permisos — Vacaciones ya trae sus propios KPIs dentro de su panel.
+  const kpisWrap = document.getElementById('aus-kpis-wrap');
+  if(kpisWrap) kpisWrap.style.display = tab === 'gl-novedades' ? '' : 'none';
+
+  if(tab === 'gl-novedades'){ renderNovedades(); _renderKPIsGL(); }
+  if(tab === 'rem-vacaciones' && typeof renderVacaciones === 'function') renderVacaciones();
 }
 
 /* Alterna entre Bonificaciones y Horas Extras — únicos 2 sub-tabs que
