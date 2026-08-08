@@ -68,6 +68,7 @@ function cargarTrabajadores(){
       </td>
       <td style="font-size:12px;font-family:monospace;color:var(--texto2);">${t.rut||'—'}</td>
       <td class="wrap-ok" style="font-size:13px;font-weight:500;min-width:160px;">${t.nombre||'—'}</td>
+      <td style="font-size:12px;">${t.sexo||'—'}</td>
       <td style="font-size:12px;">${t.nacionalidad||'—'}</td>
       <td style="font-size:12px;">${cargoNom}</td>
       <td style="font-size:12px;">${mandanteNom}</td>
@@ -76,25 +77,25 @@ function cargarTrabajadores(){
           ${activo ? 'Activo' : 'Inactivo'}
         </span>
       </td>
-      <td style="min-width:120px;">
+      <td style="min-width:280px;">
         <div style="display:flex;gap:5px;flex-wrap:nowrap;align-items:center;">
           <button class="btn btn-secondary btn-sm"
             onclick="editarTrabajador('${t.rut}')" title="Editar">
-            <i class="ti ti-edit"></i>
+            <i class="ti ti-edit"></i> Editar
           </button>
           <button class="btn btn-secondary btn-sm"
             onclick="verPerfilTrabajador('${t.rut}')" title="Carpeta laboral">
-            <i class="ti ti-folder"></i>
+            <i class="ti ti-folder"></i> Carpeta
           </button>
           <button class="btn ${activo ? 'btn-danger' : 'btn-secondary'} btn-sm"
             onclick="cambiarEstado('${t.rut}','${activo ? 'inactivo' : 'activo'}')"
             title="${activo ? 'Dar de baja' : 'Reactivar'}">
-            <i class="ti ti-${activo ? 'user-minus' : 'user-check'}"></i>
+            <i class="ti ti-${activo ? 'user-minus' : 'user-check'}"></i> ${activo ? 'Baja' : 'Reactivar'}
           </button>
           ${!_tieneMovimientosTrabajador(t.rut) ? `
           <button class="btn btn-danger btn-sm"
             onclick="eliminarTrabajadorDefinitivo('${t.rut}')" title="Eliminar definitivamente (sin movimientos registrados)">
-            <i class="ti ti-trash"></i>
+            <i class="ti ti-trash"></i> Eliminar
           </button>` : ''}
         </div>
       </td>
