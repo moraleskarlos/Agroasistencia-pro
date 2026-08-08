@@ -85,6 +85,28 @@ function _restaurarSidebarColapsado(){
   if(localStorage.getItem(LOCAL_SB_COLAPSADO) === '1') sb.classList.add('colapsado');
 }
 
+/* Resalta temporalmente un elemento y hace scroll hasta él — usado por
+   las alertas para llevar al usuario exactamente al registro que
+   generó la alerta (Hallazgo Grande #1). */
+function _resaltarYScroll(id, intentos){
+  const el = document.getElementById(id);
+  if(!el){
+    // El módulo puede tardar un tick en terminar de renderizar su lista
+    // (setTimeout de irA() + su propio render) — reintenta unas pocas veces.
+    if((intentos||0) < 10) setTimeout(() => _resaltarYScroll(id, (intentos||0)+1), 100);
+    return;
+  }
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  const fondoOriginal = el.style.background;
+  const transicionOriginal = el.style.transition;
+  el.style.transition = 'background-color .3s ease';
+  el.style.background = '#FEF9C3';
+  setTimeout(() => {
+    el.style.background = fondoOriginal;
+    setTimeout(() => { el.style.transition = transicionOriginal; }, 350);
+  }, 1800);
+}
+
 function irA(idPagina, botonEl) {
 
   document.querySelectorAll('.pagina').forEach(pag => {

@@ -222,7 +222,7 @@ function renderListaFiniquitos(){
   }
 
   const ordenados = [...finiquitos_guardados].sort((a,b) => new Date(b.fecha_termino) - new Date(a.fecha_termino));
-  tbody.innerHTML = ordenados.map(f => `<tr>
+  tbody.innerHTML = ordenados.map(f => `<tr id="fila-finiquito-${f.folio}">
     <td style="font-size:12px;">${f.folio}</td>
     <td style="font-size:13px;font-weight:500;">${f.nombre}</td>
     <td style="font-size:12px;">${fmtFecha(f.fecha_termino)}</td>

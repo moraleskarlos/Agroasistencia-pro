@@ -130,7 +130,7 @@ function renderContratistas(){
       // ✅ Se eliminó el onclick de toda la fila (llevaba accidentalmente
       // a "Trabajadores" con cualquier clic) — la acción "Ver trabajadores"
       // ahora vive solo en su botón explícito, en la columna Acciones.
-      return`<div style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--borde);transition:.15s;"
+      return`<div id="fila-mandante-${empId}" style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--borde);transition:.15s;"
         onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
         <div style="flex:1.5;display:flex;align-items:center;gap:10px;">
           <div style="width:38px;height:38px;border-radius:9px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${ini}</div>

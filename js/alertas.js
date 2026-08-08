@@ -142,7 +142,7 @@ function calcularAlertas(){
     if(!contrato){
       alertas.push(_alerta('critico','Contratos',`sin_contrato_${t.rut}`,
         'Sin contrato registrado', `${t.nombre} no tiene contrato registrado en el sistema`,
-        () => irA('contratos')));
+        () => { _rutPrecontratoTemp = t.rut; irA('contratos'); }));
       return;
     }
     if(contrato.tipo !== 'indefinido' && contrato.fecha_termino){
@@ -150,11 +150,11 @@ function calcularAlertas(){
       if(dias < 0){
         alertas.push(_alerta('critico','Contratos',`contrato_vencido_${t.rut}`,
           'Contrato vencido', `El contrato de ${t.nombre} venció hace ${Math.abs(dias)} día(s)`,
-          () => irA('contratos')));
+          () => { _rutPrecontratoTemp = t.rut; irA('contratos'); }));
       } else if(dias <= 15){
         alertas.push(_alerta('importante','Contratos',`contrato_por_vencer_${t.rut}`,
           'Contrato vence pronto', `El contrato de ${t.nombre} vence en ${dias} día(s)`,
-          () => irA('contratos')));
+          () => { _rutPrecontratoTemp = t.rut; irA('contratos'); }));
       }
     }
   });
@@ -174,7 +174,10 @@ function calcularAlertas(){
     if(!tieneLiq){
       alertas.push(_alerta('critico','Remuneraciones',`sin_liquidacion_${t.rut}_${periodoActual}`,
         'Sin liquidación generada', `${t.nombre} no tiene liquidación generada este período`,
-        () => irA('remuneraciones')));
+        () => { irA('remuneraciones'); setTimeout(() => {
+          const el = document.getElementById('liq-periodo-selector');
+          if(el){ el.value = periodoActual; if(typeof renderListaLiquidaciones==='function') renderListaLiquidaciones(); }
+        }, 150); }));
     }
   });
 
@@ -197,7 +200,7 @@ function calcularAlertas(){
         const t = trabajadores.find(x => x.rut === a.rut);
         alertas.push(_alerta('critico','Ausencias y Permisos',`ausencia_sin_clasificar_${a.rut}_${a.fecha}`,
           'Ausencia sin clasificar', `${t?.nombre||a.rut} faltó el ${fmtFecha(a.fecha)} sin justificación registrada`,
-          () => irA('ausencias')));
+          () => { irA('ausencias'); setTimeout(() => { if(typeof clasificarAusencia==='function') clasificarAusencia(a.rut, a.fecha); }, 150); }));
       }
     });
   }
@@ -206,7 +209,10 @@ function calcularAlertas(){
   _turnosAbiertos(rutsActivos, hoy).forEach(x => {
     alertas.push(_alerta('critico','Asistencia',`turno_abierto_${x.rut}_${x.fecha}`,
       'Turno de asistencia sin cerrar', `${x.nombre} marcó entrada el ${fmtFecha(x.fecha)} y no registró salida`,
-      () => irA('asistencia')));
+      () => { irA('asistencia'); setTimeout(() => {
+        const el = document.getElementById('asist-buscar');
+        if(el){ el.value = x.rut; if(typeof cargarAsistencia==='function') cargarAsistencia(); }
+      }, 150); }));
   });
 
   /* ═══ IMPORTANTES ═══ */
@@ -215,12 +221,12 @@ function calcularAlertas(){
     if(!t.epp_entregados || !t.epp_entregados.length){
       alertas.push(_alerta('importante','Contratos',`sin_epp_${t.rut}`,
         'EPP no registrado', `${t.nombre} no tiene elementos de protección personal registrados`,
-        () => irA('contratos')));
+        () => { if(typeof irAContratoEpp==='function') irAContratoEpp(t.rut); else irA('contratos'); }));
     }
     if(!t.irl_declarado){
       alertas.push(_alerta('importante','Contratos',`sin_irl_${t.rut}`,
         'RIOHS / IRL no declarado', `${t.nombre} no ha declarado haber recibido la inducción RIOHS/IRL`,
-        () => irA('contratos')));
+        () => { if(typeof irAContratoEpp==='function') irAContratoEpp(t.rut); else irA('contratos'); }));
     }
   });
 
@@ -228,7 +234,7 @@ function calcularAlertas(){
     if(f.estado !== 'ratificado'){
       alertas.push(_alerta('importante','Finiquitos',`finiquito_sin_ratificar_${f.folio}`,
         'Finiquito sin ratificar', `El finiquito de ${f.nombre} (folio ${f.folio}) sigue pendiente de ratificación`,
-        () => irA('finiquitos')));
+        () => { irA('finiquitos'); setTimeout(() => { if(typeof _resaltarYScroll==='function') _resaltarYScroll('fila-finiquito-'+f.folio); }, 150); }));
     }
   });
 
@@ -236,10 +242,11 @@ function calcularAlertas(){
     if(typeof estadoVencimiento !== 'function') return;
     const est = estadoVencimiento(e.vigencia_contrato);
     if(est.dias !== null && est.dias <= 30){
-      alertas.push(_alerta('importante','Empresas',`mandante_vigencia_${e.id||e.rut}`,
+      const empId = e.id || e.rut;
+      alertas.push(_alerta('importante','Empresas',`mandante_vigencia_${empId}`,
         est.dias < 0 ? 'Vigencia con mandante vencida' : 'Vigencia con mandante próxima a vencer',
         `${e.nombre}: ${est.dias<0 ? 'vencida' : 'vence en '+Math.ceil(est.dias)+' día(s)'}`,
-        () => irA('contratistas')));
+        () => { irA('contratistas'); setTimeout(() => { if(typeof _resaltarYScroll==='function') _resaltarYScroll('fila-mandante-'+empId); }, 150); }));
     }
   });
 
@@ -264,7 +271,10 @@ function calcularAlertas(){
   _jornadasPorRevisar(rutsActivos, periodoActual).forEach(x => {
     alertas.push(_alerta('preventivo','Asistencia',`jornada_revisar_${x.rut}_${x.fecha}`,
       'Jornada por revisar (+12h)', `${x.nombre} registró más de 12 horas el ${fmtFecha(x.fecha)}`,
-      () => irA('asistencia')));
+      () => { irA('asistencia'); setTimeout(() => {
+        const el = document.getElementById('asist-buscar');
+        if(el){ el.value = x.rut; if(typeof cargarAsistencia==='function') cargarAsistencia(); }
+      }, 150); }));
   });
 
   return alertas;

@@ -209,6 +209,23 @@ function _seleccionarTrabajadorContratoVisual(id){
   _renderListaVisualTrabajadorContrato();
 }
 
+/* Ir directo al tab EPP de Contratos con un trabajador preseleccionado —
+   usado por las alertas "EPP no registrado" / "RIOHS-IRL no declarado"
+   (Hallazgo Grande #1). */
+function irAContratoEpp(rut){
+  irA('contratos');
+  setTimeout(() => {
+    if(typeof switchTabContratos === 'function') switchTabContratos('epp');
+    setTimeout(() => {
+      const sel = document.getElementById('epp-sel-trabajador');
+      if(sel){
+        sel.value = rut;
+        if(typeof cargarEppTrabajador === 'function') cargarEppTrabajador();
+      }
+    }, 80);
+  }, 80);
+}
+
 function _actualizarContadorContratos(){
   const el = document.getElementById('contratos-contador');
   if(!el) return;
