@@ -10,6 +10,7 @@ try {
   poblarSelects();
   actualizarUI();
   renderDashboard();
+  _restaurarSidebarColapsado();
 } catch(e) {
   console.error('Error en init:', e);
 }

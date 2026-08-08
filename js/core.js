@@ -65,6 +65,26 @@ function setDB(ok,txt){
   l.textContent=txt;
 }
 
+/* ── SIDEBAR COLAPSABLE (botón «) ─────────────────────────
+   Reaprovecha el CSS que ya existía para pantallas angostas
+   (.sidebar.colapsado usa las mismas reglas), ahora disponible como
+   toggle manual en cualquier tamaño de pantalla. Se recuerda la
+   preferencia entre sesiones. */
+const LOCAL_SB_COLAPSADO = 'agro_sidebar_colapsado';
+
+function toggleSidebar(){
+  const sb = document.getElementById('sidebar-main');
+  if(!sb) return;
+  const colapsado = sb.classList.toggle('colapsado');
+  localStorage.setItem(LOCAL_SB_COLAPSADO, colapsado ? '1' : '0');
+}
+
+function _restaurarSidebarColapsado(){
+  const sb = document.getElementById('sidebar-main');
+  if(!sb) return;
+  if(localStorage.getItem(LOCAL_SB_COLAPSADO) === '1') sb.classList.add('colapsado');
+}
+
 function irA(idPagina, botonEl) {
 
   document.querySelectorAll('.pagina').forEach(pag => {
