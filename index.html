@@ -12,9 +12,14 @@
 <body>
 <div class="app">
 
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar-main">
     <div class="sb-logo">
-      <div class="sb-logo-icon"><img src="img/logo-icon.png" alt="AgroContratista" style="width:100%;height:100%;object-fit:contain;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div class="sb-logo-icon"><img src="img/logo-icon.png" alt="AgroContratista" style="width:100%;height:100%;object-fit:contain;"></div>
+        <button class="sb-toggle" onclick="toggleSidebar()" title="Colapsar / expandir menú">
+          <i class="ti ti-chevrons-left"></i>
+        </button>
+      </div>
       <div class="sb-logo-title">AgroContratista</div>
       <div class="sb-logo-sub" title="La plataforma creada para empresas contratistas agrícolas">La plataforma creada para empresas contratistas agrícolas</div>
     </div>
