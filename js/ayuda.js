@@ -317,51 +317,86 @@ const AYUDA_CONTENIDO = {
     ]
   },
 
-  'gestion-laboral': {
-    titulo: '📋 Gestión Laboral',
+  'ausencias': {
+    titulo: '📋 Ausencias y Permisos',
     secciones: [
       {
         icono: '🎯',
         titulo: 'Objetivo',
-        contenido: 'Registrar todas las novedades del período laboral que afectan la remuneración: ausencias justificadas e injustificadas, bonos, descuentos y jornadas especiales. Este módulo es el input directo al Motor de Remuneraciones.'
+        contenido: 'Registrar y clasificar las ausencias del trabajador (licencias, permisos, faltas). Es uno de los 3 inputs directos al Motor de Remuneraciones — junto con Bonos y Horas Extras, y Descuentos.'
       },
       {
         icono: '📋',
-        titulo: 'Pestaña Novedades',
+        titulo: 'Clasificar ausencias',
         contenido: 'Las ausencias se detectan <strong>automáticamente</strong> desde el módulo Asistencia — si un trabajador no tiene marcación un día hábil, aparece aquí en amarillo como "Sin clasificar". Tu tarea es clasificar cada ausencia:<ul><li>🏥 <strong>Licencia Médica:</strong> reposo con certificado médico</li><li>✅ <strong>Permiso con goce:</strong> autorizado, se paga igual</li><li>⚠️ <strong>Permiso sin goce:</strong> autorizado, se descuenta</li><li>🏖️ <strong>Vacaciones:</strong> período de descanso legal</li><li>❌ <strong>Injustificada:</strong> falta sin aviso ni justificación</li></ul>'
-      },
-      {
-        icono: '💰',
-        titulo: 'Pestaña Haberes Variables',
-        contenido: 'Registra los montos adicionales al sueldo base que corresponden en el período:<ul><li><strong>Bonos:</strong> producción, asistencia, puntualidad, responsabilidad</li><li><strong>Colación y movilización:</strong> beneficios de traslado y alimentación</li><li><strong>Viáticos:</strong> gastos por trabajos fuera de la faena habitual</li><li><strong>Asignaciones especiales:</strong> cualquier pago extraordinario acordado</li></ul>'
-      },
-      {
-        icono: '➖',
-        titulo: 'Pestaña Descuentos',
-        contenido: 'Registra los descuentos que se aplicarán en la liquidación:<ul><li><strong>Anticipos:</strong> dinero entregado antes del cierre del período</li><li><strong>Préstamos:</strong> con control de cuotas y saldo pendiente</li><li><strong>Caja de Compensación:</strong> cuotas de beneficios solicitados</li><li><strong>Cuota sindical:</strong> aporte mensual al sindicato</li><li><strong>Retención judicial:</strong> pensión de alimentos u orden judicial</li></ul>'
-      },
-      {
-        icono: '⏱️',
-        titulo: 'Pestaña Jornada Especial',
-        contenido: 'Registra situaciones fuera de la jornada habitual:<ul><li><strong>Horas extra:</strong> con recargo 50% (día hábil) o 100% (domingo/festivo) según Art. 32 CT</li><li><strong>Horas compensadas:</strong> horas que se compensan con descanso en lugar de pago</li><li><strong>Cambio de turno:</strong> modificación puntual del horario acordado</li></ul>'
-      },
-      {
-        icono: '🔄',
-        titulo: 'Filtros — Período y Mandante',
-        contenido: 'Usa el selector de período (mes/año) en la parte superior para navegar entre meses. El filtro de mandante permite ver solo los trabajadores de una empresa en particular. Ambos filtros afectan todas las pestañas simultáneamente.'
       },
       {
         icono: '🔗',
         titulo: 'Flujo relacionado',
-        contenido: 'Asistencia (registro diario) → Gestión Laboral (clasificar y complementar) → Remuneraciones (calcular liquidación)'
+        contenido: 'Asistencia (registro diario) → Ausencias y Permisos (clasificar) → Remuneraciones (calcular liquidación)'
       }
     ],
     faq: [
       { p: '¿Debo registrar manualmente todas las ausencias?', r: 'No. Las ausencias se detectan automáticamente desde Asistencia. Solo debes clasificar el motivo de cada una.' },
       { p: '¿Qué pasa si no clasifico una ausencia?', r: 'Quedará marcada como "Sin clasificar" y Remuneraciones la tratará como ausencia injustificada al calcular.' },
-      { p: '¿Los anticipos quedan registrados en la Carpeta Laboral?', r: 'Sí. Cada novedad registrada queda automáticamente en la Carpeta Laboral del trabajador.' },
-      { p: '¿Puedo registrar horas extra de varios días a la vez?', r: 'Por ahora se registran de a una por fecha. Esto garantiza el cálculo correcto del recargo según si el día es hábil o festivo.' },
+      { p: '¿Las ausencias quedan registradas en la Carpeta Laboral?', r: 'Sí. Cada novedad registrada queda automáticamente en la Carpeta Laboral del trabajador.' },
       { p: '¿El período se cierra automáticamente?', r: 'No. El sistema es flexible — puedes agregar o modificar registros hasta el momento de generar la liquidación.' }
+    ]
+  },
+
+  'bonos': {
+    titulo: '💰 Bonos y Horas Extras',
+    secciones: [
+      {
+        icono: '🎯',
+        titulo: 'Objetivo',
+        contenido: 'Registrar los conceptos que aumentan el pago del trabajador: bonificaciones y horas extra. Es uno de los 3 inputs directos al Motor de Remuneraciones.'
+      },
+      {
+        icono: '💰',
+        titulo: 'Pestaña Bonificaciones',
+        contenido: 'Registra los montos adicionales al sueldo base que corresponden en el período:<ul><li><strong>Bonos:</strong> producción, asistencia, puntualidad, responsabilidad</li><li><strong>Colación y movilización:</strong> beneficios de traslado y alimentación</li><li><strong>Viáticos:</strong> gastos por trabajos fuera de la faena habitual</li><li><strong>Asignaciones especiales:</strong> cualquier pago extraordinario acordado</li></ul>'
+      },
+      {
+        icono: '⏱️',
+        titulo: 'Pestaña Horas Extras',
+        contenido: 'Registra situaciones fuera de la jornada habitual:<ul><li><strong>Horas extra:</strong> con recargo 50% (día hábil) o 100% (domingo/festivo) según Art. 32 CT</li><li><strong>Horas compensadas:</strong> horas que se compensan con descanso en lugar de pago</li><li><strong>Cambio de turno:</strong> modificación puntual del horario acordado</li></ul>Tope legal: máximo 2 horas extraordinarias por día (Art. 31 CT).'
+      },
+      {
+        icono: '🔗',
+        titulo: 'Flujo relacionado',
+        contenido: 'Bonos y Horas Extras (registrar) → Remuneraciones (calcular liquidación)'
+      }
+    ],
+    faq: [
+      { p: '¿Puedo registrar horas extra de varios días a la vez?', r: 'Por ahora se registran de a una por fecha. Esto garantiza el cálculo correcto del recargo según si el día es hábil o festivo.' },
+      { p: '¿Qué pasa si supero las 2 horas extra en un día?', r: 'El sistema bloquea el registro — es el tope legal del Art. 31 del Código del Trabajo.' },
+      { p: '¿Los bonos quedan registrados en la Carpeta Laboral?', r: 'Sí. Cada registro queda automáticamente en la Carpeta Laboral del trabajador.' }
+    ]
+  },
+
+  'descuentos': {
+    titulo: '➖ Descuentos',
+    secciones: [
+      {
+        icono: '🎯',
+        titulo: 'Objetivo',
+        contenido: 'Registrar los descuentos que se aplicarán en la liquidación del trabajador. Es uno de los 3 inputs directos al Motor de Remuneraciones.'
+      },
+      {
+        icono: '➖',
+        titulo: 'Tipos de descuento',
+        contenido: 'Registra los descuentos que se aplicarán en la liquidación:<ul><li><strong>Anticipos:</strong> dinero entregado antes del cierre del período</li><li><strong>Préstamos:</strong> con control de cuotas y saldo pendiente</li><li><strong>Caja de Compensación:</strong> cuotas de beneficios solicitados</li><li><strong>Cuota sindical:</strong> aporte mensual al sindicato</li><li><strong>Retención judicial:</strong> pensión de alimentos u orden judicial</li></ul>'
+      },
+      {
+        icono: '🔗',
+        titulo: 'Flujo relacionado',
+        contenido: 'Descuentos (registrar) → Remuneraciones (calcular liquidación)'
+      }
+    ],
+    faq: [
+      { p: '¿Los anticipos quedan registrados en la Carpeta Laboral?', r: 'Sí. Cada descuento registrado queda automáticamente en la Carpeta Laboral del trabajador.' },
+      { p: '¿Cómo se controla el saldo pendiente de un préstamo?', r: 'El sistema descuenta una cuota por período y muestra el saldo restante hasta que se completa el pago.' }
     ]
   },
 

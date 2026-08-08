@@ -96,7 +96,9 @@ function irA(idPagina, botonEl) {
 
     // 3. Inicializar módulo en siguiente tick para no bloquear el render visual
     setTimeout(() => {
-      if(idPagina === 'gestion-laboral' || idPagina === 'p-gestion-laboral'){ initGestionLaboral(); }
+      if(idPagina === 'ausencias'  || idPagina === 'p-ausencias'){  initAusencias(); }
+      if(idPagina === 'bonos'      || idPagina === 'p-bonos'){      initBonos(); }
+      if(idPagina === 'descuentos' || idPagina === 'p-descuentos'){ initDescuentos(); }
       if(idPagina === 'remuneraciones' || idPagina === 'p-remuneraciones'){ initIndicadores(); initLiquidaciones(); initLibro(); switchTabRem('rem-indicadores'); }
       if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); poblarSelectsEmpresaPropia(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
       if(idPagina === 'registro'      || idPagina === 'p-registro'){      poblarSelects(); poblarSelectsEmpresaPropia(); switchTabRegistro('individual'); }

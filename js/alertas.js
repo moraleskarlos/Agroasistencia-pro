@@ -195,9 +195,9 @@ function calcularAlertas(){
         n.trabajador_rut === a.rut && n.fecha_inicio <= a.fecha && n.fecha_fin >= a.fecha);
       if(!clasificada){
         const t = trabajadores.find(x => x.rut === a.rut);
-        alertas.push(_alerta('critico','Gestión Laboral',`ausencia_sin_clasificar_${a.rut}_${a.fecha}`,
+        alertas.push(_alerta('critico','Ausencias y Permisos',`ausencia_sin_clasificar_${a.rut}_${a.fecha}`,
           'Ausencia sin clasificar', `${t?.nombre||a.rut} faltó el ${fmtFecha(a.fecha)} sin justificación registrada`,
-          () => irA('gestion-laboral')));
+          () => irA('ausencias')));
       }
     });
   }

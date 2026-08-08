@@ -27,30 +27,52 @@ function guardarDescuentos(){      localStorage.setItem(LOCAL_DES, JSON.stringif
 function guardarJornadaEspecial(){ localStorage.setItem(LOCAL_JOR, JSON.stringify(jornada_especial)); }
 
 /* ── INIT DEL MÓDULO ───────────────────────────────────── */
-let _tabGLActivo = 'gl-novedades';
+let _tabBonosActivo = 'gl-haberes';
 let _guardandoGL = false;
 const _buscadoresGL = {};
 
-function initGestionLaboral(){
+/* ✅ Separado en 3 páginas (Ausencias / Bonos y Horas Extras / Descuentos)
+   — antes era una sola página con 4 sub-tabs. Los 3 init reutilizan las
+   mismas funciones de carga/selects/buscadores (que ya cubrían los 4
+   submódulos a la vez, sin distinción), solo cambia qué se renderiza al
+   final según qué página se está abriendo. */
+function initAusencias(){
   cargarGestionLaboral();
   _poblarSelectsGL();
   _initBuscadoresGL();
-  switchTabGL(_tabGLActivo);
+  renderNovedades();
+  _renderKPIsGL();
 }
 
-function switchTabGL(tab){
-  _tabGLActivo = tab;
-  ['gl-novedades','gl-haberes','gl-descuentos','gl-jornada'].forEach(id => {
+function initBonos(){
+  cargarGestionLaboral();
+  _poblarSelectsGL();
+  _initBuscadoresGL();
+  switchTabBonos(_tabBonosActivo);
+}
+
+function initDescuentos(){
+  cargarGestionLaboral();
+  _poblarSelectsGL();
+  _initBuscadoresGL();
+  renderDescuentos();
+  _renderKPIsGL();
+}
+
+/* Alterna entre Bonificaciones y Horas Extras — únicos 2 sub-tabs que
+   quedaron juntos en la página "Bonos y Horas Extras" (comparten el
+   criterio "aumentan el pago", pero son formularios distintos). */
+function switchTabBonos(tab){
+  _tabBonosActivo = tab;
+  ['gl-haberes','gl-jornada'].forEach(id => {
     const btn     = document.getElementById('tab-' + id);
     const panel   = document.getElementById('panel-' + id);
     const activo  = id === tab;
     if(btn)   { btn.classList.toggle('activo', activo); }
     if(panel) { panel.style.display = activo ? 'block' : 'none'; }
   });
-  if(tab === 'gl-novedades')  renderNovedades();
-  if(tab === 'gl-haberes')    renderHaberes();
-  if(tab === 'gl-descuentos') renderDescuentos();
-  if(tab === 'gl-jornada')    renderJornada();
+  if(tab === 'gl-haberes') renderHaberes();
+  if(tab === 'gl-jornada') renderJornada();
   _renderKPIsGL();
 }
 
@@ -179,24 +201,6 @@ function _renderKPIsGL(){
   _setKPI('gl-kpi-jor-trabajadores', trabJor,                 'trabajadores');
   _setKPI('gl-kpi-jor-registros',    jorPer.length,            'registros');
   _setKPI('gl-kpi-jor-recargo100',   recargo100.toFixed(1)+' h','recargo 100%');
-
-  // Solo se muestran las 4 tarjetas del submódulo activo.
-  const visibles = {
-    'gl-novedades':  ['gl-kpi-goce','gl-kpi-singoce','gl-kpi-licencia','gl-kpi-inasistencia'],
-    'gl-haberes':    ['gl-kpi-haberes','gl-kpi-hab-trabajadores','gl-kpi-hab-registros','gl-kpi-hab-promedio'],
-    'gl-descuentos': ['gl-kpi-descuentos','gl-kpi-des-trabajadores','gl-kpi-des-cuotas','gl-kpi-des-saldo'],
-    'gl-jornada':    ['gl-kpi-hextra','gl-kpi-jor-trabajadores','gl-kpi-jor-registros','gl-kpi-jor-recargo100'],
-  }[_tabGLActivo] || [];
-  const todosKPI = [
-    'gl-kpi-goce','gl-kpi-singoce','gl-kpi-licencia','gl-kpi-inasistencia',
-    'gl-kpi-haberes','gl-kpi-hab-trabajadores','gl-kpi-hab-registros','gl-kpi-hab-promedio',
-    'gl-kpi-descuentos','gl-kpi-des-trabajadores','gl-kpi-des-cuotas','gl-kpi-des-saldo',
-    'gl-kpi-hextra','gl-kpi-jor-trabajadores','gl-kpi-jor-registros','gl-kpi-jor-recargo100',
-  ];
-  todosKPI.forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.style.display = visibles.includes(id) ? '' : 'none';
-  });
 }
 
 function _setKPI(id, val, sub){
