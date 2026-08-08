@@ -960,6 +960,24 @@ function guardarJornada(){
       toast(`⚠️ Tope legal superado (Art. 31 Código del Trabajo — máx. 2h extra por día). ${t?.nombre||'Este trabajador'} ya tiene ${yaHorasDia.toFixed(1)}h registradas el ${_fmtFecha(fecha)}`, 'error');
       return;
     }
+
+    // ✅ NUEVO — Tope legal semanal (Art. 31/32 CT, confirmado con
+    // Dictamen DT N°60157): máximo 12 horas extraordinarias por semana
+    // (lunes a domingo), sin importar cómo se repartan entre los días.
+    // Combinado con el tope diario de arriba, esto ya cubre correctamente
+    // el caso del "6º día" (si los primeros 5 días ya usaron las 12h,
+    // el 6º día queda igual sin margen; si sobró margen, el 6º día puede
+    // usarlo, pero nunca más de 2h por el tope diario de todas formas).
+    const { inicio: semInicio, fin: semFin } = _semanaDeFecha(fecha);
+    const yaHorasSemana = jornada_especial
+      .filter(j => j.trabajador_rut === rut && j.tipo === 'hora_extra' && j.fecha >= semInicio && j.fecha <= semFin)
+      .reduce((s,j) => s + (parseFloat(j.horas)||0), 0);
+    const totalSemana = yaHorasSemana + parseFloat(horas);
+    if(totalSemana > 12){
+      const t = trabajadores.find(x => x.rut === rut);
+      toast(`⚠️ Tope legal superado (Art. 31/32 Código del Trabajo — máx. 12h extra por semana). ${t?.nombre||'Este trabajador'} ya tiene ${yaHorasSemana.toFixed(1)}h registradas esta semana (${_fmtFecha(semInicio)} al ${_fmtFecha(semFin)})`, 'error');
+      return;
+    }
   }
 
   _guardandoGL = true;
@@ -1137,6 +1155,20 @@ function _fmtFecha(v){
   if(!v) return '—';
   const d = new Date(v+'T12:00:00');
   return isNaN(d) ? v : d.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
+/* Rango lunes→domingo de la semana que contiene 'fecha' (YYYY-MM-DD),
+   usado para el tope legal semanal de horas extra (Art. 31/32 CT). */
+function _semanaDeFecha(fecha){
+  const d = new Date(fecha + 'T12:00:00');
+  const diaSemana = d.getDay(); // 0=domingo, 1=lunes, ... 6=sábado
+  const offsetLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+  const lunes = new Date(d);
+  lunes.setDate(d.getDate() + offsetLunes);
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate() + 6);
+  const toYMD = x => x.toISOString().split('T')[0];
+  return { inicio: toYMD(lunes), fin: toYMD(domingo) };
 }
 
 function _resetForm(id){
