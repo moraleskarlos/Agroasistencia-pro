@@ -1193,7 +1193,7 @@
       </div>
 
       <!-- MODAL PREVIEW QR -->
-      <div id="modal-qr-preview" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;">
+      <div id="modal-qr-preview" class="modal-overlay">
         <div style="background:#f1f5f9;border-radius:14px;padding:22px;width:820px;max-width:94vw;max-height:88vh;overflow-y:auto;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <div>
@@ -2468,7 +2468,7 @@
 </div>
 
 <!-- MODAL MI EMPRESA (empresa contratista principal) -->
-<div id="modal-mi-empresa" style="display:none;position:fixed;inset:0;z-index:1002;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+<div id="modal-mi-empresa" class="modal-overlay">
   <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:520px;box-shadow:var(--shadow-md);max-height:90vh;overflow-y:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
       <div style="font-size:16px;font-weight:700;"><i class="ti ti-building-skyscraper" style="margin-right:8px;color:var(--azul);"></i>Mi Empresa</div>
@@ -2512,7 +2512,7 @@
 </div>
 
 <!-- MODAL EMPRESA PROPIA -->
-<div id="modal-empresa-propia" style="display:none;position:fixed;inset:0;z-index:1002;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+<div id="modal-empresa-propia" class="modal-overlay">
   <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:520px;box-shadow:var(--shadow-md);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
       <div style="font-size:16px;font-weight:700;" id="modal-ep-titulo">Nueva Empresa Propia</div>
@@ -2553,7 +2553,7 @@
 
 <!-- MODAL LISTA DE CONTRATOS -->
 <!-- MODAL RECTIFICACIÓN ADMINISTRATIVA -->
-<div id="modal-rectificacion" style="display:none;position:fixed;inset:0;z-index:1002;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+<div id="modal-rectificacion" class="modal-overlay">
   <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;box-shadow:var(--shadow-md);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <div style="font-size:16px;font-weight:700;"><i class="ti ti-edit" style="margin-right:8px;color:var(--azul);"></i>Rectificación Administrativa</div>
@@ -2601,7 +2601,7 @@
 <!-- MODAL FAENA -->
 <!-- MODAL EMPRESA -->
 <!-- MODAL EDITAR TRABAJADOR (TR-005) — reutiliza el mismo #form-trabajador, sin duplicar campos -->
-<div id="modal-editar-trabajador" style="display:none;position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+<div id="modal-editar-trabajador" class="modal-overlay">
   <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <div style="font-size:16px;font-weight:700;">
@@ -2617,7 +2617,7 @@
   </div>
 </div>
 
-<div id="modal-empresa" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;padding:20px;">
+<div id="modal-empresa" class="modal-overlay">
   <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:520px;box-shadow:var(--shadow-md);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
       <div style="font-size:16px;font-weight:700;" id="modal-empresa-titulo">Nuevo mandante</div>
@@ -2793,7 +2793,7 @@
        encabezado del lote (Empresa/Mandante/Cargo) en Registro Personal,
        elegido ANTES de subir el Excel. Ver Hallazgo Grande #12/#13. -->
   <!-- MODAL CONFIGURACIÓN — Contratos Masivo -->
-  <div id="modal-config-grupos-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div id="modal-config-grupos-masivo" class="modal-overlay">
     <div style="background:#fff;border-radius:14px;padding:24px;width:820px;max-width:96vw;max-height:90vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
         <div style="font-size:16px;font-weight:700;">Configurar condiciones del lote</div>
@@ -2810,7 +2810,7 @@
     </div>
   </div>
   <!-- MODAL CONFIRMACIÓN — Registro Masivo -->
-  <div id="modal-confirmacion-registro-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:1001;align-items:center;justify-content:center;padding:20px;">
+  <div id="modal-confirmacion-registro-masivo" class="modal-overlay">
     <div style="background:#fff;border-radius:14px;padding:24px;width:440px;max-width:96vw;">
       <div style="font-size:16px;font-weight:700;margin-bottom:12px;">Revise la información antes de continuar</div>
       <div style="display:grid;gap:6px;font-size:13px;background:var(--gris-bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
@@ -2827,7 +2827,7 @@
     </div>
   </div>
   <!-- MODAL CONFIRMACIÓN — Contratación Masiva -->
-  <div id="modal-confirmacion-masivo" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:1001;align-items:center;justify-content:center;padding:20px;">
+  <div id="modal-confirmacion-masivo" class="modal-overlay">
     <div style="background:#fff;border-radius:14px;padding:24px;width:460px;max-width:96vw;">
       <div style="font-size:16px;font-weight:700;margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Confirmación de contratación masiva</div>      <p style="font-size:13px;color:var(--texto2);margin:10px 0;">Está a punto de generar contratos para el siguiente lote:</p>
       <div style="display:grid;gap:6px;font-size:13px;background:var(--gris-bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
@@ -2847,7 +2847,7 @@
     </div>
   </div>
   <!-- MODAL BIENVENIDA ALERTAS -->
-  <div id="modal-bienvenida-alertas" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:1100;align-items:center;justify-content:center;">
+  <div id="modal-bienvenida-alertas" class="modal-overlay modal-overlay--top">
     <div style="background:#fff;border-radius:16px;padding:28px;width:400px;max-width:92vw;">
       <div id="ba-contenido"></div>
     </div>
