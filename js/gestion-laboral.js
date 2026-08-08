@@ -726,7 +726,11 @@ function renderDescuentos(){
       <td style="font-size:12px;text-align:center;">${d.numero_cuota||1}/${d.cuotas_total||1}</td>
       <td style="font-size:13px;font-weight:500;">$${saldoRestante.toLocaleString('es-CL')}</td>
       <td style="font-size:12px;color:var(--texto2);">${d.observacion||'—'}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="eliminarDescuento('${d.id}')"><i class="ti ti-trash"></i></button></td>
+      <td>
+        <button class="btn btn-danger btn-sm" onclick="eliminarDescuento('${d.id}')" title="Eliminar solo esta cuota"><i class="ti ti-trash"></i></button>
+        ${(d.cuotas_total||1) > 1 ? `
+        <button class="btn btn-secondary btn-sm" onclick="eliminarSerieDescuento('${d.grupo_id}')" title="Eliminar todas las cuotas pendientes de este descuento (no toca las ya pasadas)"><i class="ti ti-trash-x"></i></button>` : ''}
+      </td>
     </tr>`;
   }).join('');
 }
@@ -836,6 +840,39 @@ function eliminarDescuento(id){
   guardarDescuentos();
   renderDescuentos();
   _renderKPIsGL();
+}
+
+/* Elimina de una sola vez todas las cuotas PENDIENTES (mes actual en
+   adelante) de un mismo descuento — ej. el trabajador pagó el préstamo
+   antes de tiempo, o el descuento se cargó mal y hay que anularlo
+   completo. Las cuotas de meses ya pasados NO se tocan — quedaron
+   reflejadas en liquidaciones ya generadas, borrarlas generaría
+   inconsistencia con pagos que ya se hicieron. */
+function eliminarSerieDescuento(grupoId){
+  if(!grupoId){ toast('⚠️ Este descuento no tiene cuotas vinculadas','error'); return; }
+
+  const mesActual = _mesActual();
+  const serie = descuentos.filter(x => x.grupo_id === grupoId);
+  const pendientes = serie.filter(x => x.periodo >= mesActual);
+  const pasadas = serie.length - pendientes.length;
+
+  if(!pendientes.length){
+    toast('⚠️ No hay cuotas pendientes de este descuento — todas ya pasaron', 'error');
+    return;
+  }
+
+  const t = trabajadores.find(x => x.rut === serie[0]?.trabajador_rut);
+  const nombreTipo = _labelDescuento(serie[0]?.tipo);
+  const aviso = pasadas > 0
+    ? `Se eliminarán ${pendientes.length} cuota${pendientes.length!==1?'s':''} pendiente${pendientes.length!==1?'s':''} de "${nombreTipo}" de ${t?.nombre||'este trabajador'}.\n\nLas ${pasadas} cuota${pasadas!==1?'s':''} de meses ya pasados NO se tocan.\n\n¿Continuar?`
+    : `Se eliminarán las ${pendientes.length} cuota${pendientes.length!==1?'s':''} de "${nombreTipo}" de ${t?.nombre||'este trabajador'} (ninguna se había cobrado todavía).\n\n¿Continuar?`;
+  if(!confirm(aviso)) return;
+
+  descuentos = descuentos.filter(x => !(x.grupo_id === grupoId && x.periodo >= mesActual));
+  guardarDescuentos();
+  renderDescuentos();
+  _renderKPIsGL();
+  toast(`✅ ${pendientes.length} cuota${pendientes.length!==1?'s':''} eliminada${pendientes.length!==1?'s':''}`, 'exito');
 }
 
 function _labelDescuento(tipo){
