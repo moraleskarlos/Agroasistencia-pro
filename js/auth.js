@@ -219,7 +219,7 @@ function aplicarPermisosPorRol(){
 
   // Operador: solo ve asistencia de su mandante
   if(rol === 'operador'){
-    const ocultarIds = ['registro','trabajadores','contratistas','contratos','qr','exportar','config'];
+    const ocultarIds = ['registro','trabajadores','contratistas','contratos','qr','config'];
     document.querySelectorAll('.sb-item').forEach(btn => {
       const onclick = btn.getAttribute('onclick') || '';
       const esOculto = ocultarIds.some(id => onclick.includes(`'${id}'`));
