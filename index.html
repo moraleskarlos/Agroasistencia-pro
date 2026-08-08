@@ -171,7 +171,7 @@
     <i class="ti ti-calendar"></i> Fecha de ingreso
   </div>
 
-  <div class="form-grid" style="margin-bottom:12px;">
+  <div class="fila-compacta" style="margin-bottom:12px;">
     <div class="form-group">
       <label>Fecha de ingreso *</label>
       <input type="date" id="m-fecha-ingreso" required>
@@ -182,7 +182,7 @@
   <!-- IDENTIFICACIÓN -->
   <div class="form-section"><i class="ti ti-id-badge"></i> Identificación</div>
 
-  <div class="form-grid" style="margin-bottom:12px;">
+  <div class="fila-mixta" style="margin-bottom:12px;">
     <div class="form-group">
       <label>RUT *</label>
       
@@ -199,7 +199,9 @@
       <label>Nombre completo *</label>
       <input type="text" id="m-nombre" placeholder="Juan Pérez González" required>
     </div>
+  </div>
 
+  <div class="fila-compacta" style="margin-bottom:12px;">
     <div class="form-group">
       <label>Nacionalidad *</label>
       <select id="m-nacionalidad" required onchange="evaluarCampos();mostrarCamposMigratorios()">
@@ -220,45 +222,51 @@
       </div>
     </div>
 
-    <!-- DATOS MIGRATORIOS — solo si nacionalidad ≠ Chileno -->
-    <div id="bloque-migratorio" style="display:none;">
-      <div class="form-section"><i class="ti ti-world"></i> Datos Migratorios</div>
-
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Situación Migratoria *</label>
-          <select id="m-tipo-doc-mig" onchange="onCambioTipoDocMig()">
-            <option value="">— Seleccionar —</option>
-            <option value="Residencia Temporal">Residencia Temporal</option>
-            <option value="Residencia Definitiva">Residencia Definitiva</option>
-            <option value="Prórroga / Ampliación de Residencia (180 días)">Prórroga / Ampliación de Residencia (180 días)</option>
-            <option value="Documento en trámite">Documento en trámite</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Número de documento</label>
-          <input type="text" id="m-num-doc-mig" placeholder="Ej: 123456789">
-        </div>
-      </div>
-
-      <div class="form-group" id="grupo-fecha-venc-mig">
-        <label id="lbl-fecha-venc-mig">Fecha de vencimiento *</label>
-        <input type="date" id="m-fecha-venc-mig">
-        <div id="semaforo-venc-mig" style="margin-top:4px;"></div>
-        <div id="nota-res-definitiva" style="display:none;font-size:12px;color:var(--texto2);margin-top:4px;">
-          ℹ️ Para Residencia Definitiva, ingresa la fecha de vencimiento de la <strong>cédula de identidad</strong> (se renueva cada 5 años).
-        </div>
-      </div>
-    </div>
-    <!-- FIN DATOS MIGRATORIOS -->
-
     <div class="form-group">
       <label>Fecha de nacimiento</label>
       <input type="date" id="m-fecha-nac" min="1900-01-01" required>
     </div>
+  </div>
 
+  <!-- DATOS MIGRATORIOS — solo si nacionalidad ≠ Chileno. Fuera de las
+       filas compactas de arriba porque es un bloque condicional propio,
+       con su propio mini-formulario interno. -->
+  <div id="bloque-migratorio" style="display:none;margin-bottom:12px;">
+    <div class="form-section"><i class="ti ti-world"></i> Datos Migratorios</div>
+
+    <div class="fila-mixta">
+      <div class="form-group">
+        <label>Situación Migratoria *</label>
+        <select id="m-tipo-doc-mig" onchange="onCambioTipoDocMig()">
+          <option value="">— Seleccionar —</option>
+          <option value="Residencia Temporal">Residencia Temporal</option>
+          <option value="Residencia Definitiva">Residencia Definitiva</option>
+          <option value="Prórroga / Ampliación de Residencia (180 días)">Prórroga / Ampliación de Residencia (180 días)</option>
+          <option value="Documento en trámite">Documento en trámite</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Número de documento</label>
+        <input type="text" id="m-num-doc-mig" placeholder="Ej: 123456789">
+      </div>
+    </div>
+
+    <div class="fila-compacta" style="margin-top:12px;">
+      <div class="form-group" id="grupo-fecha-venc-mig">
+        <label id="lbl-fecha-venc-mig">Fecha de vencimiento *</label>
+        <input type="date" id="m-fecha-venc-mig">
+        <div id="semaforo-venc-mig" style="margin-top:4px;"></div>
+        <div id="nota-res-definitiva" style="display:none;font-size:12px;color:var(--texto2);margin-top:4px;max-width:320px;">
+          ℹ️ Para Residencia Definitiva, ingresa la fecha de vencimiento de la <strong>cédula de identidad</strong> (se renueva cada 5 años).
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- FIN DATOS MIGRATORIOS -->
+
+  <div class="fila-compacta" style="margin-bottom:12px;">
     <div class="form-group">
       <label>Sexo *</label>
       <select id="m-sexo" required onchange="_actualizarListasPorSexo()">
@@ -279,13 +287,17 @@
         <option>Conviviente</option>
       </select>
     </div>
+  </div>
 
+  <div class="fila-ancha" style="margin-bottom:12px;">
     <div class="form-group">
       <label>Correo electrónico</label>
       <input type="email" id="m-correo" placeholder="correo@ejemplo.com">
     </div>
+  </div>
 
-    <div class="form-group full">
+  <div class="fila-ancha" style="margin-bottom:12px;">
+    <div class="form-group">
       <label>Domicilio</label>
       <input type="text" id="m-domicilio" placeholder="Calle, número, ciudad">
     </div>
@@ -295,7 +307,7 @@
   <!-- SALUD -->
   <div class="form-section"><i class="ti ti-heart-rate-monitor"></i> Salud y Previsión</div>
 
-  <div class="form-grid" style="margin-bottom:12px;">
+  <div class="fila-compacta" style="margin-bottom:12px;">
     <div class="form-group">
       <label>AFP *</label>
       <select id="m-afp" required>
@@ -318,8 +330,10 @@
         <option>Isapre</option>
       </select>
     </div>
+  </div>
 
-    <div class="form-group full" id="isapre-grupo" style="display:none;">
+  <div class="fila-ancha" id="isapre-grupo" style="display:none;margin-bottom:12px;">
+    <div class="form-group">
       <label>Nombre de Isapre</label>
       <input type="text" id="m-isapre" placeholder="Ej: Banmédica, Cruz Blanca...">
     </div>
@@ -328,14 +342,14 @@
   <!-- RELACIÓN LABORAL -->
   <div class="form-section"><i class="ti ti-building"></i> Relación Laboral</div>
 
-  <div class="form-grid" style="margin-bottom:12px;">
-
-    <div class="form-group full">
+  <div class="fila-compacta" style="margin-bottom:12px;">
+    <div class="form-group">
       <label>Empresa Contratista (Empleador) *</label>
-      <select id="m-empresa-contratista" onchange="evaluarCampos()" style="width:100%;" required>
+      <select id="m-empresa-contratista" onchange="evaluarCampos()" required>
         <option value="">— Seleccionar empresa propia —</option>
       </select>
     </div>
+  </div>
 
     <!-- Campo Empresa Mandante eliminado — ahora vive en Contratos,
          donde se elige al generar el Contrato de cada persona (mismo
@@ -344,7 +358,8 @@
     <!-- Campo Faena eliminado — ahora vive en Contratos, donde
          realmente se usa (Hallazgo Grande #13 de la bitácora). -->
 
-    <div class="form-group full">
+  <div class="fila-compacta" style="margin-bottom:12px;">
+    <div class="form-group">
       <label>Cargo *</label>
       <select id="m-cargo" onchange="evaluarCampos()" required>
         <option value="">— Seleccionar cargo —</option>
@@ -367,7 +382,6 @@
       <input type="text" id="cargo-otro" placeholder="Especifica el cargo"
         style="display:none;margin-top:8px;">
     </div>
-
   </div>
 
   <!-- BOTONES -->
