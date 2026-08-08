@@ -61,7 +61,8 @@ function initDescuentos(){
 
 /* Alterna entre Bonificaciones y Horas Extras — únicos 2 sub-tabs que
    quedaron juntos en la página "Bonos y Horas Extras" (comparten el
-   criterio "aumentan el pago", pero son formularios distintos). */
+   criterio "aumentan el pago", pero son 2 submódulos independientes,
+   cada uno con sus propios 4 KPIs — no deben verse los 8 a la vez). */
 function switchTabBonos(tab){
   _tabBonosActivo = tab;
   ['gl-haberes','gl-jornada'].forEach(id => {
@@ -71,6 +72,10 @@ function switchTabBonos(tab){
     if(btn)   { btn.classList.toggle('activo', activo); }
     if(panel) { panel.style.display = activo ? 'block' : 'none'; }
   });
+  const kpisHaberes = ['gl-kpi-haberes','gl-kpi-hab-trabajadores','gl-kpi-hab-registros','gl-kpi-hab-promedio'];
+  const kpisJornada = ['gl-kpi-hextra','gl-kpi-jor-trabajadores','gl-kpi-jor-registros','gl-kpi-jor-recargo100'];
+  kpisHaberes.forEach(id => { const el = document.getElementById(id); if(el) el.style.display = tab==='gl-haberes' ? '' : 'none'; });
+  kpisJornada.forEach(id => { const el = document.getElementById(id); if(el) el.style.display = tab==='gl-jornada' ? '' : 'none'; });
   if(tab === 'gl-haberes') renderHaberes();
   if(tab === 'gl-jornada') renderJornada();
   _renderKPIsGL();
