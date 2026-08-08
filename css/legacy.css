@@ -86,6 +86,16 @@
     .kpi.amarillo .kpi-value{color:#D97706}
     /* BADGES */
     .badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px}
+
+    /* MODAL OVERLAY — clase compartida (Design System). Antes cada uno de
+       los 13 modales del sistema repetía este mismo bloque a mano, con
+       inconsistencias reales de verdad: el fondo variaba entre
+       rgba(0,0,0,0.5) y rgba(15,23,42,0.6) según el modal, y el z-index
+       iba de 999 a 1100 sin ningún criterio de apilado real. */
+    .modal-overlay{display:none;position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,0.6);align-items:center;justify-content:center;padding:20px}
+    /* Único caso con jerarquía real: el modal de bienvenida a Alertas debe
+       quedar siempre arriba de cualquier otro modal que ya esté abierto. */
+    .modal-overlay--top{z-index:1100}
     .badge-verde{background:#D1FAE5;color:#065F46}
     .badge-rojo{background:#FEE2E2;color:#991B1B}
     .badge-gris{background:#F1F5F9;color:#475569}
