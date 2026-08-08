@@ -339,7 +339,7 @@ async function guardarTrabajador(e){
     sistema_salud:     document.getElementById('m-salud').value,
     empresa_propia_id: document.getElementById('m-empresa-contratista')?.value || '',
     // Mandante eliminado de Registro Personal — se fija al generar el
-    // Contrato (contratos.js sincroniza mandante_id/empresa_rut/empresa
+    // Contrato (contratos.js sincroniza mandante_id — un solo campo,
     // hacia el trabajador cuando corresponda).
     funcion_cargo:     cargo || '',
     fecha_ingreso:     document.getElementById('m-fecha-ingreso')?.value || null,

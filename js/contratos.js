@@ -265,7 +265,7 @@ function precargarContrato(){
   // sincronizado de un Contrato anterior — pero sigue siendo 100%
   // editable acá, es el selector el que manda.
   const mandanteSel = document.getElementById('cp-mandante');
-  if(mandanteSel) mandanteSel.value = contratoPrevio?.mandante_id || t.mandante_id || t.empresa_rut || '';
+  if(mandanteSel) mandanteSel.value = contratoPrevio?.mandante_id || t.mandante_id || '';
   _onCambioMandanteContrato();
 
   // Precargar Cargo y Faena automáticamente desde el trabajador (vienen de Registro Personal)
@@ -445,14 +445,12 @@ function guardarContrato(){
     Object.assign(t, _leerFormularioEpp('cepp'));
     // ✅ Sincronización del Bypass de Mandante: el trabajador ya no elige
     // su Mandante en Registro Personal — se fija aquí, al guardar el
-    // Contrato, y queda reflejado en t.mandante_id (más empresa_rut/
-    // empresa por compatibilidad) para que el resto del sistema
-    // (Dashboard, Empresas, Asistencia, Trabajadores, Alertas, QR,
-    // Exportar) siga funcionando sin cambios. Se actualiza siempre al
-    // valor del Contrato más reciente/vigente.
+    // Contrato, y queda reflejado en t.mandante_id — un solo campo
+    // (Hallazgo #5, consolidado: antes se triplicaba en mandante_id/
+    // empresa_rut/empresa "por compatibilidad"; ya no hace falta, todo
+    // el sistema lee solo mandante_id). Se actualiza siempre al valor
+    // del Contrato más reciente/vigente.
     t.mandante_id  = datos.mandante_id;
-    t.empresa_rut  = datos.mandante_id;
-    t.empresa      = datos.mandante_id;
   }
   guardarLocal();
 
@@ -1857,11 +1855,9 @@ function confirmarYGenerarContratosMasivo(){
     // Contrato Individual: el trabajador refleja el Mandante de su
     // Contrato más reciente, para que el resto del sistema siga
     // funcionando sin cambios (Dashboard, Empresas, Asistencia,
-    // Trabajadores, Alertas, QR, Exportar).
+    // Trabajadores, Alertas, QR, Exportar). Un solo campo (Hallazgo #5).
     Object.assign(t, {
       mandante_id: g.mandanteId || '',
-      empresa_rut: g.mandanteId || '',
-      empresa:     g.mandanteId || '',
       epp_entregados: cfg.epp_entregados,
       epp_otro: cfg.epp_otro,
       epp_fecha_entrega: cfg.epp_fecha_entrega,

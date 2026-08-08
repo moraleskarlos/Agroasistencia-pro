@@ -9,7 +9,7 @@ function cargarTrabajadores(){
 
   const lista = trabajadores.filter(t => {
     const m       = findMandante(t);
-    const mEmp    = !fEmp || (m?.id === fEmp) || (m?.rut === fEmp) || (t.empresa_rut === fEmp) || (t.empresa === fEmp);
+    const mEmp    = !fEmp || (m?.id === fEmp) || (m?.rut === fEmp) || (t.mandante_id === fEmp);
     const mEmpProp= !fEmpProp || t.empresa_propia_id === fEmpProp;
     const mEst    = !fEst   || t.estado === fEst;
     const rutLimp = (t.rut||'').replace(/\./g,'').toLowerCase();
@@ -287,7 +287,7 @@ function renderTablaExtranjeros(){
 
     const m = findMandante(t);
     const mEmpProp = !fEmpProp || t.empresa_propia_id === fEmpProp;
-    const mEmp     = !fEmp || (m?.id === fEmp) || (m?.rut === fEmp) || (t.empresa_rut === fEmp) || (t.empresa === fEmp);
+    const mEmp     = !fEmp || (m?.id === fEmp) || (m?.rut === fEmp) || (t.mandante_id === fEmp);
     const mEst     = !fEst || t.estado === fEst;
     if(!mEmpProp || !mEmp || !mEst) return false;
 

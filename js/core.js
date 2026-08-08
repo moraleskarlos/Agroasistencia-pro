@@ -255,8 +255,8 @@ function renderDashboard(){
     barEl.innerHTML='<div style="font-size:13px;color:var(--texto3);text-align:center;padding:20px 0;">Agrega mandantes para ver el resumen</div>';
   } else {
     barEl.innerHTML=empresas.map((e,i)=>{
-      const t=trabajadores.filter(w=>(w.mandante_id||w.empresa_rut||w.empresa)===( e.id||e.rut)).length;
-      const a=trabajadores.filter(w=>(w.mandante_id||w.empresa_rut||w.empresa)===( e.id||e.rut)&&w.estado==='activo').length;
+      const t=trabajadores.filter(w=>w.mandante_id===( e.id||e.rut)).length;
+      const a=trabajadores.filter(w=>w.mandante_id===( e.id||e.rut)&&w.estado==='activo').length;
       const pct=t?Math.round(a/t*100):0;
       return`<div class="barra-row"><div class="barra-header"><span>${e.nombre}</span><span>${a}/${t} activos</span></div><div class="barra-track"><div class="barra-fill" style="width:${pct}%;background:${colors[i%colors.length]}"></div></div></div>`;
     }).join('');
@@ -364,7 +364,13 @@ function getEmpresaEmpleadora(epId){
 
 function findMandante(t){
   if(!t) return null;
-  const ref = t.mandante_id || t.empresa_rut || t.empresa || '';
+  // ✅ Hallazgo #5 — consolidado a un solo campo. Antes: t.mandante_id ||
+  // t.empresa_rut || t.empresa (triplicado, "por compatibilidad"). La
+  // migración automática (más abajo, migrarIDs()) ya rellena mandante_id
+  // en cualquier trabajador viejo que solo tuviera empresa_rut/empresa —
+  // así que a partir de acá el sistema entero puede confiar en un único
+  // campo, sin cadenas de respaldo.
+  const ref = t.mandante_id || '';
   return empresas.find(e => e.id === ref || e.rut === ref) || null;
 }
 

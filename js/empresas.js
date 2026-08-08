@@ -106,8 +106,8 @@ function renderContratistas(){
     ${empresas.map((e,i)=>{
       const[bg,fg]=colors[i%colors.length];
       const empId=e.id||e.rut;
-      const total=trabajadores.filter(t=>(t.mandante_id||t.empresa_rut||t.empresa)===empId).length;
-      const act=trabajadores.filter(t=>(t.mandante_id||t.empresa_rut||t.empresa)===empId&&t.estado==='activo').length;
+      const total=trabajadores.filter(t=>t.mandante_id===empId).length;
+      const act=trabajadores.filter(t=>t.mandante_id===empId&&t.estado==='activo').length;
       const inact=total-act;
       const pct=total?Math.round(act/total*100):0;
       const venc=estadoVencimiento(e.vigencia_contrato);
@@ -349,7 +349,7 @@ function toggleEstadoMandante(idOrRut){
 function eliminarMandante(idOrRut){
   const e = empresas.find(x => x.id === idOrRut || x.rut === idOrRut);
   if(!e) return;
-  const enUso = trabajadores.some(t => t.mandante_id === e.id || t.empresa_rut === e.rut);
+  const enUso = trabajadores.some(t => t.mandante_id === e.id || t.mandante_id === e.rut);
   if(enUso){ toast(`⚠️ ${e.nombre} tiene trabajadores asignados — reasígnalos primero`, 'error'); return; }
   if(!confirm(`¿Eliminar ${e.nombre}? Esta acción no se puede deshacer.`)) return;
   empresas = empresas.filter(x => x.id !== e.id && x.rut !== e.rut);

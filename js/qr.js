@@ -26,7 +26,7 @@ function cargarListaQR(){
   const filtro  = document.getElementById('qr-filtro-empresa')?.value || '';
   const buscar  = (document.getElementById('qr-buscar')?.value || '').toLowerCase().trim();
   let lista = filtro
-    ? trabajadores.filter(t => (t.mandante_id||t.empresa||t.empresa_rut) === filtro)
+    ? trabajadores.filter(t => t.mandante_id === filtro)
     : trabajadores;
 
   if(buscar){

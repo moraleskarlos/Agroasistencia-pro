@@ -179,8 +179,8 @@ function exportarAsistenciaExcel(){
   const rows = data.map(r => {
     const t     = trabajadores.find(x => x.rut === r.rut);
     const emp   = empresas.find(e =>
-      e.id  === (t?.mandante_id || t?.empresa || t?.empresa_rut) ||
-      e.rut === (t?.empresa || t?.empresa_rut)
+      e.id  === t?.mandante_id ||
+      e.rut === t?.mandante_id
     );
     const estado = !r.hora_entrada ? 'Pendiente' : !r.hora_salida ? 'Activo' : 'Cerrado';
 

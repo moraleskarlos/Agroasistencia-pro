@@ -86,7 +86,7 @@ function cargarAsistencia(){
   const data    = JSON.parse(localStorage.getItem(clave) || '[]');
 
   let lista = trabajadores.filter(t => t.estado === 'activo');
-  if(filtro) lista = lista.filter(t => (t.mandante_id === filtro || t.empresa_rut === filtro || t.empresa === filtro));
+  if(filtro) lista = lista.filter(t => (t.mandante_id === filtro));
   if(buscar) lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
 
   // KPIs — basados en nuevo estado
@@ -371,7 +371,7 @@ function generarReporteAsistencia(){
     data.forEach(m => {
       const t = trabajadores.find(x => x.rut === m.rut);
       if(!t) return;
-      if(filtroEmp && !(t.mandante_id === filtroEmp || t.empresa_rut === filtroEmp || t.empresa === filtroEmp)) return;
+      if(filtroEmp && !(t.mandante_id === filtroEmp)) return;
       if(buscar && !(t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar))) return;
 
       const mandante = (typeof findMandante === 'function') ? findMandante(t) : null;
@@ -448,7 +448,7 @@ function exportarAsistenciaPDF(){
   const data   = JSON.parse(localStorage.getItem(clave) || '[]');
 
   let lista = trabajadores.filter(t => t.estado === 'activo');
-  if(filtro) lista = lista.filter(t => (t.mandante_id === filtro || t.empresa_rut === filtro || t.empresa === filtro));
+  if(filtro) lista = lista.filter(t => (t.mandante_id === filtro));
   if(buscar) lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
 
   if(!lista.length){ toast('⚠️ Sin trabajadores para exportar', 'error'); return; }
