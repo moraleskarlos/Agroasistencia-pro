@@ -146,7 +146,8 @@
 
     /* Empresa Contratista puede tener razones sociales largas —
        mínimo más generoso que el resto de los selects compactos. */
-    #m-empresa-contratista{min-width:320px}
+    #m-empresa-contratista,
+    #lote-empresa-propia{min-width:320px}
 
     /* Campo suelto de texto libre (Correo, Domicilio) — no llena
        todo el ancho de la tarjeta, pero se queda con un espacio
