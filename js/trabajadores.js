@@ -66,7 +66,7 @@ function cargarTrabajadores(){
       <td style="font-size:12px;color:var(--texto2);white-space:nowrap;">
         ${t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString('es-CL') : '—'}
       </td>
-      <td style="font-size:12px;font-family:monospace;color:var(--texto2);">${t.rut||'—'}</td>
+      <td class="rut-mono">${t.rut||'—'}</td>
       <td class="wrap-ok" style="font-size:13px;font-weight:500;min-width:160px;">${t.nombre||'—'}</td>
       <td style="font-size:12px;">${t.sexo||'—'}</td>
       <td style="font-size:12px;">${t.nacionalidad||'—'}</td>
@@ -317,7 +317,7 @@ function renderTablaExtranjeros(){
     const fechaTxt  = venc ? venc.toLocaleDateString('es-CL') : '—';
 
     return `<tr>
-      <td style="font-size:12px;font-family:monospace;">${t.rut}</td>
+      <td class="rut-mono">${t.rut}</td>
       <td style="font-size:13px;font-weight:500;">${t.nombre}</td>
       <td style="font-size:12px;">${t.nacionalidad}</td>
       <td style="font-size:12px;">${t.tipo_doc_migratorio || '—'}</td>
@@ -393,7 +393,7 @@ function verPerfilTrabajador(rut){
         <div>
           <div class="sec-title" style="margin-bottom:2px;">${t.nombre}</div>
           <div class="sec-sub" style="display:flex;gap:8px;align-items:center;">
-            <span style="font-family:monospace;">${t.rut}</span>
+            <span class="rut-mono">${t.rut}</span>
             <span class="badge ${t.estado==='activo'?'badge-verde':'badge-gris'}">${t.estado==='activo'?'Activo':'Inactivo'}</span>
           </div>
         </div>

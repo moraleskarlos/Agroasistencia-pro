@@ -193,7 +193,7 @@ function renderListaLiquidaciones(){
   lista.sort((a,b) => a.nombre?.localeCompare(b.nombre));
   tbody.innerHTML = lista.map(l => `<tr>
     <td style="font-size:13px;font-weight:500;">${l.nombre}</td>
-    <td style="font-size:12px;font-family:monospace;">${l.rut}</td>
+    <td class="rut-mono">${l.rut}</td>
     <td style="font-size:12px;text-align:right;">$${l.total_haberes?.toLocaleString('es-CL')||'—'}</td>
     <td style="font-size:12px;text-align:right;color:var(--danger);">-$${l.total_descuentos?.toLocaleString('es-CL')||'—'}</td>
     <td style="font-size:13px;font-weight:600;text-align:right;color:var(--verde-dark);">$${l.liquido?.toLocaleString('es-CL')||'—'}</td>

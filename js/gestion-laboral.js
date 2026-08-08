@@ -314,7 +314,7 @@ function renderNovedades(){
 
     return `<tr id="fila-res-${f.rut.replace(/\W/g,'')}">
       <td style="font-size:13px;font-weight:600;">${f.t.nombre}</td>
-      <td style="font-size:12px;font-family:monospace;color:var(--texto2);">${f.rut}</td>
+      <td class="rut-mono">${f.rut}</td>
       <td>${alertaBadge}</td>
       <td>${novBadges}</td>
       <td style="text-align:center;font-size:13px;font-weight:500;">${f.totalDias > 0 ? f.totalDias+' día'+(f.totalDias>1?'s':'') : '—'}</td>

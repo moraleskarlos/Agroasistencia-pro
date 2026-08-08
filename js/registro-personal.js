@@ -605,7 +605,7 @@ function procesarExcel(event){
       tbody.innerHTML = datosExcel.map(t => {
         const estMig = t.fecha_venc_migratorio ? estadoDocumentoMigratorio(t.fecha_venc_migratorio) : null;
         return `<tr>
-        <td>${t.rut}</td><td>${t.nombre}</td><td>${t.nacionalidad||'—'}</td>
+        <td class="rut-mono">${t.rut}</td><td>${t.nombre}</td><td>${t.nacionalidad||'—'}</td>
         <td>${t.fecha_nacimiento||'—'}</td><td>${t.sexo||'—'}</td><td>${t.estado_civil||'—'}</td>
         <td>${t.domicilio||'—'}</td><td>${t.correo_electronico||'—'}</td>
         <td>${t.afiliacion_afp||'—'}</td><td>${t.sistema_salud||'—'}</td>

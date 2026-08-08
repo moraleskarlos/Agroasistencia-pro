@@ -954,7 +954,7 @@ function _renderListaVisualTrabajadorAnexo(){
       return `<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
           border-bottom:1px solid var(--borde);">
         <span style="font-size:13px;font-weight:500;flex:1;">${t.nombre}</span>
-        <span style="font-size:12px;font-family:monospace;color:var(--texto3);">${t.rut}</span>
+        <span class="rut-mono">${t.rut}</span>
         <span style="font-size:11px;font-weight:600;color:${tieneAnexo?'#16a34a':'var(--texto3)'};">${tieneAnexo?'con anexo previo':''}</span>
         <input type="checkbox" class="am-check-trab" value="${t.id}" ${marcados.has(t.id)?'checked':''}
           onchange="_amActualizarContador()" style="width:auto;flex-shrink:0;">
@@ -978,7 +978,7 @@ function _renderListaVisualTrabajadorAnexo(){
         ${seleccionado ? '<span style="width:6px;height:6px;border-radius:50%;background:#fff;"></span>' : ''}
       </span>
       <span style="font-size:13px;font-weight:500;flex:1;">${t.nombre}</span>
-      <span style="font-size:12px;font-family:monospace;color:var(--texto3);">${t.rut}</span>
+      <span class="rut-mono">${t.rut}</span>
       <span style="font-size:11px;font-weight:600;color:${tieneAnexo?'#16a34a':'#dc2626'};">${tieneAnexo?'con anexo':'sin anexo'}</span>
     </div>`;
   }).join('');

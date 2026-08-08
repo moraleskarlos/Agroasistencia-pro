@@ -119,7 +119,7 @@ function _renderLibroDT(lista, periodo){
     const t = trabajadores.find(x => x.rut === l.rut);
     return `<tr style="${i%2===0?'':'background:#F8FAFC'}">
       <td style="font-size:11px;white-space:nowrap;">${i+1}</td>
-      <td style="font-size:11px;font-family:monospace;white-space:nowrap;">${l.rut}</td>
+      <td class="rut-mono" style="white-space:nowrap;">${l.rut}</td>
       <td style="font-size:12px;font-weight:500;white-space:nowrap;min-width:160px;">${l.nombre}</td>
       <td style="font-size:11px;text-align:center;">${_tipoContratoLabel(l.tipo_contrato)}</td>
       <td style="font-size:11px;text-align:center;">${30-(l.dias_a_descontar||0)}</td>

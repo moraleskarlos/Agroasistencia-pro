@@ -176,7 +176,7 @@ function _renderListaVisualTrabajadorContrato(){
         ${seleccionado ? '<span style="width:6px;height:6px;border-radius:50%;background:#fff;"></span>' : ''}
       </span>
       <span style="font-size:13px;font-weight:500;flex:1;">${t.nombre}</span>
-      <span style="font-size:12px;font-family:monospace;color:var(--texto3);">${t.rut}</span>
+      <span class="rut-mono">${t.rut}</span>
       <span style="font-size:11px;font-weight:600;color:${tieneContrato?'#16a34a':'#dc2626'};">${tieneContrato?'con contrato':'sin contrato'}</span>
     </div>`;
   }).join('');
@@ -1517,7 +1517,7 @@ function renderListaMasivo(){
       ${lista.map(t => `
         <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;border-top:1px solid var(--borde);cursor:pointer;">
           <input type="checkbox" class="masivo-check-trab" data-id="${t.id}" onchange="_toggleMasivoCheck('${t.id}', this.checked)" style="width:auto;">
-          <span style="flex:1;">${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
+          <span style="flex:1;">${t.nombre} <span class="rut-mono">${t.rut}</span></span>
         </label>`).join('')}
     </div>`;
 
@@ -1780,7 +1780,7 @@ function abrirConfirmacionMasivo(g){
   if(lista){
     lista.innerHTML = g.trabajadores
       .slice().sort((a,b) => a.nombre?.localeCompare(b.nombre))
-      .map(t => `<li>${t.nombre} <span style="color:var(--texto3);font-family:monospace;">(${t.rut})</span></li>`)
+      .map(t => `<li>${t.nombre} <span class="rut-mono">(${t.rut})</span></li>`)
       .join('');
   }
 
@@ -2123,7 +2123,7 @@ function renderListaEppMasivo(){
   cont.innerHTML = lista.map(t => `
     <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;border-bottom:1px solid var(--borde);cursor:pointer;">
       <input type="checkbox" class="epp-cm-check-trab" value="${t.rut}" onchange="_eppCmActualizarContador()" style="width:auto;">
-      <span>${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span></span>
+      <span>${t.nombre} <span class="rut-mono">${t.rut}</span></span>
     </label>`).join('');
 
   // Mostrar el formulario compartido debajo de la lista (una sola vez)

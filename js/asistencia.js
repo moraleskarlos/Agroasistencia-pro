@@ -395,7 +395,7 @@ function generarReporteAsistencia(){
     tbody.innerHTML = filas.map(f => `<tr>
       <td style="font-size:12px;">${fmtFecha(f.fecha)}</td>
       <td style="font-size:13px;font-weight:500;">${f.nombre}</td>
-      <td style="font-size:12px;font-family:monospace;">${f.rut}</td>
+      <td class="rut-mono">${f.rut}</td>
       <td style="font-size:12px;">${f.mandante}</td>
       <td style="font-size:12px;">${f.hora_entrada}</td>
       <td style="font-size:12px;">${f.hora_salida}</td>
@@ -458,7 +458,7 @@ function exportarAsistenciaPDF(){
     const horasTxt = r?.horas_trabajadas != null ? r.horas_trabajadas.toFixed(1)+' h' : '—';
     const estado = !r ? 'Pendiente' : !r.hora_salida ? 'Activo' : 'Cerrado';
     return `<tr>
-      <td>${t.nombre||'—'}</td><td>${t.rut}</td>
+      <td>${t.nombre||'—'}</td><td class="rut-mono">${t.rut}</td>
       <td>${r?.hora_entrada||'—'}</td><td>${r?.hora_salida||'—'}</td>
       <td>${horasTxt}</td><td>${r?.jornada||'—'}</td><td>${estado}</td>
     </tr>`;
@@ -514,7 +514,7 @@ function buscarTrabajadorManual(){
     <div onclick="seleccionarTrabajadorManual('${t.rut}')"
       style="padding:8px 10px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--borde);"
       onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-      ${t.nombre} <span style="color:var(--texto3);font-family:monospace;font-size:11px;">${t.rut}</span>
+      ${t.nombre} <span class="rut-mono">${t.rut}</span>
     </div>`).join('');
 }
 

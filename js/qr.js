@@ -98,7 +98,7 @@ function cargarListaQR(){
           </div>
 
           <!-- RUT -->
-          <div style="flex:1;font-family:monospace;font-size:12px;color:var(--texto2);">${t.rut}</div>
+          <div class="rut-mono">${t.rut}</div>
 
           <!-- Cargo -->
           <div style="flex:1;font-size:12px;color:var(--texto2);">${t.funcion_cargo||'—'}</div>
@@ -140,7 +140,7 @@ function _tarjetaQR(t){
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}"
           style="width:150px;height:150px;">
         <div style="font-weight:700;font-size:12px;margin-top:6px;">${t.nombre}</div>
-        <div style="font-size:10px;color:#666;font-family:monospace;">${t.rut}</div>
+        <div class="rut-mono">${t.rut}</div>
         <div style="font-size:10px;color:#888;">${t.funcion_cargo||'—'}</div>
       </div>
       <div style="background:#10b981;height:8px;

@@ -143,7 +143,7 @@ function renderVacaciones(){
   tbody.innerHTML = saldos.map(s => {
     const alerta = s.dias_saldo > 20; // acumulación excesiva — riesgo de fiscalización DT
     return `<tr>
-      <td style="font-size:12px;font-family:monospace;">${s.rut}</td>
+      <td class="rut-mono">${s.rut}</td>
       <td style="font-size:13px;font-weight:500;">${s.nombre}</td>
       <td style="font-size:12px;">${fmtFecha(s.fecha_ingreso)}</td>
       <td style="font-size:12px;text-align:center;">${s.antiguedad_anios} años</td>
