@@ -753,7 +753,7 @@
 
       <!-- SELECTOR COMPARTIDO: Empresa Empleadora (Individual + Masivo) -->
       <div id="bloque-empresa-compartida" class="card" style="margin-bottom:14px;">
-        <div class="g2">
+        <div class="fila-compacta">
           <div class="f-group" id="campo-tipo-contrato-individual"><label class="form-label">Tipo de contrato</label><select class="f-input" id="c-tipo" onchange="cambiarTipoContrato()"><option value="temporada">Contrato de temporada</option><option value="indefinido">Contrato indefinido</option><option value="plazo_fijo">Contrato a plazo fijo</option></select></div>
           <div class="f-group"><label class="form-label">Empresa empleadora *</label><select class="f-input" id="c-empresa-propia" onchange="onCambioEmpresaFiltroContrato()"><option value="">— Seleccionar empresa propia —</option></select></div>
         </div>
@@ -776,21 +776,27 @@
           <div class="card" id="bloque-precargados-individual">
             <div class="card-title"><i class="ti ti-lock"></i> Datos precargados <span style="background:var(--gris-bg);color:var(--texto3);font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">solo lectura</span></div>
             <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">Datos del Trabajador</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div class="fila-mixta" style="margin-bottom:8px;">
               <div class="f-group"><label class="form-label">RUT trabajador</label><input class="f-input" id="cp-rut" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Nombre completo</label><input class="f-input" id="cp-nombre" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
+            </div>
+            <div class="fila-compacta" style="margin-bottom:8px;">
               <div class="f-group"><label class="form-label">Nacionalidad</label><input class="f-input" id="cp-nacionalidad" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Estado civil</label><input class="f-input" id="cp-estado-civil" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
+            </div>
+            <div class="fila-compacta" style="margin-bottom:10px;">
               <div class="f-group"><label class="form-label">AFP</label><input class="f-input" id="cp-afp" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Salud</label><input class="f-input" id="cp-salud" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
             </div>
             <hr style="border:none;border-top:1px solid var(--borde);margin:8px 0;">
             <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">Datos de la Empresa</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="fila-mixta" style="margin-bottom:8px;">
               <div class="f-group"><label class="form-label">RUT empresa</label><input class="f-input" id="cp-empresa-rut" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Nombre empresa</label><input class="f-input" id="cp-empresa-nombre" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr max-content;gap:8px;">
               <div class="f-group"><label class="form-label">Representante</label><input class="f-input" id="cp-rep-nombre" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
-             <div class="f-group"><label class="form-label">RUT representante</label><input class="f-input" id="cp-rep-rut" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
+              <div class="f-group"><label class="form-label">RUT representante</label><input class="f-input" id="cp-rep-rut" readonly style="background:var(--gris-bg);color:var(--texto2);min-width:140px;"></div>
             </div>
             <hr style="border:none;border-top:1px solid var(--borde);margin:8px 0;">
             <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;"><i class="ti ti-building-skyscraper"></i> Empresa Mandante</div>
@@ -809,12 +815,15 @@
           </div>
           <div class="card">
             <div class="card-title"><i class="ti ti-edit"></i> Datos del contrato <span style="background:#EAF3DE;color:#27500A;font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">editable</span></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div style="font-size:12px;color:var(--texto3);margin-bottom:10px;">
+              <i class="ti ti-clock"></i> Fecha de registro del trabajador: <strong id="c-fecha-registro-txt">—</strong>
+            </div>
+            <div class="fila-compacta" style="margin-bottom:12px;">
               <div class="f-group"><label class="form-label">Ciudad de firma</label><input class="f-input" id="c-ciudad" placeholder="Ej: Santiago" oninput="actualizarPrevia()"></div>
               <div class="f-group"><label class="form-label">Fecha de firma</label><input class="f-input" id="c-fecha-firma" type="date" oninput="actualizarPrevia()"></div>
             </div>
             <div class="form-section"><i class="ti ti-building-factory"></i> Faena</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="fila-mixta" style="margin-bottom:12px;">
               <div class="f-group">
   <label class="form-label" id="lbl-c-cargo">Función / cargo *</label>
   <input class="f-input" id="c-cargo" readonly
@@ -822,23 +831,27 @@
          placeholder="Se carga al seleccionar trabajador"
          oninput="actualizarPrevia()">
 </div>
-          <div class="f-group"><label class="form-label">Nombre de la faena *</label><input class="f-input" id="c-faena" placeholder="Ej: Cosecha temporada 2026" oninput="actualizarPrevia()"></div>
+          <div class="f-group"><label class="form-label">Nombre de la faena *</label><div id="c-faena-wrap"><input class="f-input" id="c-faena" placeholder="Ej: Cosecha temporada 2026" oninput="actualizarPrevia()"></div></div>
+            </div>
 
-              <div id="campo-temporada" class="f-group"><label class="form-label">Temporada</label><input class="f-input" id="c-temporada" placeholder="Ej: Temporada 2026" oninput="actualizarPrevia()"></div>
+            <div class="fila-compacta">
+              <div id="campo-temporada" class="f-group"><label class="form-label">Temporada</label><input class="f-input" id="c-temporada" placeholder="Ej: 2026-2027 (sin escribir la palabra Temporada)" oninput="actualizarPrevia()"></div>
               <div id="campo-fecha-termino" class="f-group"><label class="form-label" id="lbl-fecha-termino">Fecha término *</label><input class="f-input" id="c-fecha-termino" type="date" oninput="actualizarPrevia()"></div>
             </div>
               <div class="form-section"><i class="ti ti-clock"></i> Jornada</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div class="fila-compacta" style="margin-bottom:10px;">
               <div class="f-group"><label class="form-label" id="lbl-c-horas">Horas semanales (auto)</label><input class="f-input" id="c-horas" placeholder="45" type="number" readonly style="background:var(--gris-bg);"></div>
               <div class="f-group"><label class="form-label">Colación</label><input class="f-input" id="c-colacion" placeholder="30 minutos" oninput="onJornadaChange();actualizarPrevia()"></div>
             </div>
             <div id="jornada-dias" style="border:1px solid var(--borde);border-radius:var(--radius);overflow:hidden;"></div>
             <input type="hidden" id="c-distribucion">
             <div class="form-section"><i class="ti ti-currency-dollar"></i> Remuneración</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="fila-compacta" style="margin-bottom:8px;">
               <div class="f-group"><label class="form-label">Forma de remuneración</label><select class="f-input" id="c-tipo-rem" onchange="actualizarPrevia()"><option value="">— Seleccionar —</option><option value="mensual">Mensual</option><option value="diaria">Diaria (Jornal)</option></select></div>
               <div class="f-group"><label class="form-label">Monto sueldo ($)</label><input class="f-input" id="c-sueldo" type="number" placeholder="500000" oninput="autoEscribirSueldo()"></div>
-              <div class="f-group" style="grid-column:span 2"><label class="form-label">Monto en palabras</label><input class="f-input" id="c-sueldo-escrito" placeholder="Quinientos mil pesos" oninput="actualizarPrevia()"></div>
+            </div>
+            <div class="fila-ancha" style="margin-bottom:12px;">
+              <div class="f-group"><label class="form-label">Monto en palabras</label><input class="f-input" id="c-sueldo-escrito" placeholder="Quinientos mil pesos" oninput="actualizarPrevia()"></div>
             </div>
             <div class="form-section"><i class="ti ti-home"></i> Beneficios (opcional)</div>
             <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
@@ -867,30 +880,15 @@
       <!-- SUBMÓDULO CONTRATOS MASIVOS -->
       <div id="sub-tab-ct-masivo" style="display:none;">
         <div class="card" style="margin-bottom:14px;">
-          <div class="card-title"><i class="ti ti-users"></i> Contrato Masivo — mismo Cargo, mismas condiciones</div>
-          <div style="font-size:12px;color:var(--texto3);margin-bottom:12px;">
-            <i class="ti ti-info-circle"></i> Pensado para lotes homogéneos (ej. 18 cosecheros con el mismo sueldo). Un caso único (ej. un Supervisor) se sube por Contrato Individual.
+          <div class="card-title"><i class="ti ti-users"></i> Contrato Masivo</div>
+          <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#1E40AF;line-height:1.6;">
+            <i class="ti ti-info-circle"></i> Los trabajadores seleccionados recibirán las mismas condiciones de contrato. Para contratos con condiciones diferentes, usá Contrato Individual.
           </div>
-          <div class="form-grid" style="margin-bottom:12px;">
-            <div class="form-group"><label>Empresa Mandante *</label>
-              <select id="masivo-mandante" onchange="_onCambioMandanteMasivo()">
-                <option value="">— Seleccionar mandante —</option>
-              </select>
-            </div>
-            <div class="form-group"><label>Cargo *</label>
-              <select id="masivo-cargo" onchange="_onCambioCargoMasivo()">
-                <option value="">— Seleccionar cargo —</option>
-              </select>
-            </div>
-          </div>
+          <div id="masivo-pendientes-resumen" style="font-size:12px;color:var(--texto2);margin-bottom:10px;"></div>
           <div id="masivo-lista-vacio" style="display:none;padding:20px;text-align:center;color:var(--texto3);font-size:13px;">
-            Selecciona una Empresa Contratista arriba para ver sus trabajadores sin contrato.
+            Selecciona una Empresa Empleadora arriba para mostrar sus trabajadores pendientes de contrato.
           </div>
-          <div id="masivo-lista-trabajadores"></div>
-          <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;">
-            <div id="masivo-contador" style="font-size:12px;color:var(--texto3);"></div>
-            <button class="btn btn-primary btn-sm" id="btn-config-descarga-masivo" onclick="abrirConfigGrupoMasivo()" disabled><i class="ti ti-settings"></i> Configurar y generar contratos</button>
-          </div>
+          <div id="masivo-bloques"></div>
         </div>
       </div><!-- /sub-tab-ct-masivo -->
 
