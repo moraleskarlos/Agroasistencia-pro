@@ -57,9 +57,11 @@
   border-bottom: none;
 }
 
-.tabla tbody tr:nth-child(even) td {
-  background: var(--gris-bg);
-}
+/* BL-003 resuelto — se quitó el zebra striping: la regla nueva
+   coincidía en color con los inputs (var(--gris-bg)) y con el hover
+   (#F8FAFC), las tres cosas terminaban siendo el mismo tono. Se
+   dejan las filas en blanco; la línea divisoria de .tabla td ya
+   alcanza para leer la tabla fila por fila. */
 
 .tabla tr:hover td {
   background: #F8FAFC;

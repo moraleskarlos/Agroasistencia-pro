@@ -46,10 +46,12 @@
   color: var(--texto-principal-oscuro);
 }
 
-/* Pendiente de Fase 1 (prioridad Baja) */
+/* BL-002 corregido — antes 0.35 (contraste 3.08:1, insuficiente),
+   ahora 0.55 para igualar el fix que ya existía en legacy.css y que
+   quedaba pisado por esta regla al cargar components/ después. */
 .sb-logo-sub {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.55);
   margin-top: 2px;
 }
 
