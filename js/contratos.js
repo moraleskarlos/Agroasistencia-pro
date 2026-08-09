@@ -107,6 +107,7 @@ function onJornadaChange(){
 function initContratos(rutPreseleccionado){
   cargarLocal();
   cargarContratos();
+  poblarSelectsEmpresaPropia();
   poblarSelectTrabajadoresContrato();
   poblarSelectAnexoTrabajador();
   actualizarBadgesContratos();
@@ -2141,9 +2142,34 @@ function _poblarSelectEppTrabajador(){
   const sel = document.getElementById('epp-sel-trabajador');
   if(!sel) return;
   const val = sel.value;
+  const epFiltro = document.getElementById('epp-f-empresa')?.value || '';
+
+  let lista = trabajadores.slice();
+  if(epFiltro) lista = lista.filter(t => (t.empresa_propia_id || '') === epFiltro);
+
   sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>' +
-    trabajadores.map(t => `<option value="${t.rut}">${t.nombre} — ${t.rut}</option>`).join('');
+    lista.map(t => `<option value="${t.rut}">${t.nombre} — ${t.rut}</option>`).join('');
   if(val) sel.value = val;
+}
+
+/* BL-005 resuelto — Al cambiar la Empresa en EPP: refiltra el select
+   Individual y la lista Masivo, y si el trabajador ya seleccionado en
+   Individual no pertenece a la empresa recién elegida, limpia la
+   selección. Mismo patrón que onCambioEmpresaFiltroContrato() en este
+   mismo archivo. El onchange en el HTML (epp-f-empresa) ya apuntaba
+   a esta función — solo faltaba que existiera. */
+function _onCambioEmpresaEpp(){
+  const epFiltro = document.getElementById('epp-f-empresa')?.value || '';
+  const selTrabajador = document.getElementById('epp-sel-trabajador');
+  const actual = trabajadores.find(t => t.rut === selTrabajador?.value);
+
+  if(epFiltro && actual && (actual.empresa_propia_id || '') !== epFiltro){
+    selTrabajador.value = '';
+    cargarEppTrabajador();
+  }
+
+  _poblarSelectEppTrabajador();
+  renderListaEppMasivo();
 }
 
 function cambiarModoEpp(modo){
@@ -2252,10 +2278,12 @@ function guardarEppIndividual(){
 /* ── MASIVO ──────────────────────────────────────────────── */
 function renderListaEppMasivo(){
   const buscar = (document.getElementById('epp-cm-buscar')?.value || '').toLowerCase().trim();
+  const epFiltro = document.getElementById('epp-f-empresa')?.value || '';
   const cont = document.getElementById('epp-cm-lista');
   if(!cont) return;
 
   let lista = trabajadores.filter(t => t.estado === 'activo');
+  if(epFiltro) lista = lista.filter(t => (t.empresa_propia_id || '') === epFiltro);
   if(buscar) lista = lista.filter(t => t.rut?.toLowerCase().includes(buscar) || t.nombre?.toLowerCase().includes(buscar));
 
   if(!lista.length){
