@@ -55,6 +55,16 @@ const ESTADO_CIVIL_PARES = [
   ['Viudo','Viuda'],
   ['Conviviente','Conviviente'],
 ];
+const NACIONALIDAD_PARES = [
+  ['Chileno','Chilena'],
+  ['Haitiano','Haitiana'],
+  ['Colombiano','Colombiana'],
+  ['Venezolano','Venezolana'],
+  ['Peruano','Peruana'],
+  ['Boliviano','Boliviana'],
+  ['Argentino','Argentina'],
+  ['Paraguayo','Paraguaya'],
+];
 
 function _actualizarListasPorSexo(){
   const sexo   = document.getElementById('m-sexo')?.value || '';
@@ -82,6 +92,19 @@ function _actualizarListasPorSexo(){
     selCivil.innerHTML = '<option value="">— Seleccionar —</option>'
       + ESTADO_CIVIL_PARES.map(p => `<option value="${p[colIdx]}">${p[colIdx]}</option>`).join('');
     if(filaPrevia) selCivil.value = filaPrevia[colIdx];
+  }
+
+  // --- Nacionalidad ---
+  // ✅ Mismo patrón que Cargo/Estado Civil. La opción "otro" se mantiene
+  // igual en ambas formas (no tiene par masculino/femenino, es texto libre).
+  const selNac = document.getElementById('m-nacionalidad');
+  if(selNac){
+    const valorPrevio = selNac.value;
+    const filaPrevia = NACIONALIDAD_PARES.find(p => p.includes(valorPrevio));
+    selNac.innerHTML = NACIONALIDAD_PARES.map(p => `<option value="${p[colIdx]}">${p[colIdx]}</option>`).join('')
+      + '<option value="otro">Otro...</option>';
+    if(valorPrevio === 'otro') selNac.value = 'otro';
+    else if(filaPrevia) selNac.value = filaPrevia[colIdx];
   }
 }
 
@@ -158,7 +181,7 @@ function validarFormularioTrabajador(datos, idOriginal){
   if(!datos.fecha_ingreso)     return { ok:false, mensaje:'Ingresa la Fecha de Ingreso' };
 
   // Validaciones migratorias — solo si corresponde según el tipo de situación migratoria
-  if(datos.nacionalidad && datos.nacionalidad !== 'Chileno'){
+  if(esNacionalidadExtranjera(datos.nacionalidad)){
     if(!datos.tipo_doc_migratorio){
       return { ok:false, mensaje:'Selecciona la Situación Migratoria del trabajador extranjero' };
     }
@@ -358,10 +381,13 @@ async function guardarTrabajador(e){
       // Modo edición: actualizar por ID, nunca por RUT
       const idx = trabajadores.findIndex(t => t.id === idOriginal);
       if(idx >= 0) trabajadores[idx] = {...trabajadores[idx], ...datos};
-      else trabajadores.push({id: idOriginal, ...datos}); // por si el id venía de un borrador recuperado
+      // ✅ Fecha de registro (Punto 2 del reporte de Contratos): timestamp
+      // automático de cuándo se creó el trabajador, no editable. Solo se
+      // fija al crear — nunca se sobreescribe en una edición.
+      else trabajadores.push({id: idOriginal, creado_en: new Date().toISOString(), ...datos}); // por si el id venía de un borrador recuperado
     } else {
       // Modo registro nuevo: ya validamos que el RUT no existe, se crea con ID propio
-      trabajadores.push({id: crypto.randomUUID(), ...datos});
+      trabajadores.push({id: crypto.randomUUID(), creado_en: new Date().toISOString(), ...datos});
     }
     guardarLocal(); limpiarFormulario();
     _cerrarModalEditarTrabajadorSiAbierto();
@@ -383,7 +409,7 @@ async function guardarTrabajador(e){
   try{
     let err;
     if(idOriginal)({error:err}=await supabaseClient.from('trabajadores').update(datos).eq('id',idOriginal));
-    else({error:err}=await supabaseClient.from('trabajadores').insert([{id: crypto.randomUUID(), ...datos}]));
+    else({error:err}=await supabaseClient.from('trabajadores').insert([{id: crypto.randomUUID(), creado_en: new Date().toISOString(), ...datos}]));
     if(err)throw err;
     await cargarDatos(); limpiarFormulario();
     _cerrarModalEditarTrabajadorSiAbierto();
@@ -530,7 +556,7 @@ function procesarExcel(event){
         const num_doc_migratorio    = (row['N° Doc. Migratorio']    || row['num_doc_migratorio']   || '').toString().trim();
         const fecha_venc_migratorio = fmtFecha(row['Fecha Venc. Documento'] || row['fecha_venc_migratorio']);
 
-        if(nacionalidad && nacionalidad !== 'Chileno'){
+        if(esNacionalidadExtranjera(nacionalidad)){
           if(_fechaVencMigratorioObligatoria(tipo_doc_migratorio) && !fecha_venc_migratorio){
             errores.push({ fila, nombre, mensaje:`Falta la fecha de vencimiento (obligatoria para "${tipo_doc_migratorio}")`, correccion:'Completa la columna "Fecha Venc. Documento" en formato AAAA-MM-DD, o cambia la Situación Migratoria si no corresponde.' });
             return;
@@ -739,6 +765,9 @@ function confirmarImportacionMasiva(){
     // elegido al final (Opción B).
     trabajador.empresa_propia_id = loteEmpresaPropia;
     trabajador.funcion_cargo     = loteCargo;
+    // ✅ Fecha de registro (Punto 2 del reporte de Contratos) — mismo
+    // criterio que el alta individual.
+    trabajador.creado_en         = new Date().toISOString();
     trabajadores.push(trabajador);
     rutsImportados.push(trabajador.rut);
     importados++;
@@ -829,7 +858,7 @@ function mostrarCamposMigratorios(){
   const nac    = document.getElementById('m-nacionalidad')?.value || '';
   const bloque = document.getElementById('bloque-migratorio');
   if(!bloque) return;
-  const esExtranjero = nac && nac !== 'Chileno' && nac !== '';
+  const esExtranjero = esNacionalidadExtranjera(nac);
   bloque.style.display = esExtranjero ? 'block' : 'none';
   onCambioTipoDocMig();
 }

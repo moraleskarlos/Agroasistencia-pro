@@ -152,18 +152,24 @@ function _renderListaVisualTrabajadorContrato(){
     lista = lista.filter(t => (t.empresa_propia_id || '') === epFiltro);
   }
 
+  // ✅ Punto 14 del reporte de Contratos — Individual (igual que Masivo)
+  // ya no muestra trabajadores que ya tienen contrato. Editar un contrato
+  // existente se hace exclusivamente desde "Contratos Emitidos" — así
+  // quedó definido en una sesión anterior, para no arriesgar
+  // sobrescrituras accidentales desde la pantalla de creación.
+  lista = lista.filter(t => !contratos.some(c => c.trabajador_id === t.id));
+
   if(buscar){
     lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
   }
   lista.sort((a,b) => a.nombre?.localeCompare(b.nombre));
 
   if(!lista.length){
-    cont.innerHTML = `<div style="padding:18px;text-align:center;color:var(--texto3);font-size:13px;">Sin resultados</div>`;
+    cont.innerHTML = `<div style="padding:18px;text-align:center;color:var(--texto3);font-size:13px;">Sin trabajadores pendientes de contrato${epFiltro ? ' en esta empresa' : ''}.</div>`;
     return;
   }
 
   cont.innerHTML = lista.map(t => {
-    const tieneContrato = contratos.some(c => c.trabajador_id === t.id);
     const seleccionado  = valActual === t.id;
     return `<div onclick="_seleccionarTrabajadorContratoVisual('${t.id}')"
         style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
@@ -177,7 +183,6 @@ function _renderListaVisualTrabajadorContrato(){
       </span>
       <span style="font-size:13px;font-weight:500;flex:1;">${t.nombre}</span>
       <span class="rut-mono">${t.rut}</span>
-      <span style="font-size:11px;font-weight:600;color:${tieneContrato?'#16a34a':'#dc2626'};">${tieneContrato?'con contrato':'sin contrato'}</span>
     </div>`;
   }).join('');
 }
@@ -197,8 +202,8 @@ function onCambioEmpresaFiltroContrato(){
 
   _renderListaVisualTrabajadorContrato();
   precargarContrato();
-  _masivoSeleccionados.clear();
-  renderListaMasivo();
+  _masivoSeleccionados = {};
+  renderBloquesMasivo();
 }
 
 function _seleccionarTrabajadorContratoVisual(id){
@@ -245,12 +250,29 @@ function precargarContrato(){
   const t = trabajadores.find(x => x.rut === id || x.id === id);
   if(!t) return;
 
+  // ✅ Fecha de registro (Punto 2 del reporte de Contratos) — dato de
+  // trazabilidad, no editable desde acá. Trabajadores creados antes de
+  // este cambio no la tienen — se muestra "—" en ese caso.
+  const elFechaReg = document.getElementById('c-fecha-registro-txt');
+  if(elFechaReg){
+    elFechaReg.textContent = t.creado_en
+      ? new Date(t.creado_en).toLocaleDateString('es-CL', {day:'2-digit', month:'2-digit', year:'numeric'})
+      : '— (registrado antes de este cambio)';
+  }
+
   if(contratos.some(c => c.trabajador_id === t.id)){
     toast(`⚠️ ${t.nombre} ya tiene contrato — se sobrescribirá al guardar. Para un cambio puntual usa "Rectificar" en Contratos Emitidos, o un Anexo si es una condición laboral nueva`, 'error');
   }
 
   if(eppCont){
     eppCont.innerHTML = _htmlFormularioEpp('cepp', t);
+    // ✅ Punto 7 del reporte de Contratos — igual que en Contrato Masivo:
+    // estas 2 fechas ya no se piden por separado, se auto-completan con
+    // la Fecha de Firma al guardar (ver guardarContrato()).
+    const indInput = document.getElementById('cepp-irl-fecha-induccion');
+    if(indInput) indInput.closest('.form-group').style.display = 'none';
+    const eppFechaInput = document.getElementById('cepp-epp-fecha-entrega');
+    if(eppFechaInput) eppFechaInput.closest('.form-group').style.display = 'none';
   }
 
   // Precargar datos bloqueados — trabajador
@@ -285,13 +307,12 @@ function precargarContrato(){
   if(mandanteSel) mandanteSel.value = contratoPrevio?.mandante_id || t.mandante_id || '';
   _onCambioMandanteContrato();
 
-  // Precargar Cargo y Faena automáticamente desde el trabajador (vienen de Registro Personal)
+  // Precargar Cargo automáticamente desde el trabajador (viene de Registro Personal)
   const cCargo = document.getElementById('c-cargo');
-  const cFaena = document.getElementById('c-faena');
   if(cCargo) cCargo.value = t.funcion_cargo || '';
-  // Prellenado de Faena desde t.faena_obra eliminado — ese campo ya no
-  // existe en el trabajador (Hallazgo Grande #13). La Faena se define
-  // directamente aquí, en el Contrato.
+  // Faena ya no se prellena desde el trabajador (Hallazgo Grande #13) ni
+  // se escribe libre — se elige desde el selector que arma
+  // _onCambioMandanteContrato() según el Mandante recién elegido arriba.
 
   // Precargar fecha inicio desde fecha_ingreso del trabajador
   const fechaInicio = t.fecha_ingreso || '';
@@ -313,6 +334,24 @@ function _onCambioMandanteContrato(){
   set('cp-man-comuna',    mandante?.comuna);
   set('cp-man-region',    mandante?.region);
   set('cp-man-direccion', mandante ? [mandante.direccion, mandante.comuna, mandante.region].filter(Boolean).join(', ') : '');
+
+  // ✅ Punto 6 del reporte de Contratos — Faena pasa de texto libre a
+  // selector cargado según el Mandante elegido (mismo criterio que ya
+  // usa Contrato Masivo desde el rediseño del Bypass de Mandante). Se
+  // reconstruye acá porque las faenas disponibles cambian según el
+  // Mandante — mantiene el id="c-faena" para que cargarContratoEnFormulario
+  // pueda seguir precargando el valor guardado normalmente.
+  const wrapFaena = document.getElementById('c-faena-wrap');
+  if(wrapFaena){
+    const faenas = mandante?.faenas || [];
+    wrapFaena.innerHTML = faenas.length
+      ? `<select class="f-input" id="c-faena" onchange="actualizarPrevia()">
+          <option value="">— Seleccionar faena —</option>
+          ${faenas.map(f => `<option value="${f.nombre||f}">${f.nombre||f}</option>`).join('')}
+        </select>`
+      : `<input class="f-input" id="c-faena" placeholder="${mandante ? mandante.nombre+' no tiene faenas registradas' : 'Selecciona primero la Empresa Mandante'}" oninput="actualizarPrevia()">`;
+  }
+
   if(typeof actualizarPrevia === 'function') actualizarPrevia();
 }
 
@@ -459,7 +498,13 @@ function guardarContrato(){
   // Guardar EPP/IRL en la misma acción (evita un segundo viaje a la pestaña EPP/IRL)
   const t = trabajadores.find(x => x.rut === id || x.id === id);
   if(t){
-    Object.assign(t, _leerFormularioEpp('cepp'));
+    // ✅ Punto 7 del reporte de Contratos — Fecha de entrega EPP y Fecha
+    // de inducción RIOHS/IRL ya no se piden por separado, se auto-completan
+    // con la Fecha de Firma (mismo criterio que ya usa Contrato Masivo).
+    const datosEpp = _leerFormularioEpp('cepp');
+    datosEpp.epp_fecha_entrega   = datos.fecha_firma || null;
+    datosEpp.irl_fecha_induccion = datos.fecha_firma || null;
+    Object.assign(t, datosEpp);
     // ✅ Sincronización del Bypass de Mandante: el trabajador ya no elige
     // su Mandante en Registro Personal — se fija aquí, al guardar el
     // Contrato, y queda reflejado en t.mandante_id — un solo campo
@@ -486,6 +531,13 @@ function limpiarContrato(){
     'cp-rep-nombre','cp-rep-rut','cp-mandante','cp-man-rut','cp-man-comuna',
     'cp-man-region','cp-man-direccion'];
   campos.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  // Vuelve el selector de Faena a su estado por defecto (input libre,
+  // deshabilitado hasta elegir Mandante) — si quedó como <select> del
+  // trabajador anterior, no se resetea solo con .value=''.
+  const wrapFaena = document.getElementById('c-faena-wrap');
+  if(wrapFaena) wrapFaena.innerHTML = `<input class="f-input" id="c-faena" placeholder="Selecciona primero la Empresa Mandante" oninput="actualizarPrevia()">`;
+  const elFechaReg = document.getElementById('c-fecha-registro-txt');
+  if(elFechaReg) elFechaReg.textContent = '—';
   ['ben-alojamiento','ben-alimentacion','ben-transporte','ben-luz'].forEach(id => {
     const el = document.getElementById(id); if(el) el.checked = false;
   });
@@ -584,6 +636,22 @@ function cambiarTipoContrato(){
 function construirDocumentoContrato(t, emp, mandante, datos){
   const otrosMandantes = empresas.filter(e => e.id !== mandante?.id && e.estado !== 'inactivo');
 
+  // ✅ Redacción dinámica según Sexo (Registro Personal) — reemplaza la
+  // notación genérica "(a)"/"(o)" en todo el documento (contrato + anexos
+  // EPP/IRL). Si el trabajador no tiene sexo registrado (dato viejo,
+  // anterior a que existiera el campo), se usa la forma masculina como
+  // respaldo, igual que hacía la notación "(a)" antes.
+  const esMujer            = t?.sexo === 'Mujer';
+  const ElTrabajador       = esMujer ? 'La trabajadora'  : 'El trabajador';
+  const elTrabajador       = esMujer ? 'la trabajadora'  : 'el trabajador';
+  const Trabajador         = esMujer ? 'Trabajadora'     : 'Trabajador';
+  const trabajador_        = esMujer ? 'trabajadora'     : 'trabajador';
+  const nacidoTxt          = esMujer ? 'nacida'          : 'nacido';
+  const afiliadoTxt        = esMujer ? 'afiliada'        : 'afiliado';
+  const informadoTxt       = esMujer ? 'informada'       : 'informado';
+  const elTrabajadorCap    = esMujer ? 'la Trabajadora'  : 'el Trabajador';
+  const delTrabajador      = esMujer ? 'de la'           : 'del';
+
   // Fechas formateadas
   const fmtLarga = v => v ? new Date(v).toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'}) : '___________';
   const fmtCorta = v => v ? new Date(v).toLocaleDateString('es-CL') : '___________';
@@ -631,13 +699,19 @@ function construirDocumentoContrato(t, emp, mandante, datos){
   // ══════════════════════════════════════════
   const tipo = datos.tipo || 'temporada';
 
+  // ✅ Corrige "Temporada Temporada 2026" (Punto 3 del reporte de
+  // Contratos) — si el usuario ya escribió la palabra "Temporada" en el
+  // campo, se le quita antes de anteponerla nosotros. Funciona sin
+  // importar mayúsculas/minúsculas ni espacios extra.
+  const temporadaLimpia = (datos.temporada || '').replace(/^\s*temporada\s*/i, '').trim();
+
   const TITULOS = {
     temporada:  'Contrato de Trabajo Agrícola por Temporada',
     plazo_fijo: 'Contrato de Trabajo Agrícola a Plazo Fijo',
     indefinido: 'Contrato de Trabajo Agrícola Indefinido',
   };
   const SUBTITULOS = {
-    temporada:  `Temporada ${datos.temporada || '________'}`,
+    temporada:  `Temporada ${temporadaLimpia || '________'}`,
     plazo_fijo: `Vigencia hasta el ${fechaTermino}`,
     indefinido: 'Contrato de duración indefinida',
   };
@@ -657,13 +731,13 @@ function construirDocumentoContrato(t, emp, mandante, datos){
   const clausulas = [];
 
   clausulas.push({tit:'Funciones del cargo', body:`
-    <p>El trabajador(a) desempeñará la función de <strong>${datos.funcion_cargo}</strong>,
+    <p>${ElTrabajador} desempeñará la función de <strong>${datos.funcion_cargo}</strong>,
     siendo sus labores principales aquellas propias de dicho cargo.</p>
     <p>Sin perjuicio de lo anterior, podrá ejecutar labores agrícolas relacionadas con cosecha,
     poda, raleo, amarre, packing, selección, mantención de huertos, control de malezas, apoyo
     operacional agrícola y demás funciones afines que le encomiende el empleador, siempre que
     sean compatibles con la naturaleza de su cargo y dentro de su área de trabajo.</p>
-    <p>En el desempeño de sus funciones, el trabajador(a) se compromete a:</p>
+    <p>En el desempeño de sus funciones, ${elTrabajador} se compromete a:</p>
     <ol>
       <li>Cumplir fiel y oportunamente las políticas, instrucciones, reglamentos y órdenes impartidas por el empleador o sus representantes.</li>
       <li>Realizar todas las actividades que directa o indirectamente se relacionen con su labor y sean necesarias para su adecuado cumplimiento.</li>
@@ -679,7 +753,7 @@ function construirDocumentoContrato(t, emp, mandante, datos){
 
   clausulas.push({tit:'Lugar de prestación de servicios', body:`
     <p>El trabajador prestará servicios en la faena agrícola denominada
-    <strong>${datos.nombre_faena}</strong>${tipo==='temporada' ? `, correspondiente a la temporada <strong>${datos.temporada || '________'}</strong>,` : ','}
+    <strong>${datos.nombre_faena}</strong>${tipo==='temporada' ? `, correspondiente a la temporada <strong>${temporadaLimpia || '________'}</strong>,` : ','}
     ubicada en <strong>${dirMandante}</strong>,
     de la empresa mandante <strong>${mandante?.nombre || '______________'}</strong>,
     RUT <strong>${mandante?.rut || '___________'}</strong>.</p>
@@ -720,7 +794,7 @@ function construirDocumentoContrato(t, emp, mandante, datos){
     anexos o las que procedan conforme a la legislación laboral vigente.</p>`});
 
   clausulas.push({tit:'Prohibiciones', body:`
-    <p>El trabajador(a) se obliga a no incurrir en las siguientes conductas:</p>
+    <p>${ElTrabajador} se obliga a no incurrir en las siguientes conductas:</p>
     <ol>
       <li>Registrar asistencia de otro trabajador.</li>
       <li>Retirarse antes del término de la jornada sin autorización.</li>
@@ -733,10 +807,10 @@ function construirDocumentoContrato(t, emp, mandante, datos){
     en la legislación vigente.</p>`});
 
   clausulas.push({tit:'Elementos de protección personal', body:`
-    <p>El empleador proporcionará al trabajador(a) los elementos de protección personal necesarios
+    <p>El empleador proporcionará a ${elTrabajador} los elementos de protección personal necesarios
     para el desempeño de sus funciones, conforme a la Ley N°16.744 sobre Accidentes del Trabajo
     y Enfermedades Profesionales.</p>
-    <p>El trabajador(a) se obliga a utilizar correctamente dichos implementos y a mantenerlos
+    <p>${ElTrabajador} se obliga a utilizar correctamente dichos implementos y a mantenerlos
     en buen estado. En caso de término de la relación laboral, el trabajador deberá restituir
     los elementos de protección personal que le hayan sido entregados, en la medida que
     corresponda.</p>`});
@@ -780,7 +854,7 @@ function construirDocumentoContrato(t, emp, mandante, datos){
   } else {
     clausulas.push({tit:'Vigencia del contrato', body:`
       <p>El presente contrato es de carácter transitorio y se celebra para atender necesidades propias
-      de la temporada agrícola <strong>${datos.temporada || '________'}</strong>, conforme a lo
+      de la temporada agrícola <strong>${temporadaLimpia || '________'}</strong>, conforme a lo
       dispuesto en el <strong>artículo 93 del Código del Trabajo</strong>.</p>
       <p>Su vigencia se extenderá hasta el <strong>${fechaTermino}</strong>, o hasta que finalicen
       las labores que le dieron origen, lo que ocurra primero.</p>
@@ -807,13 +881,13 @@ function construirDocumentoContrato(t, emp, mandante, datos){
 
   if(tipo !== 'temporada'){
     clausulas.push({tit:'Fecha de ingreso', body:`
-      <p>Se deja constancia de que el trabajador(a) ingresó al servicio del empleador
+      <p>Se deja constancia de que ${elTrabajador} ingresó al servicio del empleador
       con fecha <strong>${fechaIngreso}</strong>.</p>`});
   }
 
   if(tipo === 'indefinido'){
     clausulas.push({tit:'Feriado anual', body:`
-      <p>El trabajador(a) tendrá derecho a un feriado anual de quince días hábiles, con
+      <p>${ElTrabajador} tendrá derecho a un feriado anual de quince días hábiles, con
       goce de remuneración íntegra, después de un año de servicio, conforme a lo dispuesto
       en el artículo 67 del Código del Trabajo. El feriado se otorgará de preferencia en
       primavera o verano, considerando las necesidades del empleador y las de la faena.</p>`});
@@ -824,7 +898,7 @@ function construirDocumentoContrato(t, emp, mandante, datos){
       necesidades de la empresa u otra causal que así lo requiera, el empleador deberá
       dar aviso previo de al menos treinta días, o pagar una indemnización sustitutiva
       equivalente a la última remuneración mensual devengada, conforme al artículo 162.</p>
-      <p>Si correspondiere, el trabajador(a) tendrá derecho a la indemnización por años
+      <p>Si correspondiere, ${elTrabajador} tendrá derecho a la indemnización por años
       de servicio establecida en el artículo 163 del Código del Trabajo, equivalente a
       treinta días de la última remuneración mensual devengada por cada año de servicio
       y fracción superior a seis meses, con un máximo de trescientos treinta días de
@@ -903,9 +977,9 @@ function construirDocumentoContrato(t, emp, mandante, datos){
     table td:first-child{ font-weight:bold; width:45%; background:#f7f7f7; }
     .check-row{ display:flex; gap:12px; flex-wrap:wrap; margin:8px 0; }
     .check-item{ display:flex; align-items:center; gap:6px; font-size:10pt; }
-    .checkbox{ width:13px; height:13px; border:1.5px solid #000;
-      display:inline-block; text-align:center; line-height:13px; font-size:10px;
-      cursor:pointer; flex-shrink:0; }
+    .checkbox{ width:16px; height:16px; border:1.8px solid #000;
+      display:inline-block; text-align:center; line-height:16px; font-size:12px;
+      font-weight:bold; font-family:Arial,sans-serif; flex-shrink:0; }
     .checkbox.checked{ background:#000; color:#fff; }
     .firma-simple{ margin-top:36px; }
     .firma-simple .firma-linea{ width:60%; margin:45px auto 6px; }
@@ -951,17 +1025,17 @@ en adelante <em>"el Empleador"</em>; y don(ña)
 <strong>${t?.nombre || '______________'}</strong>,
 RUT <strong>${t?.rut || '___________'}</strong>,
 de nacionalidad <strong>${t?.nacionalidad || '___________'}</strong>,
-nacida(o) el <strong>${fechaNac}</strong>,
+${nacidoTxt} el <strong>${fechaNac}</strong>,
 estado civil <strong>${t?.estado_civil || '___________'}</strong>,
 con domicilio en <strong>${t?.domicilio || '___________'}</strong>,
 correo electrónico <strong>${t?.correo_electronico || '___________'}</strong>,
-afiliada(o) a AFP <strong>${t?.afiliacion_afp || '___________'}</strong>
+${afiliadoTxt} a AFP <strong>${t?.afiliacion_afp || '___________'}</strong>
 y sistema de salud <strong>${t?.sistema_salud || '___________'}</strong>,
-en adelante <em>"el Trabajador(a)"</em>, se ha convenido celebrar el siguiente
+en adelante <em>"${elTrabajadorCap}"</em>, se ha convenido celebrar el siguiente
 ${tipoTexto}, el cual se regirá por el Código del Trabajo y demás disposiciones
 legales vigentes.</p>
 
-<p>Las partes acuerdan denominarse <em>"Empleador"</em> y <em>"Trabajador(a)"</em>,
+<p>Las partes acuerdan denominarse <em>"Empleador"</em> y <em>"${Trabajador}"</em>,
 respectivamente, y suscriben las siguientes cláusulas:</p>
 
 ${clausulasHTML}
@@ -970,7 +1044,7 @@ ${clausulasHTML}
   <div class="firma-box">
     <div class="firma-linea"></div>
     <div class="firma-nombre">${t?.nombre || '______________'}</div>
-    <div class="firma-rol">Trabajador(a)</div>
+    <div class="firma-rol">${Trabajador}</div>
     <div class="firma-rol">RUT: ${t?.rut || '___________'}</div>
   </div>
   <div class="firma-box">
@@ -998,9 +1072,9 @@ ${clausulasHTML}
   <div class="check-row" style="margin:16px 0;">
     ${['Legionario','Guantes','Lentes','Chaleco','Bloqueador'].map(item => {
       const marcado = (t?.epp_entregados||[]).includes(item);
-      return `<span class="check-item"><span class="checkbox${marcado?' checked':''}">${marcado?'✓':''}</span> ${item}</span>`;
+      return `<span class="check-item"><span class="checkbox${marcado?' checked':''}">${marcado?'X':''}</span> ${item}</span>`;
     }).join('\n    ')}
-    <span class="check-item"><span class="checkbox${(t?.epp_entregados||[]).includes('Otro')?' checked':''}">${(t?.epp_entregados||[]).includes('Otro')?'✓':''}</span> Otro: ${t?.epp_otro || '_______________'}</span>
+    <span class="check-item"><span class="checkbox${(t?.epp_entregados||[]).includes('Otro')?' checked':''}">${(t?.epp_entregados||[]).includes('Otro')?'X':''}</span> Otro: ${t?.epp_otro || '_______________'}</span>
   </div>
 
   <p>Declaro que los elementos entregados se encuentran en buen estado y cumplen con la
@@ -1028,16 +1102,16 @@ ${clausulasHTML}
   <strong>${emp.razon_social || '______________'}</strong>,
   RUT <strong>${emp.rut || '___________'}</strong>,
   representada por don(ña) <strong>${emp.representante || '______________'}</strong>,
-  en su calidad de representante legal, hace entrega al(la) trabajador(a)
+  en su calidad de representante legal, hace entrega a ${elTrabajador}
   <strong>${t?.nombre || '______________'}</strong>,
   RUT <strong>${t?.rut || '___________'}</strong>,
   de un ejemplar del Reglamento Interno de Orden, Higiene y Seguridad, en cumplimiento
   de lo dispuesto en el artículo 156 del Código del Trabajo.</p>
 
-  <p style="margin-bottom:10px;">El(la) trabajador(a) declara haber recibido una copia del referido reglamento, haber sido
-  informado(a) de su contenido y se compromete a cumplir las disposiciones, normas y
+  <p style="margin-bottom:10px;">${ElTrabajador} declara haber recibido una copia del referido reglamento, haber sido
+  ${informadoTxt} de su contenido y se compromete a cumplir las disposiciones, normas y
   procedimientos establecidos durante el desempeño de sus labores. Asimismo, se deja constancia
-  de que el trabajador(a) ha sido informado(a) sobre la obligación de conocer y aplicar las
+  de que ${elTrabajador} ha sido ${informadoTxt} sobre la obligación de conocer y aplicar las
   medidas preventivas de seguridad, higiene y disciplina contenidas en el Reglamento Interno,
   así como de los riesgos asociados a las labores que desempeña.</p>
 
@@ -1056,7 +1130,7 @@ ${clausulasHTML}
     <div class="firma-box">
       <div class="firma-linea"></div>
       <div class="firma-nombre">${t?.nombre || '______________'}</div>
-      <div class="firma-rol">Firma del Trabajador(a)</div>
+      <div class="firma-rol">Firma ${delTrabajador} ${Trabajador}</div>
       <div class="firma-rol">RUT: ${t?.rut || '___________'}</div>
     </div>
     <div class="firma-box">
@@ -1087,10 +1161,15 @@ ${clausulasHTML}
 
   <p><strong>1. Tipo de Inducción</strong> (marque con una X la opción correspondiente)</p>
   <div style="margin:10px 0 16px;">
-    <div style="margin-bottom:8px;" class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> &nbsp;Persona trabajadora nueva</div>
-    <div style="margin-bottom:8px;" class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> &nbsp;Persona trabajadora con ausencia prolongada</div>
-    <div style="margin-bottom:8px;" class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> &nbsp;Persona trabajadora reubicada en nuevo cargo</div>
-    <div style="margin-bottom:8px;" class="check-item"><span class="checkbox" onclick="this.classList.toggle('checked');this.textContent=this.classList.contains('checked')?'✓':''"> </span> &nbsp;Por cambio de proceso, tecnología, materiales o sustancias</div>
+    ${[
+      ['nueva', 'Persona trabajadora nueva'],
+      ['ausencia_prolongada', 'Persona trabajadora con ausencia prolongada'],
+      ['reubicada', 'Persona trabajadora reubicada en nuevo cargo'],
+      ['cambio_proceso', 'Por cambio de proceso, tecnología, materiales o sustancias'],
+    ].map(([valor, etiqueta]) => {
+      const marcado = (datos.irl_tipo || t?.irl_tipo || 'nueva') === valor;
+      return `<div style="margin-bottom:8px;" class="check-item"><span class="checkbox${marcado?' checked':''}">${marcado?'X':''}</span> &nbsp;${etiqueta}</div>`;
+    }).join('\n    ')}
   </div>
 
   <p><strong>2. Identificación de la Persona Trabajadora</strong></p>
@@ -1112,7 +1191,7 @@ ${clausulasHTML}
   </table>
 
   <p style="margin-top:16px;"><strong>4. Declaración de Recepción de IRL</strong>
-    ${t?.irl_declarado ? ' <span style="color:#0a7a35;">✅ Declarado recibido por el trabajador(a) en su ficha</span>' : ''}
+    ${t?.irl_declarado ? ' <span style="color:#0a7a35;">✅ Declarado recibido por ${elTrabajador} en su ficha</span>' : ''}
   </p>
   <p>Declaro haber recibido información clara y suficiente sobre los riesgos laborales
   asociados a mis funciones, así como respecto de las medidas preventivas y procedimientos
@@ -1130,7 +1209,7 @@ ${clausulasHTML}
     <div class="firma-box">
       <div class="firma-linea"></div>
       <div class="firma-nombre">${t?.nombre || '______________'}</div>
-      <div class="firma-rol">Firma Trabajador(a)</div>
+      <div class="firma-rol">Firma ${Trabajador}</div>
       <div class="firma-rol">RUT: ${t?.rut || '___________'}</div>
       <div class="firma-rol">Fecha: ${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</div>
     </div>
@@ -1441,10 +1520,21 @@ function _initTabContratoIndividual(){
    ════════════════════════════════════════════════════════ */
 
 /* Se llama al abrir la pestaña "Contratos Masivos" */
+/* ════════════════════════════════════════════════════════
+   CONTRATO MASIVO — rediseño completo (reporte de Contratos, Punto 13)
+   Nuevo flujo: Empresa Empleadora → bloques automáticos agrupados por
+   Cargo (ya viene de Registro Personal, sin selector manual) → el
+   usuario abre un bloque a la vez, selecciona trabajadores → Bloque 1
+   del formulario de configuración recién ahí pide Mandante (que trae
+   la Faena) — "un grupo por Mandante" es la regla, con aviso visible.
+   Reemplaza el flujo anterior donde Mandante y Cargo se elegían ANTES
+   de ver la lista de candidatos.
+   ════════════════════════════════════════════════════════ */
+
+/* Se llama al abrir la pestaña "Contratos Masivos" */
 function _initTabContratoMasivo(){
-  _masivoSeleccionados.clear();
-  _poblarCargoMasivo();
-  renderListaMasivo();
+  _masivoSeleccionados = {};
+  renderBloquesMasivo();
 }
 
 /* Un trabajador tiene contrato vigente si existe un documento tipo 'contrato' en su carpeta laboral */
@@ -1452,7 +1542,7 @@ function _tieneContratoVigente(rut){
   return (carpeta || []).some(d => d.trabajador_rut === rut && d.tipo === 'contrato');
 }
 
-let _masivoSeleccionados = new Set();
+let _masivoSeleccionados = {}; // { cargoKey: Set(id_trabajador) }
 let _configGruposActuales = [];
 
 /* Candidatos base: activos, de la Empresa Propia elegida arriba, sin Contrato vigente */
@@ -1462,121 +1552,151 @@ function _candidatosMasivoBase(){
   return trabajadores.filter(t => t.estado === 'activo' && (t.empresa_propia_id||'') === epId && !_tieneContratoVigente(t.rut));
 }
 
-/* El Cargo se arma con los cargos que realmente tienen candidatos disponibles —
-   evita ofrecer cargos vacíos y se adapta solo a los pares Cosechero/Cosechera, etc. */
-function _poblarCargoMasivo(){
-  const sel = document.getElementById('masivo-cargo');
-  if(!sel) return;
-  const val = sel.value;
-  const cargos = [...new Set(_candidatosMasivoBase().map(t => t.funcion_cargo).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-  sel.innerHTML = '<option value="">— Seleccionar cargo —</option>' + cargos.map(c => `<option value="${c}">${c}</option>`).join('');
-  if(val && cargos.includes(val)) sel.value = val;
-}
+function _cargoKeySafe(cargo){ return (cargo||'sin_cargo').replace(/[^a-zA-Z0-9]/g, '_'); }
 
-function _onCambioMandanteMasivo(){ renderListaMasivo(); }
-function _onCambioCargoMasivo(){ renderListaMasivo(); }
-
-function renderListaMasivo(){
-  _masivoSeleccionados.clear();
-  const epId  = document.getElementById('c-empresa-propia')?.value || '';
-  const manId = document.getElementById('masivo-mandante')?.value || '';
-  const cargo = document.getElementById('masivo-cargo')?.value || '';
-  const cont  = document.getElementById('masivo-lista-trabajadores');
-  const vacio = document.getElementById('masivo-lista-vacio');
+function renderBloquesMasivo(){
+  const epId    = document.getElementById('c-empresa-propia')?.value || '';
+  const cont    = document.getElementById('masivo-bloques');
+  const vacio   = document.getElementById('masivo-lista-vacio');
+  const resumen = document.getElementById('masivo-pendientes-resumen');
   if(!cont) return;
 
   if(!epId){
     cont.innerHTML = '';
-    if(vacio){ vacio.style.display = 'block'; vacio.textContent = 'Selecciona una Empresa Contratista arriba para ver sus trabajadores sin contrato.'; }
-    _masivoActualizarContador();
-    return;
-  }
-  if(!manId || !cargo){
-    cont.innerHTML = '';
-    if(vacio){ vacio.style.display = 'block'; vacio.textContent = 'Elige Empresa Mandante y Cargo para ver los trabajadores disponibles.'; }
-    _masivoActualizarContador();
+    if(vacio){ vacio.style.display = 'block'; vacio.textContent = 'Selecciona una Empresa Empleadora arriba para mostrar sus trabajadores pendientes de contrato.'; }
+    if(resumen) resumen.textContent = '';
     return;
   }
 
-  const lista = _candidatosMasivoBase().filter(t => t.funcion_cargo === cargo);
-  if(!lista.length){
+  const candidatos = _candidatosMasivoBase();
+  if(!candidatos.length){
     cont.innerHTML = '';
-    if(vacio){ vacio.style.display = 'block'; vacio.textContent = `No hay trabajadores activos sin contrato con el cargo "${cargo}" en esta empresa.`; }
-    _masivoActualizarContador();
+    if(vacio){ vacio.style.display = 'block'; vacio.textContent = 'Esta empresa no tiene trabajadores pendientes de contrato en este momento.'; }
+    if(resumen) resumen.textContent = '';
     return;
   }
   if(vacio) vacio.style.display = 'none';
 
-  lista.sort((a,b) => a.nombre?.localeCompare(b.nombre));
-  cont.innerHTML = `
-    <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border:1px solid var(--borde);border-radius:8px 8px 0 0;cursor:pointer;">
-      <input type="checkbox" id="masivo-check-todos" onchange="_toggleMasivoTodos(this.checked)" style="width:auto;">
-      <span style="font-size:13px;font-weight:600;">Seleccionar todos (${lista.length})</span>
-    </label>
-    <div style="border:1px solid var(--borde);border-top:none;border-radius:0 0 8px 8px;overflow:hidden;max-height:320px;overflow-y:auto;">
-      ${lista.map(t => `
-        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;border-top:1px solid var(--borde);cursor:pointer;">
-          <input type="checkbox" class="masivo-check-trab" data-id="${t.id}" onchange="_toggleMasivoCheck('${t.id}', this.checked)" style="width:auto;">
-          <span style="flex:1;">${t.nombre} <span class="rut-mono">${t.rut}</span></span>
-        </label>`).join('')}
-    </div>`;
-
-  _masivoActualizarContador();
-}
-
-function _toggleMasivoTodos(val){
-  document.querySelectorAll('.masivo-check-trab').forEach(c => {
-    c.checked = val;
-    if(val) _masivoSeleccionados.add(c.dataset.id); else _masivoSeleccionados.delete(c.dataset.id);
+  // Agrupar automáticamente por Cargo — sin selector manual, el dato
+  // ya viene de Registro Personal.
+  const grupos = {};
+  candidatos.forEach(t => {
+    const cargo = t.funcion_cargo || 'Sin cargo';
+    (grupos[cargo] = grupos[cargo] || []).push(t);
   });
-  _masivoActualizarContador();
+  const cargos = Object.keys(grupos).sort((a,b) => a.localeCompare(b));
+
+  if(resumen){
+    resumen.textContent = `${candidatos.length} trabajador${candidatos.length!==1?'es':''} pendiente${candidatos.length!==1?'s':''} de contrato, en ${cargos.length} grupo${cargos.length!==1?'s':''} por cargo.`;
+  }
+
+  cont.innerHTML = cargos.map(cargo => {
+    const key = _cargoKeySafe(cargo);
+    const lista = grupos[cargo].slice().sort((a,b) => a.nombre?.localeCompare(b.nombre));
+    return `
+    <div style="border:1px solid var(--borde);border-radius:8px;margin-bottom:8px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f8fafc;cursor:pointer;" onclick="_toggleBloqueMasivo('${key}')">
+        <span style="font-size:13px;font-weight:600;flex:1;">${cargo} (${lista.length})</span>
+        <i class="ti ti-chevron-down" id="chev-masivo-${key}"></i>
+      </div>
+      <div id="bloque-masivo-${key}" style="display:none;padding:12px 14px;">
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;font-weight:600;cursor:pointer;border-bottom:1px solid var(--borde);margin-bottom:6px;">
+          <input type="checkbox" onchange="_toggleTodosBloqueMasivo('${key}', this.checked)" style="width:auto;"> Seleccionar todos (${lista.length})
+        </label>
+        <div style="max-height:260px;overflow-y:auto;">
+          ${lista.map(t => `
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
+              <input type="checkbox" class="masivo-check-${key}" data-id="${t.id}" onchange="_toggleCheckBloqueMasivo('${key}','${t.id}', this.checked)" style="width:auto;">
+              <span style="flex:1;">${t.nombre} <span class="rut-mono">${t.rut}</span></span>
+            </label>`).join('')}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;">
+          <span id="contador-masivo-${key}" style="font-size:12px;color:var(--texto3);">Selecciona trabajadores para generar contratos</span>
+          <button class="btn btn-primary btn-sm" id="btn-config-masivo-${key}" onclick="abrirConfigGrupoMasivo('${key}')" disabled><i class="ti ti-settings"></i> Configurar y generar contratos</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-function _toggleMasivoCheck(id, val){
-  if(val) _masivoSeleccionados.add(id); else _masivoSeleccionados.delete(id);
+function _toggleBloqueMasivo(key){
+  const el = document.getElementById(`bloque-masivo-${key}`);
+  const chev = document.getElementById(`chev-masivo-${key}`);
+  if(!el) return;
+  const abierto = el.style.display !== 'none';
+  el.style.display = abierto ? 'none' : 'block';
+  if(chev) chev.className = abierto ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
+}
+
+function _marcarSeleccionMasivo(key, id, val){
+  if(!_masivoSeleccionados[key]) _masivoSeleccionados[key] = new Set();
+  if(val) _masivoSeleccionados[key].add(id); else _masivoSeleccionados[key].delete(id);
+}
+
+function _toggleTodosBloqueMasivo(key, val){
+  document.querySelectorAll(`.masivo-check-${key}`).forEach(c => {
+    c.checked = val;
+    _marcarSeleccionMasivo(key, c.dataset.id, val);
+  });
+  _actualizarContadorBloqueMasivo(key);
+}
+
+function _toggleCheckBloqueMasivo(key, id, val){
+  _marcarSeleccionMasivo(key, id, val);
   if(!val){
-    const todos = document.getElementById('masivo-check-todos');
+    const todos = document.querySelector(`#bloque-masivo-${key} input[type="checkbox"]:not(.masivo-check-${key})`);
     if(todos) todos.checked = false;
   }
-  _masivoActualizarContador();
+  _actualizarContadorBloqueMasivo(key);
 }
 
-function _masivoActualizarContador(){
-  const n = _masivoSeleccionados.size;
-  const contador = document.getElementById('masivo-contador');
-  if(contador) contador.textContent = n ? `${n} trabajador${n!==1?'es':''} seleccionado${n!==1?'s':''}` : 'Selecciona trabajadores para generar contratos';
-  const btn = document.getElementById('btn-config-descarga-masivo');
+function _actualizarContadorBloqueMasivo(key){
+  const n = _masivoSeleccionados[key]?.size || 0;
+  const el = document.getElementById(`contador-masivo-${key}`);
+  if(el) el.textContent = n ? `${n} trabajador${n!==1?'es':''} seleccionado${n!==1?'s':''}` : 'Selecciona trabajadores para generar contratos';
+  const btn = document.getElementById(`btn-config-masivo-${key}`);
   if(btn) btn.disabled = n === 0;
 }
 
-/* ── CONFIGURACIÓN DEL LOTE (una sola vez, no por trabajador) ───────────── */
-function abrirConfigGrupoMasivo(){
-  if(!_masivoSeleccionados.size){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
+/* ── CONFIGURACIÓN DEL GRUPO (Bloque 1: Mandante+Faena · Bloque 2:
+   condiciones · Bloque 3: documentación) ────────────────────────── */
+function abrirConfigGrupoMasivo(key){
+  const seleccionados = _masivoSeleccionados[key];
+  if(!seleccionados || !seleccionados.size){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
 
-  const manId = document.getElementById('masivo-mandante')?.value || '';
-  const cargo = document.getElementById('masivo-cargo')?.value || '';
-  const mandanteObj = empresas.find(e => e.id === manId || e.rut === manId);
-  const idsSel = Array.from(_masivoSeleccionados);
-  const trabsSel = idsSel.map(id => trabajadores.find(t => t.id === id)).filter(Boolean);
+  const candidatos = _candidatosMasivoBase();
+  const trabsSel = Array.from(seleccionados).map(id => candidatos.find(t => t.id === id)).filter(Boolean);
+  if(!trabsSel.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
+  const cargo = trabsSel[0].funcion_cargo || 'Sin cargo';
 
-  const gid = 'masivo';
-  _configGruposActuales = [{ gid, mandanteId: manId, mandanteNombre: mandanteObj?.nombre || '', cargo, trabajadores: trabsSel }];
-  const faenasDelMandante = mandanteObj?.faenas || [];
+  const gid = key;
+  _configGruposActuales = [{ gid, mandanteId: '', mandanteNombre: '', cargo, trabajadores: trabsSel }];
 
   const cont = document.getElementById('config-grupos-contenido');
   cont.innerHTML = `
     <div style="border:1px solid var(--borde);border-radius:10px;padding:14px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">${mandanteObj?.nombre||''} — ${cargo} (${trabsSel.length} trabajador${trabsSel.length!==1?'es':''})</div>
-      <div class="f-group" style="margin-bottom:10px;">
-        <label class="form-label">Faena *</label>
-        ${faenasDelMandante.length
-          ? `<select class="f-input" id="cfg-faena-${gid}">
-              <option value="">— Seleccionar faena —</option>
-              ${faenasDelMandante.map(f => `<option value="${f.nombre||f}">${f.nombre||f}</option>`).join('')}
-            </select>`
-          : `<input class="f-input" id="cfg-faena-${gid}" placeholder="Nombre de la faena (${mandanteObj?.nombre||'este mandante'} no tiene faenas registradas)">`}
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;">${cargo} (${trabsSel.length} trabajador${trabsSel.length!==1?'es':''})</div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Bloque 1 — Empresa Mandante y Faena</div>
+      <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#92400E;">
+        <i class="ti ti-alert-triangle"></i> Solo se puede ingresar un grupo por Empresa Mandante — los ${trabsSel.length} trabajadores seleccionados quedarán con el mismo Mandante.
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div class="fila-compacta" style="margin-bottom:10px;">
+        <div class="f-group">
+          <label class="form-label">Empresa Mandante *</label>
+          <select class="f-input" id="cfg-mandante-${gid}" onchange="_onCambioMandanteConfigGrupo('${gid}')">
+            <option value="">— Seleccionar mandante —</option>
+            ${empresas.map(e => `<option value="${e.id||e.rut}">${e.nombre}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="f-group" id="cfg-faena-wrap-${gid}" style="margin-bottom:14px;">
+        <label class="form-label">Faena *</label>
+        <input class="f-input" id="cfg-faena-${gid}" placeholder="Selecciona primero la Empresa Mandante">
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;border-top:1px solid var(--borde);padding-top:12px;">Bloque 2 — Condiciones del contrato</div>
+      <div class="fila-compacta" style="margin-bottom:8px;">
         <div class="f-group"><label class="form-label">Tipo de Contrato</label>
           <select class="f-input" id="cfg-tipo-${gid}" onchange="_onCambioTipoConfigGrupo('${gid}')">
             <option value="temporada">Contrato de Temporada</option>
@@ -1586,11 +1706,11 @@ function abrirConfigGrupoMasivo(){
         </div>
         <div class="f-group"><label class="form-label">Ciudad de firma</label><input class="f-input" id="cfg-ciudad-${gid}" placeholder="Ej: Santiago"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
-        <div class="f-group" id="cfg-campo-temporada-${gid}"><label class="form-label">Temporada</label><input class="f-input" id="cfg-temporada-${gid}" placeholder="Ej: Temporada 2026"></div>
+      <div class="fila-compacta" style="margin-bottom:4px;">
+        <div class="f-group" id="cfg-campo-temporada-${gid}"><label class="form-label">Temporada</label><input class="f-input" id="cfg-temporada-${gid}" placeholder="Ej: 2026-2027 (sin escribir la palabra Temporada)"></div>
         <div class="f-group" id="cfg-campo-termino-${gid}"><label class="form-label">Fecha de término</label><input class="f-input" type="date" id="cfg-termino-${gid}"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div class="fila-compacta" style="margin-bottom:8px;">
         <div class="f-group"><label class="form-label">Colación (minutos)</label><input class="f-input" id="cfg-colacion-${gid}" placeholder="30" onchange="_actualizarHorasGrupo('${gid}')"></div>
         <div class="f-group"><label class="form-label">Horas semanales (auto)</label><input class="f-input" id="cfg-horas-${gid}" readonly style="background:var(--gris-bg);"></div>
       </div>
@@ -1598,7 +1718,7 @@ function abrirConfigGrupoMasivo(){
       <div id="cfg-jornada-${gid}" style="border:1px solid var(--borde);border-radius:8px;overflow:hidden;margin-bottom:12px;"></div>
 
       <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;margin-bottom:6px;">Remuneración</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:4px;">
+      <div class="fila-compacta" style="margin-bottom:4px;">
         <div class="f-group"><label class="form-label">Fecha de Firma</label><input class="f-input" type="date" id="cfg-firma-${gid}" onchange="_actualizarAvisoFirmaGrupo('${gid}')"></div>
         <div class="f-group"><label class="form-label">Forma de Pago</label>
           <select class="f-input" id="cfg-formapago-${gid}">
@@ -1607,10 +1727,13 @@ function abrirConfigGrupoMasivo(){
             <option value="diaria">Diaria (Jornal)</option>
           </select>
         </div>
+      </div>
+      <div class="fila-ancha" style="margin-bottom:4px;">
         <div class="f-group"><label class="form-label">Valor ($)</label><input class="f-input" type="number" id="cfg-valor-${gid}" placeholder="450000"></div>
       </div>
       <div id="cfg-aviso-firma-${gid}" style="display:none;font-size:11px;color:var(--danger);background:#FEF2F2;border-radius:6px;padding:6px 10px;margin-bottom:8px;"></div>
 
+      <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;border-top:1px solid var(--borde);padding-top:12px;">Bloque 3 — Documentación y Prevención</div>
       <div id="cfg-epp-${gid}"></div>
     </div>`;
 
@@ -1625,23 +1748,28 @@ function abrirConfigGrupoMasivo(){
     if(indInput) indInput.closest('.form-group').style.display = 'none';
     const eppFechaInput = document.getElementById(`cfg-${gid}-epp-fecha-entrega`);
     if(eppFechaInput) eppFechaInput.closest('.form-group').style.display = 'none';
-    // Selector de Tipo de Inducción RIOHS/IRL (formulario oficial)
-    if(indInput){
-      const tipoInduccionHTML = `
-        <div class="f-group" style="margin-bottom:10px;">
-          <label class="form-label">Tipo de Inducción</label>
-          <select class="f-input" id="cfg-${gid}-irl-tipo">
-            <option value="nueva">Persona trabajadora nueva</option>
-            <option value="ausencia_prolongada">Persona trabajadora con ausencia prolongada</option>
-            <option value="reubicada">Persona trabajadora reubicada en nuevo cargo</option>
-            <option value="cambio_proceso">Por cambio de proceso, tecnología, materiales o sustancias</option>
-          </select>
-        </div>`;
-      indInput.closest('.form-grid').insertAdjacentHTML('beforebegin', tipoInduccionHTML);
-    }
   }
 
   document.getElementById('modal-config-grupos-masivo').style.display = 'flex';
+}
+
+/* Bloque 1 — al elegir Mandante, trae su Faena automáticamente (mismo
+   criterio que Contrato Individual desde el Punto 6 del reporte). */
+function _onCambioMandanteConfigGrupo(gid){
+  const sel = document.getElementById(`cfg-mandante-${gid}`);
+  const mandante = empresas.find(e => (e.id||e.rut) === sel?.value);
+  const g = _configGruposActuales.find(x => x.gid === gid);
+  if(g){ g.mandanteId = sel?.value || ''; g.mandanteNombre = mandante?.nombre || ''; }
+
+  const wrap = document.getElementById(`cfg-faena-wrap-${gid}`);
+  if(!wrap) return;
+  const faenas = mandante?.faenas || [];
+  wrap.innerHTML = `<label class="form-label">Faena *</label>` + (faenas.length
+    ? `<select class="f-input" id="cfg-faena-${gid}">
+        <option value="">— Seleccionar faena —</option>
+        ${faenas.map(f => `<option value="${f.nombre||f}">${f.nombre||f}</option>`).join('')}
+      </select>`
+    : `<input class="f-input" id="cfg-faena-${gid}" placeholder="${mandante ? mandante.nombre+' no tiene faenas registradas' : 'Selecciona primero la Empresa Mandante'}">`);
 }
 
 function cerrarModalConfigGruposMasivo(){
@@ -1738,6 +1866,7 @@ function generarContratosGrupoMasivo(){
   if(!g){ toast('⚠️ Vuelve a abrir "Configurar y generar contratos"', 'error'); return; }
   const gid = g.gid;
 
+  const mandanteSel = document.getElementById(`cfg-mandante-${gid}`)?.value;
   const tipo = document.getElementById(`cfg-tipo-${gid}`)?.value;
   const ciudad = document.getElementById(`cfg-ciudad-${gid}`)?.value.trim();
   const termino = document.getElementById(`cfg-termino-${gid}`)?.value;
@@ -1747,6 +1876,7 @@ function generarContratosGrupoMasivo(){
   const formaPago = document.getElementById(`cfg-formapago-${gid}`)?.value;
   const valor = document.getElementById(`cfg-valor-${gid}`)?.value;
   const faena = document.getElementById(`cfg-faena-${gid}`)?.value.trim();
+  if(!mandanteSel){ toast(`⚠️ Selecciona la Empresa Mandante para "${g.cargo}"`, 'error'); return; }
   if(!faena){ toast(`⚠️ Ingresa/selecciona la Faena para "${g.cargo}"`, 'error'); return; }
   if(!ciudad){ toast(`⚠️ Ingresa la ciudad de firma para "${g.cargo}"`, 'error'); return; }
   if(tipo !== 'indefinido' && !termino){ toast(`⚠️ Ingresa la fecha de término para "${g.cargo}"`, 'error'); return; }
@@ -1905,9 +2035,12 @@ function confirmarYGenerarContratosMasivo(){
   toast(`✅ ${generados} contrato${generados!==1?'s':''} generado${generados!==1?'s':''}`, 'exito');
 
   _abrirVentanaContratosMasivo(contenidos);
-  _masivoSeleccionados.clear();
-  _poblarCargoMasivo();
-  renderListaMasivo();
+  // Este bloque (cargo) queda limpio — si a alguno le queda gente sin
+  // contrato todavía, renderBloquesMasivo() lo va a mostrar de nuevo con
+  // el conteo actualizado (los recién contratados ya no aparecen, por
+  // _tieneContratoVigente()).
+  delete _masivoSeleccionados[gid];
+  renderBloquesMasivo();
 }
 
 
@@ -1963,9 +2096,9 @@ function _abrirVentanaContratosMasivo(contenidos){
     table td:first-child{ font-weight:bold; width:45%; background:#f7f7f7; }
     .check-row{ display:flex; gap:12px; flex-wrap:wrap; margin:8px 0; }
     .check-item{ display:flex; align-items:center; gap:6px; font-size:10pt; }
-    .checkbox{ width:13px; height:13px; border:1.5px solid #000;
-      display:inline-block; text-align:center; line-height:13px; font-size:10px;
-      cursor:pointer; flex-shrink:0; }
+    .checkbox{ width:16px; height:16px; border:1.8px solid #000;
+      display:inline-block; text-align:center; line-height:16px; font-size:12px;
+      font-weight:bold; font-family:Arial,sans-serif; flex-shrink:0; }
     .checkbox.checked{ background:#000; color:#fff; }
     .firma-simple{ margin-top:36px; }
     .firma-simple .firma-linea{ width:60%; margin:45px auto 6px; }
@@ -2051,7 +2184,7 @@ function _htmlFormularioEpp(prefix, datos, soloEpp){
 
   return bloqueEpp + `
     <div class="form-section"><i class="ti ti-notebook"></i> RIOHS / Inducción (IRL)</div>
-    <div class="form-grid" style="margin-bottom:14px;">
+    <div class="form-grid" style="margin-bottom:10px;">
       <div class="form-group">
         <label>Fecha de inducción</label>
         <input type="date" id="${prefix}-irl-fecha-induccion" value="${datos.irl_fecha_induccion||''}">
@@ -2060,6 +2193,15 @@ function _htmlFormularioEpp(prefix, datos, soloEpp){
         <input type="checkbox" id="${prefix}-irl-declarado" ${datos.irl_declarado?'checked':''} style="width:auto;">
         <label style="margin:0;">Declara haber recibido RIOHS/IRL</label>
       </div>
+    </div>
+    <div class="f-group" style="margin-bottom:10px;">
+      <label class="form-label">Tipo de Inducción</label>
+      <select class="f-input" id="${prefix}-irl-tipo">
+        <option value="nueva" ${(!datos.irl_tipo||datos.irl_tipo==='nueva')?'selected':''}>Persona trabajadora nueva</option>
+        <option value="ausencia_prolongada" ${datos.irl_tipo==='ausencia_prolongada'?'selected':''}>Persona trabajadora con ausencia prolongada</option>
+        <option value="reubicada" ${datos.irl_tipo==='reubicada'?'selected':''}>Persona trabajadora reubicada en nuevo cargo</option>
+        <option value="cambio_proceso" ${datos.irl_tipo==='cambio_proceso'?'selected':''}>Por cambio de proceso, tecnología, materiales o sustancias</option>
+      </select>
     </div>`;
 }
 
@@ -2076,6 +2218,7 @@ function _leerFormularioEpp(prefix){
   if(campoInduccion){
     datos.irl_fecha_induccion = campoInduccion.value || null;
     datos.irl_declarado = document.getElementById(`${prefix}-irl-declarado`)?.checked || false;
+    datos.irl_tipo = document.getElementById(`${prefix}-irl-tipo`)?.value || 'nueva';
   }
   return datos;
 }

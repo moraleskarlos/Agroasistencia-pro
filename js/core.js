@@ -146,7 +146,7 @@ function irA(idPagina, botonEl) {
       if(idPagina === 'prevision'       || idPagina === 'p-prevision'){       initIndicadores(); initPrevired(); switchTabPrevision('rem-indicadores'); }
       if(idPagina === 'centralizacion'  || idPagina === 'p-centralizacion'){  initCentralizacion(); }
       if(idPagina === 'finiquitos'      || idPagina === 'p-finiquitos'){      initFiniquitos(); }
-      if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); poblarSelectsEmpresaPropia(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>t.nacionalidad&&t.nacionalidad!=='Chileno'&&t.estado==='activo')); }
+      if(idPagina === 'trabajadores' || idPagina === 'p-trabajadores'){ poblarSelects(); poblarSelectsEmpresaPropia(); cargarTrabajadores(); actualizarBadgeExtranjeros(trabajadores.filter(t=>esNacionalidadExtranjera(t.nacionalidad)&&t.estado==='activo')); }
       if(idPagina === 'registro'      || idPagina === 'p-registro'){      poblarSelects(); poblarSelectsEmpresaPropia(); switchTabRegistro('individual'); }
       if(idPagina === 'p-perfil-trabajador'){ /* contenido se carga desde verPerfilTrabajador */ }
       if(idPagina === 'contratistas' || idPagina === 'p-contratistas'){ switchTabEmpresas(tabEmpresasActivo||'mis-empresas'); }
@@ -384,6 +384,16 @@ function getEmpresaEmpleadora(epId){
   return normalizarEmpresa(ep || cfg.empresa);
 }
 
+/* ✅ Nacionalidad femenina (Chilena, además de Chileno) — antes el
+   sistema solo tenía "Chileno" como valor posible, así que 9 lugares
+   distintos comparaban literal contra ese string para detectar
+   "extranjero". Con la versión femenina agregada, hay que reconocer
+   ambas formas — este helper único evita repetir la lista en cada
+   archivo (mismo criterio que ya usamos con findMandante). */
+function esNacionalidadExtranjera(nacionalidad){
+  return !!nacionalidad && nacionalidad !== 'Chileno' && nacionalidad !== 'Chilena';
+}
+
 function findMandante(t){
   if(!t) return null;
   // ✅ Hallazgo #5 — consolidado a un solo campo. Antes: t.mandante_id ||
@@ -440,6 +450,15 @@ function migrarIDs(){
   // Asignar id a empresas que no lo tienen (datos legacy)
   let cambios = false;
   empresas.forEach(e => {
+    // ✅ Punto 6 del reporte de Contratos — el catálogo de regiones ya
+    // tiene el nombre oficial completo desde el cierre de Empresas; esto
+    // corrige el dato VIEJO que haya quedado guardado con el nombre
+    // truncado de antes. Solo se verificó la VI Región hasta ahora — si
+    // aparece otro caso truncado, agregar acá mismo.
+    if(e.region === 'VI Región del Libertador'){
+      e.region = "VI Región del Libertador General Bernardo O'Higgins";
+      cambios = true;
+    }
     if(!e.id){ e.id = crypto.randomUUID(); cambios = true; }
   });
   trabajadores.forEach(t => {
@@ -467,13 +486,16 @@ function poblarSelects(){
   // Selects de mandantes (antes "contratistas")
   // ✅ Bypass de Mandante: m-empresa (Registro Personal individual) y
   // lote-mandante (carga masiva de Registro Personal) ya no existen —
-  // el Mandante se elige en Contratos. Se agregan cp-mandante
-  // (Contrato Individual) y masivo-mandante (Contrato Masivo).
-  const ids=['cp-mandante','masivo-mandante','filtro-empresa','filtro-empresa-ext','asist-empresa','qr-filtro-empresa'];
+  // el Mandante se elige en Contratos. cp-mandante es del Contrato
+  // Individual. El de Contrato Masivo (masivo-mandante) tampoco existe
+  // más como select fijo (Punto 13 del reporte de Contratos) — ahora
+  // se arma dinámicamente por bloque dentro de abrirConfigGrupoMasivo(),
+  // que ya rellena sus opciones directo desde `empresas` al crear el HTML.
+  const ids=['cp-mandante','filtro-empresa','filtro-empresa-ext','asist-empresa','qr-filtro-empresa'];
   ids.forEach(id=>{
     const el=document.getElementById(id); if(!el)return;
     const val=el.value;
-    const isFilter=(id!=='cp-mandante' && id!=='masivo-mandante');
+    const isFilter=(id!=='cp-mandante');
     el.innerHTML=(isFilter
       ?'<option value="">Todos los mandantes</option>'
       :'<option value="">— Seleccionar mandante —</option>'
