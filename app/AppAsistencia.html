@@ -408,10 +408,17 @@ function hacerLogin(){
     if(adminUser && user === adminUser && pass === adminPass) rolValido = 'admin';
   }
 
-  // 3. Operadores — estructura actualizada cfg.usuarios.operadores
+  // 3. Operadores — estructura actualizada cfg.usuarios.operadores.
+  // El operador queda acotado a su propio mandante_rut (asignado en
+  // Configuración) — antes solo se validaba usuario/contraseña, sin
+  // comprobar que coincidiera con el mandante elegido en este login.
   if(!rolValido){
     const operadores = cfg.usuarios?.operadores || [];
-    const op = operadores.find(o => o.usuario?.toLowerCase() === user && o.password === pass);
+    const empresaSeleccionada = (Array.isArray(empresas) ? empresas : []).find(e => (e.id||e.rut) === mandanteId);
+    const op = operadores.find(o =>
+      o.usuario?.toLowerCase() === user && o.password === pass &&
+      o.mandante_rut === empresaSeleccionada?.rut
+    );
     if(op) rolValido = 'operador';
   }
 
