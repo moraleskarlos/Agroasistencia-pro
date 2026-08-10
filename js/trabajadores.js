@@ -423,8 +423,8 @@ function switchTabPerfil(tab){
   if(tab === 'carpeta' && _perfil_rut_actual) _renderCarpetaTrabajador(_perfil_rut_actual);
 }
 
-function _renderDatosPersonalesPerfil(t){
-  const cont = document.getElementById('perfil-datos-resumen');
+function _renderDatosPersonalesPerfil(t, contenedorId){
+  const cont = document.getElementById(contenedorId || 'perfil-datos-resumen');
   if(!cont) return;
 
   const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);

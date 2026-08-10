@@ -301,6 +301,7 @@ function cargarEnFormulario(t){
   if(idField) idField.value = t.id;
 
   document.getElementById('btn-guardar-txt').textContent = 'Actualizar trabajador';
+  _actualizarFichaPreviewRegistro();
 }
 
 function limpiarFormulario(){
@@ -310,6 +311,7 @@ function limpiarFormulario(){
   document.getElementById('btn-guardar-txt').textContent='Registrar trabajador';
   evaluarCampos();
   _borrarBorrador();
+  _actualizarFichaPreviewRegistro();
 }
 
 function evaluarCampos(){
@@ -339,17 +341,14 @@ function evaluarCampos(){
   }
 }
 
-async function guardarTrabajador(e){
-  e.preventDefault();
+function _leerDatosFormularioRegistro(){
   let nac=document.getElementById('m-nacionalidad').value;
   if(nac==='otro')nac=document.getElementById('m-otra-nac').value.trim();
 
   let cargo = document.getElementById('m-cargo').value;
   if(cargo === 'otro') cargo = document.getElementById('cargo-otro').value.trim();
 
-  const idOriginal = document.getElementById('m-rut-original')?.value || '';
-
-  const datos={
+  return {
     rut:               document.getElementById('m-rut').value.trim(),
     nombre:            document.getElementById('m-nombre').value.trim(),
     nacionalidad:      nac,
@@ -372,6 +371,12 @@ async function guardarTrabajador(e){
     num_doc_migratorio:    document.getElementById('m-num-doc-mig')?.value.trim() || null,
     fecha_venc_migratorio: document.getElementById('m-fecha-venc-mig')?.value || null,
   };
+}
+
+async function guardarTrabajador(e){
+  e.preventDefault();
+  const idOriginal = document.getElementById('m-rut-original')?.value || '';
+  const datos = _leerDatosFormularioRegistro();
 
   const validacion = validarFormularioTrabajador(datos, idOriginal);
   if(!validacion.ok){ toast(`⚠️ ${validacion.mensaje}`,'error'); return; }
@@ -1001,6 +1006,7 @@ function _recuperarBorrador(){
   evaluarCampos();
   mostrarCamposMigratorios();
   onCambioTipoDocMig();
+  _actualizarFichaPreviewRegistro();
 
   const banner = document.getElementById('rp-banner-borrador');
   if(banner) banner.remove();
@@ -1019,6 +1025,8 @@ function _initBorradorAutosave(){
   form.dataset.borradorInit = '1';
   form.addEventListener('input', _autoguardarBorrador);
   form.addEventListener('change', _autoguardarBorrador);
+  form.addEventListener('input', _actualizarFichaPreviewRegistro);
+  form.addEventListener('change', _actualizarFichaPreviewRegistro);
   document.getElementById('m-fecha-venc-mig')?.addEventListener('input', _actualizarSemaforoMigratorio);
 
   // RP-004: la fecha de nacimiento nunca puede ser futura
@@ -1026,6 +1034,15 @@ function _initBorradorAutosave(){
   if(fechaNac) fechaNac.max = new Date().toISOString().split('T')[0];
 
   _verificarBorradorPendiente();
+  _actualizarFichaPreviewRegistro(); // primer render (formulario vacío o borrador recuperado)
+}
+
+/* Ficha en vivo — reutiliza _renderDatosPersonalesPerfil() (trabajadores.js)
+   con los datos que se van completando en el formulario, sin guardar. */
+function _actualizarFichaPreviewRegistro(){
+  if(typeof _renderDatosPersonalesPerfil !== 'function') return;
+  const datos = _leerDatosFormularioRegistro();
+  _renderDatosPersonalesPerfil(datos, 'registro-ficha-preview');
 }
 
 if(document.readyState === 'loading'){
