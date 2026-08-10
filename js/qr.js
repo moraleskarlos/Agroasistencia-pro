@@ -123,18 +123,18 @@ function cargarListaQR(){
 
 /* Construye el HTML de una tarjeta de credencial QR para un trabajador */
 function _tarjetaQR(t){
-  const url      = `${window.location.origin}${window.location.pathname}?rut=${encodeURIComponent(t.rut)}`;
-  const mandante = findMandante(t);
-  const empPrincipal  = cfg.empresa?.razon_social || 'AgroContratista';
-  const nombreMandante = mandante?.nombre || empPrincipal;
+  const url     = `${window.location.origin}${window.location.pathname}?rut=${encodeURIComponent(t.rut)}`;
+  const logoUrl = `${window.location.origin}${window.location.pathname.replace(/[^/]+$/,'')}img/logo-icon.png`;
 
   return `
     <div style="border:2px solid #0f2942;border-radius:12px;overflow:hidden;
       width:100%;max-width:6cm;text-align:center;page-break-inside:avoid;background:#fff;
       display:flex;flex-direction:column;margin:0 auto;">
       <div style="background:#0f2942;color:#fff;padding:7px;font-size:11px;
-        font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
-        ${nombreMandante}
+        font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;
+        -webkit-print-color-adjust:exact;print-color-adjust:exact;">
+        <img src="${logoUrl}" alt="" style="width:14px;height:14px;object-fit:contain;flex-shrink:0;">
+        AgroContratista
       </div>
       <div style="padding:10px 8px;flex:1;">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}"
@@ -195,7 +195,7 @@ function cerrarModalQR(){
 function imprimirQRDesdeModal(){
   if(!_trabajadores_modal_qr.length){ toast('⚠️ Nada para imprimir', 'error'); return; }
 
-  const empPrincipal = cfg.empresa?.razon_social || 'AgroContratista';
+  const empPrincipal = 'AgroContratista';
   const cards = _trabajadores_modal_qr.map(t => _tarjetaQR(t)).join('');
 
   const win = window.open('', '_blank');

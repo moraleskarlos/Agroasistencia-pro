@@ -1,10 +1,13 @@
 /* ════ ASISTENCIA ════ */
 
 function initAsistencia(){
-  document.getElementById('asist-fecha').value = new Date().toISOString().split('T')[0];
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('asist-fecha-desde').value = hoy;
+  document.getElementById('asist-fecha-hasta').value = hoy;
   const manualFecha = document.getElementById('manual-fecha');
-  if(manualFecha) manualFecha.value = new Date().toISOString().split('T')[0];
+  if(manualFecha) manualFecha.value = hoy;
   switchTabAsistencia('dia');
+  cambiarModoManualAsistencia('individual');
   cargarAsistencia();
 }
 
@@ -18,26 +21,6 @@ function switchTabAsistencia(tab){
   document.getElementById('tab-asist-manual').style.background = esDia ? 'none' : 'var(--azul)';
   document.getElementById('sub-tab-asist-dia').style.display = esDia ? '' : 'none';
   document.getElementById('sub-tab-asist-manual').style.display = esDia ? 'none' : '';
-}
-
-/* Muestra/oculta el bloque plegable de "Ver rango de fechas" (ex-Reportes),
-   dentro de la misma pestaña Asistencia del Día. */
-function toggleRangoFechasAsistencia(){
-  const bloque = document.getElementById('bloque-rango-fechas-asist');
-  if(!bloque) return;
-  const abierto = bloque.style.display !== 'none';
-  bloque.style.display = abierto ? 'none' : 'block';
-  if(!abierto){
-    if(typeof poblarSelects === 'function') poblarSelects();
-    const selRep = document.getElementById('rep-asist-empresa');
-    const selReg = document.getElementById('asist-empresa');
-    if(selRep && selReg){
-      const val = selRep.value;
-      selRep.innerHTML = selReg.innerHTML;
-      if(val) selRep.value = val;
-    }
-    if(!document.getElementById('rep-asist-inicio').value) rangoRapidoAsistencia('semana');
-  }
 }
 
 function calcularHoras(entrada, salida){
@@ -78,9 +61,79 @@ function badgeEstado(registro){
   return                             '<span class="badge badge-verde">Cerrado</span>';
 }
 
+/* ════════════════════════════════════════════════════════
+   ASISTENCIA DEL DÍA — unificada con "Ver rango de fechas"
+   Si Desde === Hasta: vista de un solo día, editable (marcar,
+   corregir, cierre masivo de turno).
+   Si Desde !== Hasta: vista de rango, de solo lectura, con el
+   detalle agregado del período (antes era un reporte aparte).
+   ════════════════════════════════════════════════════════ */
 function cargarAsistencia(){
+  const desde = document.getElementById('asist-fecha-desde')?.value;
+  const hasta = document.getElementById('asist-fecha-hasta')?.value;
+  if(!desde || !hasta) return;
+
+  if(desde > hasta){
+    toast('⚠️ "Desde" no puede ser posterior a "Hasta"', 'error');
+    return;
+  }
+
+  if(desde === hasta) _renderAsistenciaDia(desde);
+  else _renderAsistenciaRango(desde, hasta);
+}
+
+function toggleMenuRangoAsistencia(){
+  const menu = document.getElementById('menu-rango-asist');
+  if(!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+/* Atajos rápidos de rango — fijan Desde/Hasta y recargan */
+function rangoRapidoAsistencia(tipo){
+  const hoy = new Date();
+  const fmt = d => d.toISOString().slice(0,10);
+  let inicio, fin;
+
+  if(tipo === 'hoy'){
+    inicio = fin = new Date(hoy);
+  } else if(tipo === 'ayer'){
+    inicio = fin = new Date(hoy); inicio.setDate(inicio.getDate()-1); fin = new Date(inicio);
+  } else if(tipo === 'semana'){
+    const diaSemana = (hoy.getDay() + 6) % 7; // lunes=0
+    inicio = new Date(hoy); inicio.setDate(hoy.getDate() - diaSemana);
+    fin = new Date(hoy);
+  } else if(tipo === 'semana_pasada'){
+    const diaSemana = (hoy.getDay() + 6) % 7;
+    fin = new Date(hoy); fin.setDate(hoy.getDate() - diaSemana - 1);
+    inicio = new Date(fin); inicio.setDate(fin.getDate() - 6);
+  } else if(tipo === 'mes'){
+    inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    fin = new Date(hoy);
+  } else if(tipo === 'mes_pasado'){
+    inicio = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
+    fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+  }
+
+  document.getElementById('asist-fecha-desde').value = fmt(inicio);
+  document.getElementById('asist-fecha-hasta').value = fmt(fin);
+  toggleMenuRangoAsistencia();
+  cargarAsistencia();
+}
+
+function _fechasEnRango(inicio, fin){
+  const fechas = [];
+  const d = new Date(inicio + 'T00:00:00');
+  const dFin = new Date(fin + 'T00:00:00');
+  while(d <= dFin){
+    fechas.push(d.toISOString().slice(0,10));
+    d.setDate(d.getDate()+1);
+  }
+  return fechas;
+}
+
+/* ── Vista de un solo día (editable) ─────────────────────── */
+function _renderAsistenciaDia(fecha){
   const filtro  = document.getElementById('asist-empresa').value;
-  const fecha   = document.getElementById('asist-fecha').value;
   const buscar  = (document.getElementById('asist-buscar')?.value || '').toLowerCase().trim();
   const clave   = 'asistencia_' + fecha;
   const data    = JSON.parse(localStorage.getItem(clave) || '[]');
@@ -89,30 +142,46 @@ function cargarAsistencia(){
   if(filtro) lista = lista.filter(t => (t.mandante_id === filtro));
   if(buscar) lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
 
-  // KPIs — basados en nuevo estado
-  let pendientes = 0, activos = 0, cerrados = 0;
+  let activos = 0, cerrados = 0;
   lista.forEach(t => {
     const r = data.find(x => x.rut === t.rut);
-    if(!r)             pendientes++;
-    else if(!r.hora_salida) activos++;
-    else               cerrados++;
+    if(r){ if(!r.hora_salida) activos++; else cerrados++; }
   });
-
-  document.getElementById('asist-total').textContent      = lista.length;
-  document.getElementById('asist-presentes').textContent  = activos;
-  document.getElementById('asist-media').textContent      = cerrados;
   const anticipadas = data.filter(r => {
     const h = r.horas_trabajadas;
     return h !== null && h !== undefined && h > 0 && h <= 5;
   }).length;
-  const elAnt = document.getElementById('asist-anticipada');
-  if(elAnt) elAnt.textContent = anticipadas;
 
-  // Actualizar labels KPIs
-  const lPresentes = document.getElementById('asist-label-presentes');
-  const lMedia     = document.getElementById('asist-label-media');
-  if(lPresentes) lPresentes.textContent = 'Activos';
-  if(lMedia)     lMedia.textContent     = 'Cerrados';
+  const kpis = document.getElementById('asist-kpi-grid');
+  if(kpis) kpis.innerHTML = `
+    <div class="kpi azul"><div class="kpi-label">Trabajadores</div><div class="kpi-value">${lista.length}</div><div class="kpi-sub">activos ese día</div></div>
+    <div class="kpi verde"><div class="kpi-label">Activos</div><div class="kpi-value">${activos}</div><div class="kpi-sub">jornada en curso</div></div>
+    <div class="kpi"><div class="kpi-label">Cerrados</div><div class="kpi-value">${cerrados}</div><div class="kpi-sub">jornada completa</div></div>
+    <div class="kpi amarillo"><div class="kpi-label">Salidas anticipadas</div><div class="kpi-value">${anticipadas}</div><div class="kpi-sub">≤5 horas</div></div>`;
+
+  const titulo = document.getElementById('asist-card-title');
+  if(titulo) titulo.innerHTML = `<i class="ti ti-calendar-check"></i> Asistencia del Día — ${fmtFecha(fecha)}`;
+
+  const acciones = document.getElementById('asist-card-acciones');
+  if(acciones) acciones.innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-refresh"></i> Actualizar</button>
+    <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPorMandante()"><i class="ti ti-building-factory"></i> Por mandante</button>
+    <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>
+    <button class="btn btn-dark btn-sm" onclick="cierreMasivoTurno()"><i class="ti ti-door-exit"></i> Cierre masivo turno</button>`;
+
+  const thead = document.getElementById('thead-asistencia');
+  if(thead) thead.innerHTML = `<tr>
+    <th style="width:30px;"><input type="checkbox" id="check-all" onchange="seleccionarTodosAsist(this.checked)" style="accent-color:var(--verde);width:16px;height:16px;"></th>
+    <th style="width:22%;">Trabajador</th>
+    <th style="width:12%;">RUT</th>
+    <th style="width:9%;">Registrado por</th>
+    <th style="width:11%;">Ingreso</th>
+    <th style="width:11%;">Salida</th>
+    <th style="width:10%;">Total Horas</th>
+    <th style="width:9%;">Jornada</th>
+    <th style="width:8%;">Estado</th>
+    <th style="width:8%;">Acción</th>
+  </tr>`;
 
   const tbody = document.getElementById('tbody-asistencia');
   const cols  = ['av-1','av-2','av-3','av-4','av-5','av-6'];
@@ -122,7 +191,6 @@ function cargarAsistencia(){
     return;
   }
 
-  // Obtener nombre del administrador/usuario actual
   const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre)
     ? cfg.admin_nombre.split(' ')[0]
     : 'Admin';
@@ -133,10 +201,9 @@ function cargarAsistencia(){
     const registro = data.find(x => x.rut === t.rut);
     const bloq     = !!registro && !_filasEditandoAsist.has(t.rut);
 
-    // Calcular horas y jornada desde datos guardados
     const horasGuardadas = registro ? registro.horas_trabajadas : null;
     const { jornada }    = calcularJornada(horasGuardadas);
-    const horasTxt       = horasGuardadas !== null && horasGuardadas !== undefined
+    const horasTxt        = horasGuardadas !== null && horasGuardadas !== undefined
       ? horasGuardadas.toFixed(1) + ' h' : '—';
 
     return `<tr id="fila-${rid}">
@@ -187,6 +254,109 @@ function cargarAsistencia(){
   }).join('');
 }
 
+/* ── Vista de rango (solo lectura, detalle del período) ──── */
+function _renderAsistenciaRango(inicio, fin){
+  const filtroEmp = document.getElementById('asist-empresa')?.value || '';
+  const buscar    = (document.getElementById('asist-buscar')?.value || '').toLowerCase().trim();
+
+  const fechas = _fechasEnRango(inicio, fin);
+  const filas = [];
+
+  fechas.forEach(fecha => {
+    const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
+    data.forEach(m => {
+      const t = trabajadores.find(x => x.rut === m.rut);
+      if(!t) return;
+      if(filtroEmp && !(t.mandante_id === filtroEmp)) return;
+      if(buscar && !(t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar))) return;
+
+      const mandante = (typeof findMandante === 'function') ? findMandante(t) : null;
+      filas.push({
+        fecha, nombre: t.nombre, rut: t.rut,
+        mandante: mandante?.nombre || '—',
+        hora_entrada: m.hora_entrada || '—',
+        hora_salida: m.hora_salida || '—',
+        horas: m.horas_trabajadas || 0,
+        jornada: m.jornada || '—',
+      });
+    });
+  });
+
+  filas.sort((a,b) => a.fecha === b.fecha ? a.nombre.localeCompare(b.nombre) : a.fecha.localeCompare(b.fecha));
+
+  const diasConDatos = new Set(filas.map(f => f.fecha)).size;
+  const totalHoras   = filas.reduce((s,f) => s + (parseFloat(f.horas)||0), 0);
+  const promedio     = filas.length ? (totalHoras / filas.length) : 0;
+  const porRevisar   = filas.filter(f => f.jornada === '⚠️ Revisar').length;
+
+  const kpis = document.getElementById('asist-kpi-grid');
+  if(kpis) kpis.innerHTML = `
+    <div class="kpi azul"><div class="kpi-label">Días con datos</div><div class="kpi-value">${diasConDatos}</div><div class="kpi-sub">en el rango</div></div>
+    <div class="kpi verde"><div class="kpi-label">Total horas</div><div class="kpi-value">${totalHoras.toFixed(1)}</div><div class="kpi-sub">trabajadas</div></div>
+    <div class="kpi azul"><div class="kpi-label">Promedio diario</div><div class="kpi-value">${promedio.toFixed(1)}</div><div class="kpi-sub">horas / marcación</div></div>
+    <div class="kpi amarillo"><div class="kpi-label">Por revisar</div><div class="kpi-value">${porRevisar}</div><div class="kpi-sub">jornadas +12h</div></div>`;
+
+  const titulo = document.getElementById('asist-card-title');
+  if(titulo) titulo.innerHTML = `<i class="ti ti-calendar-stats"></i> Detalle del período — ${fmtFecha(inicio)} a ${fmtFecha(fin)}`;
+
+  const acciones = document.getElementById('asist-card-acciones');
+  if(acciones) acciones.innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-refresh"></i> Actualizar</button>`;
+
+  const thead = document.getElementById('thead-asistencia');
+  if(thead) thead.innerHTML = `<tr>
+    <th>Fecha</th><th>Trabajador</th><th>RUT</th><th>Mandante</th>
+    <th>Entrada</th><th>Salida</th><th>Horas</th><th>Jornada</th>
+  </tr>`;
+
+  const tbody = document.getElementById('tbody-asistencia');
+  if(!filas.length){
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Sin marcaciones en este rango</td></tr>`;
+  } else {
+    tbody.innerHTML = filas.map(f => `<tr>
+      <td style="font-size:12px;">${fmtFecha(f.fecha)}</td>
+      <td style="font-size:13px;font-weight:500;">${f.nombre}</td>
+      <td class="rut-mono">${f.rut}</td>
+      <td style="font-size:12px;">${f.mandante}</td>
+      <td style="font-size:12px;">${f.hora_entrada}</td>
+      <td style="font-size:12px;">${f.hora_salida}</td>
+      <td style="font-size:12px;text-align:center;">${f.horas || '—'}</td>
+      <td>${badgeJornada(f.jornada)}</td>
+    </tr>`).join('');
+  }
+
+  _reporteAsistenciaActual = filas;
+}
+
+let _reporteAsistenciaActual = [];
+
+/* El botón único "Excel" de la barra de filtros exporta según el modo activo */
+function _exportarAsistenciaSegunModo(){
+  const desde = document.getElementById('asist-fecha-desde')?.value;
+  const hasta = document.getElementById('asist-fecha-hasta')?.value;
+  if(desde === hasta) exportarAsistenciaExcel();
+  else exportarReporteAsistenciaExcel();
+}
+
+function exportarReporteAsistenciaExcel(){
+  if(!_reporteAsistenciaActual.length){ toast('⚠️ No hay datos para exportar en este rango', 'error'); return; }
+
+  const inicio = document.getElementById('asist-fecha-desde').value;
+  const fin    = document.getElementById('asist-fecha-hasta').value;
+
+  const rows = _reporteAsistenciaActual.map(f => ({
+    'Fecha': f.fecha, 'Trabajador': f.nombre, 'RUT': f.rut, 'Mandante': f.mandante,
+    'Entrada': f.hora_entrada, 'Salida': f.hora_salida, 'Horas': f.horas, 'Jornada': f.jornada,
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:12},{wch:26},{wch:14},{wch:24},{wch:10},{wch:10},{wch:8},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
+  XLSX.writeFile(wb, `Reporte_Asistencia_${inicio}_a_${fin}.xlsx`);
+  toast('⬇️ Excel exportado', 'exito');
+}
+
 function previewHoras(rid){
   const entrada = document.getElementById(`hora-entrada-${rid}`)?.value;
   const salida  = document.getElementById(`hora-salida-${rid}`)?.value;
@@ -205,9 +375,8 @@ function guardarMarcacion(rut){
   const entrada = document.getElementById(`hora-entrada-${rid}`)?.value
     || new Date().toTimeString().slice(0,5);
   const salida  = document.getElementById(`hora-salida-${rid}`)?.value || '';
-  const fecha   = document.getElementById('asist-fecha').value;
+  const fecha   = document.getElementById('asist-fecha-desde').value;
 
-  // Calcular horas y jornada automáticamente
   const horas           = calcularHoras(entrada, salida);
   const { jornada, alerta } = calcularJornada(horas);
 
@@ -252,7 +421,7 @@ function eliminarMarcacionAsistencia(rut){
   const t = trabajadores.find(x => x.rut === rut);
   if(!confirm(`¿Eliminar la marcación de ${t?.nombre||rut}? Esta acción no se puede deshacer.`)) return;
 
-  const fecha = document.getElementById('asist-fecha').value;
+  const fecha = document.getElementById('asist-fecha-desde').value;
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
   const idx   = data.findIndex(x => x.rut === rut);
@@ -269,7 +438,7 @@ function cierreMasivoTurno(){
   if(!checks.length){ toast('⚠️ Selecciona trabajadores primero', 'error'); return; }
 
   const hora  = new Date().toTimeString().slice(0,5);
-  const fecha = document.getElementById('asist-fecha').value;
+  const fecha = document.getElementById('asist-fecha-desde').value;
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
 
@@ -310,139 +479,11 @@ function seleccionarTodosAsist(checked){
   document.querySelectorAll('.asist-check:not(:disabled)').forEach(c => c.checked = checked);
 }
 
-/* ════════════════════════════════════════════════════════
-   REPORTES DE ASISTENCIA — rango de fechas
-   ════════════════════════════════════════════════════════ */
-function rangoRapidoAsistencia(tipo){
-  const hoy = new Date();
-  const fmt = d => d.toISOString().slice(0,10);
-  let inicio, fin;
-
-  if(tipo === 'hoy'){
-    inicio = fin = new Date(hoy);
-  } else if(tipo === 'ayer'){
-    inicio = fin = new Date(hoy); inicio.setDate(inicio.getDate()-1); fin = new Date(inicio);
-  } else if(tipo === 'semana'){
-    const diaSemana = (hoy.getDay() + 6) % 7; // lunes=0
-    inicio = new Date(hoy); inicio.setDate(hoy.getDate() - diaSemana);
-    fin = new Date(hoy);
-  } else if(tipo === 'semana_pasada'){
-    const diaSemana = (hoy.getDay() + 6) % 7;
-    fin = new Date(hoy); fin.setDate(hoy.getDate() - diaSemana - 1);
-    inicio = new Date(fin); inicio.setDate(fin.getDate() - 6);
-  } else if(tipo === 'mes'){
-    inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    fin = new Date(hoy);
-  } else if(tipo === 'mes_pasado'){
-    inicio = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
-    fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
-  }
-
-  document.getElementById('rep-asist-inicio').value = fmt(inicio);
-  document.getElementById('rep-asist-fin').value = fmt(fin);
-  generarReporteAsistencia();
-}
-
-function _fechasEnRango(inicio, fin){
-  const fechas = [];
-  const d = new Date(inicio + 'T00:00:00');
-  const dFin = new Date(fin + 'T00:00:00');
-  while(d <= dFin){
-    fechas.push(d.toISOString().slice(0,10));
-    d.setDate(d.getDate()+1);
-  }
-  return fechas;
-}
-
-function generarReporteAsistencia(){
-  const inicio = document.getElementById('rep-asist-inicio').value;
-  const fin    = document.getElementById('rep-asist-fin').value;
-  if(!inicio || !fin){ toast('⚠️ Elige fecha de inicio y de término', 'error'); return; }
-  if(inicio > fin){ toast('⚠️ La fecha de inicio no puede ser posterior a la de término', 'error'); return; }
-
-  const filtroEmp = document.getElementById('rep-asist-empresa')?.value || '';
-  const buscar    = (document.getElementById('rep-asist-buscar')?.value || '').toLowerCase().trim();
-
-  const fechas = _fechasEnRango(inicio, fin);
-  const filas = [];
-
-  fechas.forEach(fecha => {
-    const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
-    data.forEach(m => {
-      const t = trabajadores.find(x => x.rut === m.rut);
-      if(!t) return;
-      if(filtroEmp && !(t.mandante_id === filtroEmp)) return;
-      if(buscar && !(t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar))) return;
-
-      const mandante = (typeof findMandante === 'function') ? findMandante(t) : null;
-      filas.push({
-        fecha, nombre: t.nombre, rut: t.rut,
-        mandante: mandante?.nombre || '—',
-        hora_entrada: m.hora_entrada || '—',
-        hora_salida: m.hora_salida || '—',
-        horas: m.horas_trabajadas || 0,
-        jornada: m.jornada || '—',
-      });
-    });
-  });
-
-  filas.sort((a,b) => a.fecha === b.fecha ? a.nombre.localeCompare(b.nombre) : a.fecha.localeCompare(b.fecha));
-
-  const tbody = document.getElementById('tbody-reporte-asistencia');
-  if(!filas.length){
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Sin marcaciones en este rango</td></tr>`;
-  } else {
-    tbody.innerHTML = filas.map(f => `<tr>
-      <td style="font-size:12px;">${fmtFecha(f.fecha)}</td>
-      <td style="font-size:13px;font-weight:500;">${f.nombre}</td>
-      <td class="rut-mono">${f.rut}</td>
-      <td style="font-size:12px;">${f.mandante}</td>
-      <td style="font-size:12px;">${f.hora_entrada}</td>
-      <td style="font-size:12px;">${f.hora_salida}</td>
-      <td style="font-size:12px;text-align:center;">${f.horas || '—'}</td>
-      <td>${badgeJornada(f.jornada)}</td>
-    </tr>`).join('');
-  }
-
-  const diasConDatos = new Set(filas.map(f => f.fecha)).size;
-  const totalHoras = filas.reduce((s,f) => s + (parseFloat(f.horas)||0), 0);
-  const promedio = filas.length ? (totalHoras / filas.length) : 0;
-  const porRevisar = filas.filter(f => f.jornada === '⚠️ Revisar').length;
-
-  document.getElementById('rep-asist-dias').textContent = diasConDatos;
-  document.getElementById('rep-asist-horas').textContent = totalHoras.toFixed(1);
-  document.getElementById('rep-asist-promedio').textContent = promedio.toFixed(1);
-  document.getElementById('rep-asist-revisar').textContent = porRevisar;
-
-  _reporteAsistenciaActual = filas;
-}
-
-let _reporteAsistenciaActual = [];
-
-function exportarReporteAsistenciaExcel(){
-  if(!_reporteAsistenciaActual.length){ toast('⚠️ Genera el reporte primero', 'error'); return; }
-
-  const inicio = document.getElementById('rep-asist-inicio').value;
-  const fin    = document.getElementById('rep-asist-fin').value;
-
-  const rows = _reporteAsistenciaActual.map(f => ({
-    'Fecha': f.fecha, 'Trabajador': f.nombre, 'RUT': f.rut, 'Mandante': f.mandante,
-    'Entrada': f.hora_entrada, 'Salida': f.hora_salida, 'Horas': f.horas, 'Jornada': f.jornada,
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{wch:12},{wch:26},{wch:14},{wch:24},{wch:10},{wch:10},{wch:8},{wch:14}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
-  XLSX.writeFile(wb, `Reporte_Asistencia_${inicio}_a_${fin}.xlsx`);
-  toast('⬇️ Excel exportado', 'exito');
-}
-
 /* ── EXPORTAR PDF (Asistencia del Día) — mismo patrón de ventana de impresión
    que ya usamos en Contratos y QR, sin agregar librerías nuevas ── */
 function exportarAsistenciaPDF(){
   const filtro = document.getElementById('asist-empresa').value;
-  const fecha  = document.getElementById('asist-fecha').value;
+  const fecha  = document.getElementById('asist-fecha-desde').value;
   const buscar = (document.getElementById('asist-buscar')?.value || '').toLowerCase().trim();
   const clave  = 'asistencia_' + fecha;
   const data   = JSON.parse(localStorage.getItem(clave) || '[]');
@@ -488,8 +529,20 @@ function exportarAsistenciaPDF(){
 
 /* ══════════════════════════════════════════
    REGISTRO MANUAL (contingencia — sin app)
+   Individual + Carga Masiva (para cuando no hay
+   ningún teléfono disponible ese día — a diferencia
+   del modo offline de la App, que solo cubre la falta
+   de internet, no la falta del dispositivo en sí).
    ══════════════════════════════════════════ */
 let _manualRutSeleccionado = null;
+
+function cambiarModoManualAsistencia(modo){
+  const esIndividual = modo === 'individual';
+  document.getElementById('btn-manual-modo-individual').className = 'btn btn-sm ' + (esIndividual ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('btn-manual-modo-masivo').className     = 'btn btn-sm ' + (esIndividual ? 'btn-secondary' : 'btn-primary');
+  document.getElementById('bloque-manual-individual').style.display = esIndividual ? '' : 'none';
+  document.getElementById('bloque-manual-masivo').style.display     = esIndividual ? 'none' : '';
+}
 
 function buscarTrabajadorManual(){
   const buscar = (document.getElementById('manual-buscar')?.value || '').toLowerCase().trim();
@@ -547,6 +600,17 @@ function _manualFechaCambio(){
   if(_manualRutSeleccionado) _cargarFormularioManual();
 }
 
+/* Botón Cancelar: limpia la selección/formulario sin guardar ni eliminar */
+function cancelarFormularioManual(){
+  _manualRutSeleccionado = null;
+  document.getElementById('manual-buscar').value = '';
+  document.getElementById('manual-resultados').style.display = 'none';
+  document.getElementById('manual-resultados').innerHTML = '';
+  document.getElementById('manual-form-horas').style.display = 'none';
+  document.getElementById('manual-hora-entrada').value = '';
+  document.getElementById('manual-hora-salida').value  = '';
+}
+
 function guardarMarcacionManual(){
   const rut = _manualRutSeleccionado;
   if(!rut){ toast('⚠️ Busca y selecciona un trabajador', 'error'); return; }
@@ -585,8 +649,9 @@ function guardarMarcacionManual(){
   localStorage.setItem(clave, JSON.stringify(data));
   toast(`✅ Marcación guardada — ${t.nombre}`, 'exito');
 
-  // Si la fecha coincide con la de Asistencia del Día, refresca esa vista también
-  if(document.getElementById('asist-fecha').value === fecha) cargarAsistencia();
+  // Si la fecha coincide con la que se ve en Asistencia del Día, refresca esa vista también
+  if(document.getElementById('asist-fecha-desde').value === fecha &&
+     document.getElementById('asist-fecha-hasta').value === fecha) cargarAsistencia();
 }
 
 function eliminarMarcacionManual(){
@@ -601,5 +666,152 @@ function eliminarMarcacionManual(){
   document.getElementById('manual-hora-salida').value  = '';
   toast('🗑️ Marcación eliminada', 'exito');
 
-  if(document.getElementById('asist-fecha').value === fecha) cargarAsistencia();
+  if(document.getElementById('asist-fecha-desde').value === fecha &&
+     document.getElementById('asist-fecha-hasta').value === fecha) cargarAsistencia();
+}
+
+/* ══════════════════════════════════════════
+   CARGA MASIVA DE MARCACIONES (contingencia)
+   Columnas: RUT · Fecha · Hora Entrada · Hora Salida (opcional)
+   ══════════════════════════════════════════ */
+let _datosExcelAsist = [];
+let _erroresExcelAsist = [];
+
+function _clickZonaDropExcelAsist(){
+  document.getElementById('archivo-excel-asist').click();
+}
+
+function procesarExcelAsistencia(event){
+  const file = event.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb   = XLSX.read(e.target.result, {type:'binary', cellDates:true});
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      if(!rows.length){ toast('⚠️ El archivo está vacío', 'error'); return; }
+
+      const fmtFechaCelda = v => {
+        if(!v) return null;
+        if(v instanceof Date) return v.toISOString().split('T')[0];
+        return v.toString().trim() || null;
+      };
+      const fmtHora = v => {
+        if(!v) return '';
+        if(v instanceof Date) return v.toTimeString().slice(0,5);
+        return v.toString().trim();
+      };
+
+      _datosExcelAsist = [];
+      _erroresExcelAsist = [];
+
+      rows.forEach((row, i) => {
+        const fila    = i + 2;
+        const rut     = (row['RUT'] || row['Rut'] || row['rut'] || '').toString().trim();
+        const fecha   = fmtFechaCelda(row['Fecha'] || row['fecha']);
+        const entrada = fmtHora(row['Hora Entrada'] || row['hora_entrada']);
+        const salida  = fmtHora(row['Hora Salida'] || row['hora_salida']);
+
+        if(!rut){ _erroresExcelAsist.push({ fila, mensaje:'Falta el RUT' }); return; }
+        const t = trabajadores.find(x => x.rut === rut);
+        if(!t){ _erroresExcelAsist.push({ fila, rut, mensaje:`RUT "${rut}" no encontrado en el sistema` }); return; }
+        if(!fecha){ _erroresExcelAsist.push({ fila, rut, nombre:t.nombre, mensaje:'Falta la Fecha (formato AAAA-MM-DD)' }); return; }
+        if(!entrada){ _erroresExcelAsist.push({ fila, rut, nombre:t.nombre, mensaje:'Falta la Hora Entrada' }); return; }
+
+        const clave = 'asistencia_' + fecha;
+        const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+        const yaExiste = data.some(x => x.rut === rut);
+
+        _datosExcelAsist.push({ fila, rut, nombre:t.nombre, fecha, entrada, salida, sobrescribe: yaExiste });
+      });
+
+      _renderPreviewExcelAsistencia();
+    } catch(err){
+      toast('❌ No se pudo leer el archivo — revisa que sea un Excel válido', 'error');
+    }
+  };
+  reader.readAsBinaryString(file);
+  event.target.value = '';
+}
+
+function _renderPreviewExcelAsistencia(){
+  const seccion = document.getElementById('seccion-preview-asist');
+  const cuerpo  = document.querySelector('#tabla-excel-asist tbody');
+  const conteo  = document.getElementById('preview-count-asist');
+  const avisos  = document.getElementById('preview-avisos-asist');
+  const btn     = document.getElementById('btn-subir-masivo-asist');
+
+  seccion.style.display = 'block';
+  conteo.textContent = `${_datosExcelAsist.length} marcación${_datosExcelAsist.length!==1?'es':''} lista${_datosExcelAsist.length!==1?'s':''} para cargar` +
+    (_erroresExcelAsist.length ? ` · ${_erroresExcelAsist.length} fila${_erroresExcelAsist.length!==1?'s':''} con error` : '');
+
+  avisos.innerHTML = _erroresExcelAsist.length
+    ? `<div style="background:#FEE2E2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#991B1B;">
+        ${_erroresExcelAsist.map(e => `Fila ${e.fila}${e.nombre?` (${e.nombre})`:''}: ${e.mensaje}`).join('<br>')}
+       </div>`
+    : '';
+
+  cuerpo.innerHTML = _datosExcelAsist.map(d => `<tr>
+    <td class="rut-mono">${d.rut}</td>
+    <td>${d.nombre}</td>
+    <td>${fmtFecha(d.fecha)}</td>
+    <td>${d.entrada}</td>
+    <td>${d.salida || '—'}</td>
+    <td>${d.sobrescribe ? '<span class="badge badge-amarillo">Sobrescribe existente</span>' : '<span class="badge badge-verde">Nueva</span>'}</td>
+  </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--texto3);">Sin filas válidas para cargar</td></tr>`;
+
+  btn.disabled = !_datosExcelAsist.length;
+}
+
+function cancelarCargaMasivaAsistencia(){
+  _datosExcelAsist = [];
+  _erroresExcelAsist = [];
+  document.getElementById('seccion-preview-asist').style.display = 'none';
+  document.getElementById('archivo-excel-asist').value = '';
+}
+
+function subirMasivoAsistencia(){
+  if(!_datosExcelAsist.length){ toast('⚠️ No hay marcaciones para cargar', 'error'); return; }
+  if(!confirm(`Se cargarán ${_datosExcelAsist.length} marcación${_datosExcelAsist.length!==1?'es':''}. ¿Continuar?`)) return;
+
+  const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre)
+    ? cfg.admin_nombre.split(' ')[0] + ' (carga masiva)' : 'Admin (carga masiva)';
+
+  // Agrupar por fecha para tocar cada clave de localStorage una sola vez
+  const porFecha = {};
+  _datosExcelAsist.forEach(d => {
+    (porFecha[d.fecha] = porFecha[d.fecha] || []).push(d);
+  });
+
+  Object.keys(porFecha).forEach(fecha => {
+    const clave = 'asistencia_' + fecha;
+    const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+
+    porFecha[fecha].forEach(d => {
+      const horas = d.salida ? calcularHoras(d.entrada, d.salida) : null;
+      const { jornada, valor } = calcularJornada(horas);
+
+      const marcacion = {
+        rut: d.rut, fecha,
+        hora_entrada: d.entrada,
+        hora_salida: d.salida || null,
+        horas_trabajadas: horas,
+        jornada: d.salida ? jornada : null,
+        jornada_valor: d.salida ? valor : null,
+        registrado_por: registradoPor,
+      };
+
+      const idx = data.findIndex(x => x.rut === d.rut);
+      if(idx >= 0) data[idx] = marcacion; else data.push(marcacion);
+    });
+
+    localStorage.setItem(clave, JSON.stringify(data));
+  });
+
+  toast(`✅ ${_datosExcelAsist.length} marcación${_datosExcelAsist.length!==1?'es':''} cargada${_datosExcelAsist.length!==1?'s':''}`, 'exito');
+  cancelarCargaMasivaAsistencia();
+  cargarAsistencia();
 }

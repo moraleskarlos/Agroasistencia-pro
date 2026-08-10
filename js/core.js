@@ -381,7 +381,7 @@ function normalizarEmpresa(ep){
 
 function getEmpresaEmpleadora(epId){
   const ep = epId ? empresas_propias.find(e => e.id === epId) : null;
-  return normalizarEmpresa(ep || cfg.empresa);
+  return normalizarEmpresa(ep);
 }
 
 /* ✅ Nacionalidad femenina (Chilena, además de Chileno) — antes el
@@ -410,6 +410,55 @@ function toast(msg,tipo='exito'){
   const el=document.getElementById('toast');
   el.textContent=msg; el.className=`toast show ${tipo}`;
   clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+/* BL-006 — Bloque compartido de paginado para las ventanas de documentos
+   masivos (Anexos Masivo y Contrato Masivo usaban el mismo código
+   duplicado en _abrirVentanaAnexosMasivo / _abrirVentanaContratosMasivo).
+   En pantalla se ve un documento a la vez con flechas ◀▶; al imprimir
+   (@media print) se muestran TODOS, cada uno en su propia página — el
+   paginado es solo de pantalla, nunca reduce lo que sale impreso.
+   Cada documento debe venir envuelto en <div class="doc-page">…</div>. */
+function _bloqueNavegacionMasivo(total){
+  const css = `
+    .doc-page{ display:none; }
+    .doc-page.activo{ display:block; }
+    @media print{
+      .doc-page{ display:block !important; }
+      .doc-page:not(:first-child){ break-before:page; page-break-before:always; }
+    }
+    .nav-masivo{ display:flex; align-items:center; gap:10px; }
+    .nav-masivo button{ padding:8px 14px; background:#f1f5f9; border:1px solid #ddd;
+      border-radius:6px; cursor:pointer; font-size:13px; }
+    .nav-masivo button:disabled{ opacity:0.4; cursor:not-allowed; }
+    .nav-masivo span{ font-size:13px; color:#444; min-width:120px; text-align:center; }`;
+
+  const toolbar = `
+    <div class="no-print nav-masivo">
+      <button id="nav-masivo-prev" onclick="_navMasivo(-1)">◀</button>
+      <span id="nav-masivo-contador">Documento 1 de ${total}</span>
+      <button id="nav-masivo-next" onclick="_navMasivo(1)">▶</button>
+    </div>`;
+
+  const script = `
+    <script>
+      let _navMasivoIdx = 0;
+      const _navMasivoTotal = ${total};
+      function _navMasivo(delta){
+        const paginas = document.querySelectorAll('.doc-page');
+        paginas[_navMasivoIdx].classList.remove('activo');
+        _navMasivoIdx = Math.max(0, Math.min(_navMasivoTotal - 1, _navMasivoIdx + delta));
+        paginas[_navMasivoIdx].classList.add('activo');
+        document.getElementById('nav-masivo-contador').textContent = 'Documento ' + (_navMasivoIdx + 1) + ' de ' + _navMasivoTotal;
+        document.getElementById('nav-masivo-prev').disabled = _navMasivoIdx === 0;
+        document.getElementById('nav-masivo-next').disabled = _navMasivoIdx === _navMasivoTotal - 1;
+      }
+      document.querySelectorAll('.doc-page')[0]?.classList.add('activo');
+      document.getElementById('nav-masivo-prev').disabled = true;
+      if(_navMasivoTotal <= 1) document.getElementById('nav-masivo-next').disabled = true;
+    <\/script>`;
+
+  return { css, toolbar, script };
 }
 
 function guardarLocal(){localStorage.setItem(LOCAL_T,JSON.stringify(trabajadores));localStorage.setItem(LOCAL_E,JSON.stringify(empresas));localStorage.setItem(LOCAL_EP,JSON.stringify(empresas_propias));}

@@ -457,8 +457,6 @@ const t = trabajadores.find(
   };
 }
 
-function mostrarCargoOtro(){ /* cargo se carga automáticamente desde el trabajador */ }
-
 function guardarContrato(){
   const id = document.getElementById('c-trabajador').value;
   if(!id){ toast('⚠️ Selecciona un trabajador','error'); return; }
@@ -2049,9 +2047,8 @@ function confirmarYGenerarContratosMasivo(){
 function _abrirVentanaContratosMasivo(contenidos){
   if(!contenidos.length) return;
 
-  const cuerpo = contenidos
-    .map((c, i) => i === 0 ? c : `<div class="salto"></div>${c}`)
-    .join('\n');
+  const nav = _bloqueNavegacionMasivo(contenidos.length);
+  const cuerpo = contenidos.map(c => `<div class="doc-page">${c}</div>`).join('\n');
 
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html lang="es"><head>
@@ -2107,9 +2104,10 @@ function _abrirVentanaContratosMasivo(contenidos){
     .observ-linea{ border-bottom:1px solid #000; margin:8px 0; height:22px; }
     .no-print{ margin-bottom:24px; }
     @media print{ .no-print{display:none !important;} }
+    ${nav.css}
   </style>
 </head><body>
-<div class="no-print" style="display:flex;gap:10px;align-items:center;padding:16px;">
+<div class="no-print" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px;">
   <button onclick="window.print()" style="padding:10px 24px;background:#0f2942;color:#fff;
     border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">
     🖨️ Imprimir / Guardar PDF (${contenidos.length} contratos)
@@ -2118,10 +2116,12 @@ function _abrirVentanaContratosMasivo(contenidos){
     border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:13px;">
     Cerrar
   </button>
+  ${nav.toolbar}
 </div>
 <div class="doc-wrap">
 ${cuerpo}
 </div>
+${nav.script}
 </body></html>`);
   win.document.close();
 }
@@ -2199,7 +2199,7 @@ function _htmlFormularioEpp(prefix, datos, soloEpp){
       <input type="text" id="${prefix}-epp-otro-detalle" placeholder="Especificar" value="${datos.epp_otro||''}"
         style="display:${entregados.includes('Otro')?'inline-block':'none'};max-width:160px;padding:5px 8px;font-size:12px;border:1px solid var(--borde);border-radius:6px;">
     </div>
-    <div class="form-grid" style="margin-bottom:12px;">
+    <div class="fila-compacta" style="margin-bottom:12px;">
       <div class="form-group">
         <label>Fecha de entrega EPP</label>
         <input type="date" id="${prefix}-epp-fecha-entrega" value="${datos.epp_fecha_entrega||''}">
@@ -2210,13 +2210,13 @@ function _htmlFormularioEpp(prefix, datos, soloEpp){
 
   return bloqueEpp + `
     <div class="form-section"><i class="ti ti-notebook"></i> RIOHS / Inducción (IRL)</div>
-    <div class="form-grid" style="margin-bottom:10px;">
+    <div class="fila-compacta" style="margin-bottom:10px;">
       <div class="form-group">
         <label>Fecha de inducción</label>
         <input type="date" id="${prefix}-irl-fecha-induccion" value="${datos.irl_fecha_induccion||''}">
       </div>
       <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:22px;">
-        <input type="checkbox" id="${prefix}-irl-declarado" ${datos.irl_declarado?'checked':''} style="width:auto;">
+        <input type="checkbox" id="${prefix}-irl-declarado" ${datos.irl_declarado?'checked':''} style="width:auto;min-width:0;flex-shrink:0;">
         <label style="margin:0;">Declara haber recibido RIOHS/IRL</label>
       </div>
     </div>

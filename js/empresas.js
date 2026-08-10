@@ -18,70 +18,8 @@ function _rutYaExiste(rut, idExcluir){
   return null;
 }
 
-function abrirModalMiEmpresa(){
-  const modal = document.getElementById('modal-mi-empresa');
-  modal.style.display = 'flex';
-  const e = cfg.empresa || {};
-  document.getElementById('me-nombre').value             = e.razon_social || '';
-  document.getElementById('me-rut').value                = e.rut || '';
-  document.getElementById('me-ciudad').value              = e.ciudad || '';
-  document.getElementById('me-representante').value      = e.representante || '';
-  document.getElementById('me-rut-representante').value  = e.rut_representante || '';
-  document.getElementById('me-cargo-representante').value= e.cargo_representante || '';
-  document.getElementById('me-correo').value              = e.correo || '';
-  document.getElementById('me-telefono').value             = e.telefono || '';
-  document.getElementById('me-direccion').value           = e.direccion || '';
-  document.getElementById('me-comuna').value              = e.comuna || '';
-  document.getElementById('me-region').value              = e.region || '';
-}
-
-function cerrarModalMiEmpresa(){
-  document.getElementById('modal-mi-empresa').style.display = 'none';
-}
-
-function guardarMiEmpresa(){
-  const nombre = document.getElementById('me-nombre').value.trim();
-  const rut    = document.getElementById('me-rut').value.trim();
-  const rutRep = document.getElementById('me-rut-representante').value.trim();
-  if(!nombre){ toast('⚠️ Ingresa la razón social','error'); return; }
-  if(!rut)   { toast('⚠️ Ingresa el RUT de la empresa','error'); return; }
-  if(!validarRUT(rut)){
-    const continuar = confirm(`El dígito verificador del RUT "${rut}" no coincide.\n¿Deseas guardarlo de todas formas?`);
-    if(!continuar) return;
-  }
-  if(rutRep && _rutsIguales(rut, rutRep)){
-    toast('❌ El RUT del representante no puede ser igual al RUT de la empresa','error');
-    return;
-  }
-
-  cfg.empresa = {
-    razon_social:        nombre,
-    rut:                 rut,
-    ciudad:              document.getElementById('me-ciudad').value.trim(),
-    representante:       document.getElementById('me-representante').value.trim(),
-    rut_representante:   document.getElementById('me-rut-representante').value.trim(),
-    cargo_representante: document.getElementById('me-cargo-representante').value.trim(),
-    correo:              document.getElementById('me-correo').value.trim(),
-    telefono:            document.getElementById('me-telefono').value.trim(),
-    direccion:           document.getElementById('me-direccion').value.trim(),
-    comuna:              document.getElementById('me-comuna').value.trim(),
-    region:              document.getElementById('me-region').value,
-  };
-
-  guardarCfg();
-  cerrarModalMiEmpresa();
-  renderMisEmpresas();
-  toast('✅ Mi Empresa guardada','exito');
-}
-
 function renderContratistas(){
   const el=document.getElementById('lista-contratistas');
-
-  // Rellenar tarjeta de empresa contratista desde cfg
-  const empNomEl = document.getElementById('empresa-principal-nombre');
-  const empRutEl = document.getElementById('empresa-principal-rut');
-  if(empNomEl) empNomEl.textContent = cfg.empresa?.razon_social || '— Sin configurar —';
-  if(empRutEl) empRutEl.textContent = cfg.empresa?.rut ? 'RUT: ' + cfg.empresa.rut : 'Ve a Configuración para ingresar los datos de tu empresa';
 
   if(!empresas.length){
     el.innerHTML='<div style="font-size:13px;color:var(--texto-secundario);text-align:center;padding:32px;">Sin mandantes registrados — haz clic en "Nuevo Mandante"</div>';
@@ -371,17 +309,6 @@ function _kpiCard(label, value, sub, color){
   return `<div class="kpi"><div class="kpi-label">${label}</div>
     <div class="kpi-value" style="color:${color||'var(--texto)'};">${value}</div>
     <div class="kpi-sub">${sub}</div></div>`;
-}
-
-/* KPI compacto "activas/inactivas" — ej. 3/0 */
-function _kpiActivoInactivo(label, activas, inactivas, sub){
-  return `<div class="kpi">
-    <div class="kpi-label">${label}</div>
-    <div class="kpi-value">
-      <span style="color:var(--verde-dark);">${activas}</span><span style="color:var(--texto-secundario);font-weight:400;"> / </span><span style="color:${inactivas>0?'#dc2626':'var(--texto-secundario)'};">${inactivas}</span>
-    </div>
-    <div class="kpi-sub">${sub ? sub + ' ' : ''}(activas / inactivas)</div>
-  </div>`;
 }
 
 function renderKpisMisEmpresas(){

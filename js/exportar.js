@@ -166,9 +166,38 @@ function descargarPlantilla(){
   toast('⬇️ Plantilla descargada — revisa las 3 hojas','exito');
 }
 
+/* ── 2b. PLANTILLA EXCEL PARA CARGA MASIVA DE ASISTENCIA ── */
+function descargarPlantillaAsistencia(){
+  const wb = XLSX.utils.book_new();
+
+  const instrucciones = [
+    { ' ':'Esta plantilla es para cargar marcaciones de asistencia cuando no fue posible registrarlas con la App (sin teléfono disponible, corte de luz, etc.).' },
+    { ' ':'El RUT debe corresponder a un trabajador YA registrado en el sistema.' },
+    { ' ':'La Fecha va en formato AAAA-MM-DD. La Hora Entrada y Hora Salida en formato HH:MM (24 horas).' },
+    { ' ':'La Hora Salida es opcional — si se deja vacía, la marcación queda como jornada activa (sin cerrar), igual que si se marcara solo la entrada desde la App.' },
+    { ' ':'Si ya existe una marcación para ese RUT y esa Fecha, la carga la sobrescribe — revisá la vista previa antes de confirmar.' },
+  ];
+  const ws0 = XLSX.utils.json_to_sheet(instrucciones, {skipHeader:true});
+  ws0['!cols'] = [{wch:110}];
+  XLSX.utils.book_append_sheet(wb, ws0, '0. Instrucciones');
+
+  const ejemplo = [{
+    'RUT':          '12.345.678-9',
+    'Fecha':        '2026-08-09',
+    'Hora Entrada': '08:00',
+    'Hora Salida':  '17:00',
+  }];
+  const ws1 = XLSX.utils.json_to_sheet(ejemplo);
+  ws1['!cols'] = [{wch:14},{wch:14},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws1, '1. Marcaciones');
+
+  XLSX.writeFile(wb, 'Plantilla_Asistencia.xlsx');
+  toast('⬇️ Plantilla descargada','exito');
+}
+
 /* ── 3. ASISTENCIA EXCEL ───────────────────────────────── */
 function exportarAsistenciaExcel(){
-  const fecha = document.getElementById('asist-fecha')?.value;
+  const fecha = document.getElementById('asist-fecha-desde')?.value;
   if(!fecha){ toast('⚠️ Selecciona una fecha primero','error'); return; }
 
   const clave = 'asistencia_' + fecha;
@@ -212,7 +241,7 @@ function exportarAsistenciaExcel(){
 
 /* ── 4. ASISTENCIA POR MANDANTE ────────────────────────── */
 function exportarAsistenciaPorMandante(){
-  const fecha = document.getElementById('asist-fecha')?.value || new Date().toISOString().split('T')[0];
+  const fecha = document.getElementById('asist-fecha-desde')?.value || new Date().toISOString().split('T')[0];
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
 
