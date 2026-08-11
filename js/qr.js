@@ -25,9 +25,8 @@ function _registrarCredencialesQR(ruts){
 function cargarListaQR(){
   const filtro  = document.getElementById('qr-filtro-empresa')?.value || '';
   const buscar  = (document.getElementById('qr-buscar')?.value || '').toLowerCase().trim();
-  let lista = filtro
-    ? trabajadores.filter(t => t.mandante_id === filtro)
-    : trabajadores;
+  let lista = trabajadores.filter(t => t.estado === 'activo');
+  if(filtro) lista = lista.filter(t => t.mandante_id === filtro);
 
   if(buscar){
     lista = lista.filter(t =>
@@ -39,8 +38,8 @@ function cargarListaQR(){
   const el = document.getElementById('qr-lista');
 
   if(!lista.length){
-    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--texto3);">
-      ${buscar ? `Sin resultados para "${buscar}"` : 'Sin trabajadores registrados'}</div>`;
+    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--texto-secundario);">
+      ${buscar ? `Sin resultados para "${buscar}"` : 'Sin trabajadores activos'}</div>`;
     return;
   }
 
@@ -49,7 +48,7 @@ function cargarListaQR(){
 
       <!-- CABECERA -->
       <div style="display:flex;align-items:center;padding:10px 16px;
-        font-size:11px;font-weight:600;color:var(--texto3);
+        font-size:11px;font-weight:600;color:var(--texto-secundario);
         text-transform:uppercase;letter-spacing:0.4px;gap:12px;">
         <div style="width:32px;text-align:center;">
           <input type="checkbox" id="qr-check-all"
@@ -101,18 +100,17 @@ function cargarListaQR(){
           <div class="rut-mono">${t.rut}</div>
 
           <!-- Cargo -->
-          <div style="flex:1;font-size:12px;color:var(--texto2);">${t.funcion_cargo||'—'}</div>
+          <div style="flex:1;font-size:12px;color:var(--texto-secundario);">${t.funcion_cargo||'—'}</div>
 
           <!-- Empresa -->
-          <div style="flex:1.5;font-size:12px;color:var(--texto2);">${empNom}</div>
+          <div style="flex:1.5;font-size:12px;color:var(--texto-secundario);">${empNom}</div>
 
           <!-- Ver credencial individual + estado -->
-          <div style="flex:0.8;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;">
-            ${_tieneCredencialQR(t.rut)
-              ? `<span style="font-size:10px;font-weight:600;color:#065F46;background:#D1FAE5;padding:2px 8px;border-radius:10px;">✓ Con credencial</span>`
-              : `<span style="font-size:10px;font-weight:600;color:#991B1B;background:#FEE2E2;padding:2px 8px;border-radius:10px;">✕ Sin credencial</span>`}
+          <div style="flex:0.8;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <span title="${_tieneCredencialQR(t.rut) ? 'Con credencial' : 'Sin credencial'}"
+              style="width:10px;height:10px;border-radius:50%;background:${_tieneCredencialQR(t.rut)?'#16a34a':'#dc2626'};"></span>
             <button class="btn btn-secondary btn-sm" onclick="generarQRIndividual('${t.rut}')" style="font-size:11px;">
-              <i class="ti ti-qrcode"></i> Ver
+              <i class="ti ti-qrcode"></i> Ver credencial
             </button>
           </div>
 
