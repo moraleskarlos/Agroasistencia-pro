@@ -776,7 +776,7 @@
         <div class="f-group" id="campo-c-trabajador-individual">
           <label class="form-label" id="lbl-c-trabajador-select">Seleccionar trabajador</label>
           <select class="f-input" id="c-trabajador" onchange="precargarContrato()" style="display:none;"><option value="">— Seleccionar trabajador —</option></select>
-          <input type="text" id="ct-buscar-visual" oninput="_renderListaVisualTrabajadorContrato()" placeholder="Buscar por RUT o nombre..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
+          <input type="text" id="ct-buscar-visual" oninput="_renderListaVisualTrabajadorContrato()" placeholder="Buscar por RUT o nombre..." style="width:100%;max-width:420px;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
           <div id="lista-visual-trabajador-contrato" style="max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
         </div>
       </div>
@@ -786,27 +786,27 @@
           <div class="card" id="bloque-precargados-individual">
             <div class="card-title"><i class="ti ti-lock"></i> Datos precargados <span style="background:var(--gris-bg);color:var(--texto3);font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">solo lectura</span></div>
             <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">Datos del Trabajador</div>
-            <div class="fila-mixta" style="margin-bottom:8px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
               <div class="f-group"><label class="form-label">RUT trabajador</label><input class="f-input" id="cp-rut" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Nombre completo</label><input class="f-input" id="cp-nombre" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
             </div>
-            <div class="fila-compacta" style="margin-bottom:8px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
               <div class="f-group"><label class="form-label">Nacionalidad</label><input class="f-input" id="cp-nacionalidad" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Estado civil</label><input class="f-input" id="cp-estado-civil" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
             </div>
-            <div class="fila-compacta" style="margin-bottom:10px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
               <div class="f-group"><label class="form-label">AFP</label><input class="f-input" id="cp-afp" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Salud</label><input class="f-input" id="cp-salud" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
             </div>
             <hr style="border:none;border-top:1px solid var(--borde);margin:8px 0;">
             <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">Datos de la Empresa</div>
-            <div class="fila-mixta" style="margin-bottom:8px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
               <div class="f-group"><label class="form-label">RUT empresa</label><input class="f-input" id="cp-empresa-rut" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
               <div class="f-group"><label class="form-label">Nombre empresa</label><input class="f-input" id="cp-empresa-nombre" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr max-content;gap:8px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div class="f-group"><label class="form-label">Representante</label><input class="f-input" id="cp-rep-nombre" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
-              <div class="f-group"><label class="form-label">RUT representante</label><input class="f-input" id="cp-rep-rut" readonly style="background:var(--gris-bg);color:var(--texto2);min-width:140px;"></div>
+              <div class="f-group"><label class="form-label">RUT representante</label><input class="f-input" id="cp-rep-rut" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
             </div>
             <hr style="border:none;border-top:1px solid var(--borde);margin:8px 0;">
             <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;"><i class="ti ti-building-skyscraper"></i> Empresa Mandante</div>
@@ -825,12 +825,15 @@
           </div>
           <div class="card">
             <div class="card-title"><i class="ti ti-edit"></i> Datos del contrato <span style="background:#EAF3DE;color:#27500A;font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">editable</span></div>
-            <div style="font-size:12px;color:var(--texto3);margin-bottom:10px;">
-              <i class="ti ti-clock"></i> Fecha de registro del trabajador: <strong id="c-fecha-registro-txt">—</strong>
-            </div>
             <div class="fila-compacta" style="margin-bottom:12px;">
               <div class="f-group"><label class="form-label">Ciudad de firma</label><input class="f-input" id="c-ciudad" placeholder="Ej: Santiago" oninput="actualizarPrevia()"></div>
-              <div class="f-group"><label class="form-label">Fecha de firma</label><input class="f-input" id="c-fecha-firma" type="date" oninput="actualizarPrevia()"></div>
+              <div class="f-group">
+                <label class="form-label">Fecha de firma</label>
+                <input class="f-input" id="c-fecha-firma" type="date" oninput="actualizarPrevia()">
+                <div style="font-size:11px;color:var(--texto3);margin-top:4px;">
+                  <i class="ti ti-clock"></i> Fecha de ingreso del trabajador: <strong id="c-fecha-registro-txt">—</strong>
+                </div>
+              </div>
             </div>
             <div class="form-section"><i class="ti ti-building-factory"></i> Faena</div>
             <div class="fila-mixta" style="margin-bottom:12px;">
@@ -844,8 +847,8 @@
           <div class="f-group"><label class="form-label">Nombre de la faena *</label><div id="c-faena-wrap"><input class="f-input" id="c-faena" placeholder="Ej: Cosecha temporada 2026" oninput="actualizarPrevia()"></div></div>
             </div>
 
-            <div class="fila-compacta">
-              <div id="campo-temporada" class="f-group"><label class="form-label">Temporada</label><input class="f-input" id="c-temporada" placeholder="Ej: 2026-2027 (sin escribir la palabra Temporada)" oninput="actualizarPrevia()"></div>
+            <div class="fila-adaptable">
+              <div id="campo-temporada" class="f-group campo-flex"><label class="form-label">Temporada</label><input class="f-input" id="c-temporada" placeholder="Ej: 2026-2027 (sin escribir la palabra Temporada)" oninput="actualizarPrevia()"></div>
               <div id="campo-fecha-termino" class="f-group"><label class="form-label" id="lbl-fecha-termino">Fecha término *</label><input class="f-input" id="c-fecha-termino" type="date" oninput="actualizarPrevia()"></div>
             </div>
               <div class="form-section"><i class="ti ti-clock"></i> Jornada</div>
@@ -981,8 +984,8 @@
       <button class="btn btn-secondary btn-sm" onclick="_amSeleccionarTodos(true)">Todos</button>
       <button class="btn btn-secondary btn-sm" onclick="_amSeleccionarTodos(false)">Ninguno</button>
     </div>
-    <input type="text" id="anx-buscar-visual" oninput="_renderListaVisualTrabajadorAnexo()" placeholder="Buscar por RUT o nombre..." style="width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
-    <div id="lista-visual-trabajador-anexo" style="max-height:220px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
+    <input type="text" id="anx-buscar-visual" oninput="_renderListaVisualTrabajadorAnexo()" placeholder="Buscar por RUT o nombre..." style="width:100%;max-width:420px;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
+    <div id="lista-visual-trabajador-anexo" style="max-width:520px;max-height:220px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
   </div>
 </div>
         <div class="g2" style="align-items:start;">
@@ -2763,7 +2766,7 @@
       <div id="config-grupos-contenido"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button class="btn btn-secondary btn-sm" onclick="cerrarModalConfigGruposMasivo()">Cancelar</button>
-        <button class="btn btn-primary btn-sm" onclick="generarContratosGrupoMasivo()"><i class="ti ti-file-check"></i> Generar contratos</button>
+        <button class="btn btn-primary btn-sm" onclick="generarContratosGrupoMasivo()"><i class="ti ti-eye"></i> Revisar contratos</button>
       </div>
     </div>
   </div>
@@ -2786,8 +2789,9 @@
   </div>
   <!-- MODAL CONFIRMACIÓN — Contratación Masiva -->
   <div id="modal-confirmacion-masivo" class="modal-overlay">
-    <div style="background:#fff;border-radius:14px;padding:24px;width:460px;max-width:96vw;">
-      <div style="font-size:16px;font-weight:700;margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Confirmación de contratación masiva</div>      <p style="font-size:13px;color:var(--texto2);margin:10px 0;">Está a punto de generar contratos para el siguiente lote:</p>
+    <div style="background:#fff;border-radius:14px;padding:24px;width:820px;max-width:96vw;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px;"><i class="ti ti-alert-circle"></i> Revisar antes de crear</div>
+      <p style="font-size:13px;color:var(--texto2);margin:10px 0;">Revisa el contrato tal como va a quedar antes de generarlo para el siguiente lote:</p>
       <div style="display:grid;gap:6px;font-size:13px;background:var(--gris-bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
         <div><span style="color:var(--texto3);">Empresa (Empleador):</span> <strong id="conf-masivo-empresa"></strong></div>
         <div><span style="color:var(--texto3);">Empresa Mandante:</span> <strong id="conf-masivo-mandante"></strong></div>
@@ -2797,10 +2801,20 @@
         <summary id="conf-masivo-trab-resumen" style="cursor:pointer;font-size:13px;font-weight:600;color:var(--azul);">Trabajadores seleccionados (0) ▼</summary>
         <ul id="conf-masivo-trab-lista" style="margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--texto2);max-height:180px;overflow-y:auto;"></ul>
       </details>
-      <p style="font-size:12px;color:var(--texto3);margin-bottom:16px;">Todos los trabajadores seleccionados recibirán las mismas condiciones contractuales definidas para este lote.</p>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div class="card-title" style="margin:0;"><i class="ti ti-file-text"></i> Vista previa del contrato</div>
+        <div id="conf-masivo-nav" style="display:none;gap:6px;align-items:center;">
+          <button id="conf-masivo-nav-prev" class="btn btn-secondary btn-sm" onclick="_navPreviewContratoMasivo(-1)">◀</button>
+          <span id="conf-masivo-nav-contador" style="font-size:12px;color:var(--texto3);white-space:nowrap;"></span>
+          <button id="conf-masivo-nav-next" class="btn btn-secondary btn-sm" onclick="_navPreviewContratoMasivo(1)">▶</button>
+        </div>
+      </div>
+      <div id="conf-masivo-preview" style="border:1px solid var(--borde);border-radius:8px;padding:16px;flex:1;overflow-y:auto;background:#fafafa;font-size:12px;min-height:300px;"></div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
         <button class="btn btn-secondary btn-sm" onclick="cerrarModalConfirmacionMasivo()">Cancelar</button>
-        <button class="btn btn-primary btn-sm" onclick="confirmarYGenerarContratosMasivo()"><i class="ti ti-file-check"></i> Confirmar y generar contratos</button>
+        <button class="btn btn-primary btn-sm" onclick="confirmarYGenerarContratosMasivo()"><i class="ti ti-file-check"></i> Crear contratos</button>
       </div>
     </div>
   </div>
