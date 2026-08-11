@@ -198,6 +198,7 @@
       .fila-mixta .form-group:first-child input,.fila-mixta .form-group:first-child select{width:100%;min-width:0}
     }
     .form-group{display:flex;flex-direction:column;gap:5px}
+    .f-group{display:flex;flex-direction:column;gap:5px}
     .form-group.full{grid-column:span 2}
     label{font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:0.3px}
     input,select,textarea{padding:9px 11px;border:1px solid var(--borde);border-radius:var(--radius);font-size:13px;color:var(--texto);background:var(--gris-bg);font-family:inherit;outline:none;width:100%;transition:border-color 0.15s}
