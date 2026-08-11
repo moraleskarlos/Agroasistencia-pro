@@ -990,7 +990,7 @@ function _renderListaVisualTrabajadorAnexo(){
 
   if(modoAnexoActual === 'masivo'){
     cont.innerHTML = lista.map(t => {
-      const tieneAnexo = (anexos||[]).some(a => a.trabajador_rut === t.rut);
+      const totalAnexos = (anexos||[]).filter(a => a.trabajador_rut === t.rut).length;
       const emp    = getEmpresaEmpleadora(t.empresa_propia_id)?.razon_social || '—';
       const cargo  = t.funcion_cargo || '—';
       const fecha  = t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString('es-CL') : '—';
@@ -998,10 +998,10 @@ function _renderListaVisualTrabajadorAnexo(){
           border-bottom:1px solid var(--borde);">
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:500;">${t.nombre}</div>
-          <div style="font-size:11px;color:var(--texto3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${emp} · ${cargo} · Ingreso ${fecha}</div>
+          <div style="font-size:11px;color:var(--texto3);line-height:1.4;">${emp} · ${cargo} · Ingreso ${fecha}</div>
         </div>
         <span class="rut-mono">${t.rut}</span>
-        <span style="font-size:11px;font-weight:600;color:${tieneAnexo?'#16a34a':'var(--texto3)'};">${tieneAnexo?'con anexo previo':''}</span>
+        <span style="font-size:11px;font-weight:600;color:${totalAnexos?'#16a34a':'var(--texto3)'};white-space:nowrap;">${totalAnexos} anexo${totalAnexos!==1?'s':''}</span>
         <input type="checkbox" class="am-check-trab" value="${t.id}" ${marcados.has(t.id)?'checked':''}
           onchange="_amActualizarContador()" style="width:auto;flex-shrink:0;">
       </label>`;
@@ -1011,7 +1011,7 @@ function _renderListaVisualTrabajadorAnexo(){
   }
 
   cont.innerHTML = lista.map(t => {
-    const tieneAnexo   = (anexos||[]).some(a => a.trabajador_rut === t.rut);
+    const totalAnexos  = (anexos||[]).filter(a => a.trabajador_rut === t.rut).length;
     const seleccionado = valActual === t.id;
     const emp    = getEmpresaEmpleadora(t.empresa_propia_id)?.razon_social || '—';
     const cargo  = t.funcion_cargo || '—';
@@ -1028,10 +1028,10 @@ function _renderListaVisualTrabajadorAnexo(){
       </span>
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:500;">${t.nombre}</div>
-        <div style="font-size:11px;color:var(--texto3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${emp} · ${cargo} · Ingreso ${fecha}</div>
+        <div style="font-size:11px;color:var(--texto3);line-height:1.4;">${emp} · ${cargo} · Ingreso ${fecha}</div>
       </div>
       <span class="rut-mono">${t.rut}</span>
-      <span style="font-size:11px;font-weight:600;color:${tieneAnexo?'#16a34a':'#dc2626'};">${tieneAnexo?'con anexo':'sin anexo'}</span>
+      <span style="font-size:11px;font-weight:600;color:${totalAnexos?'#16a34a':'var(--texto3)'};white-space:nowrap;">${totalAnexos} anexo${totalAnexos!==1?'s':''}</span>
     </div>`;
   }).join('');
 }

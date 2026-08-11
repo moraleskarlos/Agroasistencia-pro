@@ -251,14 +251,13 @@ function precargarContrato(){
   const t = trabajadores.find(x => x.rut === id || x.id === id);
   if(!t) return;
 
-  // ✅ Fecha de registro (Punto 2 del reporte de Contratos) — dato de
-  // trazabilidad, no editable desde acá. Trabajadores creados antes de
-  // este cambio no la tienen — se muestra "—" en ese caso.
+  // Fecha de ingreso — dato de trazabilidad, no editable desde acá.
+  // (antes mostraba fecha de registro por error; corregido a pedido)
   const elFechaReg = document.getElementById('c-fecha-registro-txt');
   if(elFechaReg){
-    elFechaReg.textContent = t.creado_en
-      ? new Date(t.creado_en).toLocaleDateString('es-CL', {day:'2-digit', month:'2-digit', year:'numeric'})
-      : '— (registrado antes de este cambio)';
+    elFechaReg.textContent = t.fecha_ingreso
+      ? new Date(t.fecha_ingreso + 'T00:00:00').toLocaleDateString('es-CL', {day:'2-digit', month:'2-digit', year:'numeric'})
+      : '— (sin fecha de ingreso registrada)';
   }
 
   if(contratos.some(c => c.trabajador_id === t.id)){
@@ -421,6 +420,7 @@ const t = trabajadores.find(
   const mandanteObj = _mandanteSeleccionadoContrato();
 
   return {
+    ..._leerFormularioEpp('cepp'),
     trabajador_id:       trabajadorId,
     trabajador_rut:      t?.rut || '',
     empresa_rut:         mandanteObj?.rut || '',
@@ -1853,28 +1853,121 @@ function _actualizarAvisoFirmaGrupo(gid){
 
   if(peor){
     avisoEl.style.display = 'block';
+    avisoEl.style.color = 'var(--danger)';
+    avisoEl.style.background = '#FEF2F2';
     avisoEl.textContent = `⚠️ ${peor.nombre} ingresó el ${fmtFecha(peor.fecha_ingreso)} — la ley exige firmar dentro de ${limite} días desde el ingreso, y ya pasaron ${peorDias}.`;
+    return;
+  }
+
+  // Sin infracciones — igual se muestra la fecha de ingreso más antigua del
+  // grupo como referencia neutral, mismo criterio informativo que ya tiene
+  // Contrato Individual.
+  const conIngreso = g.trabajadores.filter(t => t.fecha_ingreso);
+  if(conIngreso.length){
+    const masAntiguo = conIngreso.reduce((a,b) => a.fecha_ingreso < b.fecha_ingreso ? a : b);
+    avisoEl.style.display = 'block';
+    avisoEl.style.color = 'var(--texto3)';
+    avisoEl.style.background = 'var(--gris-bg)';
+    avisoEl.textContent = `ℹ️ Fecha de ingreso más antigua del grupo: ${fmtFecha(masAntiguo.fecha_ingreso)} (${masAntiguo.nombre})`;
   } else {
     avisoEl.style.display = 'none';
   }
 }
 
 /* ── VALIDACIÓN + PANTALLA DE CONFIRMACIÓN (antes de generar nada) ──────── */
+function _leerConfigGrupoMasivo(gid){
+  const tipo = document.getElementById(`cfg-tipo-${gid}`)?.value;
+  return {
+    mandanteSel: document.getElementById(`cfg-mandante-${gid}`)?.value,
+    tipo,
+    ciudad:      document.getElementById(`cfg-ciudad-${gid}`)?.value.trim(),
+    termino:     document.getElementById(`cfg-termino-${gid}`)?.value,
+    temporada:   document.getElementById(`cfg-temporada-${gid}`)?.value.trim(),
+    colacion:    document.getElementById(`cfg-colacion-${gid}`)?.value.trim(),
+    firma:       document.getElementById(`cfg-firma-${gid}`)?.value,
+    formaPago:   document.getElementById(`cfg-formapago-${gid}`)?.value,
+    valor:       document.getElementById(`cfg-valor-${gid}`)?.value,
+    faena:       document.getElementById(`cfg-faena-${gid}`)?.value.trim(),
+  };
+}
+
+/* Arma el objeto `datos` de un contrato del lote para un trabajador puntual
+   — función pura, sin efectos secundarios, usada tanto para la vista previa
+   (sin guardar nada) como para la generación final (guardando de verdad). */
+function _construirDatosContratoMasivo(g, cfgCompleto, t, mandanteObj){
+  return {
+    trabajador_id: t.id,
+    trabajador_rut: t.rut,
+    empresa_rut: mandanteObj?.rut || '',
+    empresa_propia_id: t.empresa_propia_id || '',
+    tipo: cfgCompleto.tipo_contrato,
+    ciudad_firma: cfgCompleto.ciudad_firma,
+    fecha_firma: cfgCompleto.fecha_firma,
+    funcion_cargo: t.funcion_cargo || '',
+    nombre_faena: cfgCompleto.faena || '',
+    ubicacion_faena: [mandanteObj?.direccion, mandanteObj?.comuna].filter(Boolean).join(', '),
+    region: mandanteObj?.region || '',
+    mandante_id: g.mandanteId || '',
+    mandante_nombre: mandanteObj?.nombre || '',
+    mandante_rut: mandanteObj?.rut || '',
+    mandante_direccion: mandanteObj?.direccion || '',
+    mandante_comuna: mandanteObj?.comuna || '',
+    mandante_region: mandanteObj?.region || '',
+    temporada: cfgCompleto.temporada || '',
+    fecha_inicio: t.fecha_ingreso || '',
+    fecha_termino: cfgCompleto.fecha_termino || '',
+    horas_semanales: cfgCompleto.horas_semanales,
+    distribucion_jornada: cfgCompleto.distribucion_jornada,
+    jornada_dias: cfgCompleto.jornada_dias,
+    colacion: cfgCompleto.colacion,
+    tipo_remuneracion: cfgCompleto.forma_pago,
+    sueldo_monto: cfgCompleto.valor,
+    sueldo_escrito: numeroALetras(cfgCompleto.valor).trim() + ' pesos',
+    beneficios: [],
+    estado: 'activo',
+    creado_en: new Date().toISOString(),
+    epp_entregados: cfgCompleto.epp_entregados,
+    epp_otro: cfgCompleto.epp_otro,
+    epp_fecha_entrega: cfgCompleto.epp_fecha_entrega,
+    irl_fecha_induccion: cfgCompleto.irl_fecha_induccion,
+    irl_tipo: cfgCompleto.irl_tipo,
+    irl_declarado: cfgCompleto.irl_declarado,
+  };
+}
+
+/* Arma cfgCompleto (config del grupo + EPP/RIOHS + jornada) a partir de los
+   campos leídos por _leerConfigGrupoMasivo — separado para poder llamarlo
+   tanto desde la vista previa como desde la generación final. */
+function _construirCfgCompletoMasivo(gid, cfg){
+  const { jornada_dias, horas_semanales, distribucion_jornada } = _leerJornadaGrupo(gid);
+  const eppDatos = _leerFormularioEpp(`cfg-${gid}`);
+  return {
+    tipo_contrato:  cfg.tipo,
+    faena:          cfg.faena,
+    ciudad_firma:   cfg.ciudad,
+    temporada:      cfg.tipo === 'temporada' ? cfg.temporada : '',
+    fecha_termino:  cfg.tipo !== 'indefinido' ? cfg.termino : '',
+    colacion:       cfg.colacion,
+    jornada_dias, horas_semanales, distribucion_jornada,
+    fecha_firma:    cfg.firma,
+    forma_pago:     cfg.formaPago,
+    valor:          parseInt(cfg.valor) || 0,
+    epp_entregados: eppDatos.epp_entregados,
+    epp_otro:       eppDatos.epp_otro,
+    epp_fecha_entrega: cfg.firma,
+    irl_fecha_induccion: cfg.firma,
+    irl_tipo:       document.getElementById(`cfg-${gid}-irl-tipo`)?.value || '',
+    irl_declarado:  eppDatos.irl_declarado,
+  };
+}
+
 function generarContratosGrupoMasivo(){
   const g = _configGruposActuales[0];
   if(!g){ toast('⚠️ Vuelve a abrir "Configurar y generar contratos"', 'error'); return; }
   const gid = g.gid;
 
-  const mandanteSel = document.getElementById(`cfg-mandante-${gid}`)?.value;
-  const tipo = document.getElementById(`cfg-tipo-${gid}`)?.value;
-  const ciudad = document.getElementById(`cfg-ciudad-${gid}`)?.value.trim();
-  const termino = document.getElementById(`cfg-termino-${gid}`)?.value;
-  const temporada = document.getElementById(`cfg-temporada-${gid}`)?.value.trim();
-  const colacion = document.getElementById(`cfg-colacion-${gid}`)?.value.trim();
-  const firma = document.getElementById(`cfg-firma-${gid}`)?.value;
-  const formaPago = document.getElementById(`cfg-formapago-${gid}`)?.value;
-  const valor = document.getElementById(`cfg-valor-${gid}`)?.value;
-  const faena = document.getElementById(`cfg-faena-${gid}`)?.value.trim();
+  const cfg = _leerConfigGrupoMasivo(gid);
+  const { mandanteSel, tipo, ciudad, termino, temporada, colacion, firma, formaPago, valor, faena } = cfg;
   if(!mandanteSel){ toast(`⚠️ Selecciona la Empresa Mandante para "${g.cargo}"`, 'error'); return; }
   if(!faena){ toast(`⚠️ Ingresa/selecciona la Faena para "${g.cargo}"`, 'error'); return; }
   if(!ciudad){ toast(`⚠️ Ingresa la ciudad de firma para "${g.cargo}"`, 'error'); return; }
@@ -1891,11 +1984,16 @@ function generarContratosGrupoMasivo(){
   // Mandante no tiene rol legal en los términos del contrato de trabajo,
   // así que no correspondía bloquear la fecha de término por esto.
 
-  // Todo validado — se abre la confirmación en vez de generar directo.
+  // Todo validado — se abre la revisión (vista previa real, sin guardar nada
+  // todavía) en vez de generar directo.
   abrirConfirmacionMasivo(g);
 }
 
+let _previewContratosMasivoActual = [];
+let _previewContratosMasivoIdx = 0;
+
 function abrirConfirmacionMasivo(g){
+  const gid = g.gid;
   const epId = document.getElementById('c-empresa-propia')?.value || '';
   const emp = getEmpresaEmpleadora(epId);
 
@@ -1913,7 +2011,50 @@ function abrirConfirmacionMasivo(g){
       .join('');
   }
 
+  // Vista previa real — mismos datos y mismo motor de documento que la
+  // generación final (construirDocumentoContrato), solo que acá no se
+  // guarda nada todavía. Se genera un documento por trabajador para que
+  // la revisión sea fiel (cargo/faena pueden variar por persona).
+  const cfg = _leerConfigGrupoMasivo(gid);
+  const cfgCompleto = _construirCfgCompletoMasivo(gid, cfg);
+  const mandanteObj = empresas.find(e => e.id === g.mandanteId || e.rut === g.mandanteId);
+
+  _previewContratosMasivoActual = g.trabajadores.map(t => {
+    const empT = getEmpresaEmpleadora(t.empresa_propia_id);
+    const datos = _construirDatosContratoMasivo(g, cfgCompleto, t, mandanteObj);
+    const { htmlCompleto } = construirDocumentoContrato(t, empT, mandanteObj, datos);
+    return { nombre: t.nombre, htmlCompleto };
+  });
+  _previewContratosMasivoIdx = 0;
+  _renderPreviewContratoMasivo();
+
   document.getElementById('modal-confirmacion-masivo').style.display = 'flex';
+}
+
+function _renderPreviewContratoMasivo(){
+  const total = _previewContratosMasivoActual.length;
+  const cont  = document.getElementById('conf-masivo-preview');
+  const nav   = document.getElementById('conf-masivo-nav');
+  if(!cont || !total) return;
+
+  const actual = _previewContratosMasivoActual[_previewContratosMasivoIdx];
+  cont.innerHTML = actual.htmlCompleto ? _contenidoInternoDocumento(actual.htmlCompleto) : '<p style="color:var(--texto3);">Sin documento</p>';
+
+  if(nav){
+    nav.style.display = total > 1 ? 'flex' : 'none';
+    const contador = document.getElementById('conf-masivo-nav-contador');
+    if(contador) contador.textContent = `${actual.nombre} — ${_previewContratosMasivoIdx+1} de ${total}`;
+    const prev = document.getElementById('conf-masivo-nav-prev');
+    const next = document.getElementById('conf-masivo-nav-next');
+    if(prev) prev.disabled = _previewContratosMasivoIdx === 0;
+    if(next) next.disabled = _previewContratosMasivoIdx === total - 1;
+  }
+}
+
+function _navPreviewContratoMasivo(delta){
+  const total = _previewContratosMasivoActual.length;
+  _previewContratosMasivoIdx = Math.max(0, Math.min(total - 1, _previewContratosMasivoIdx + delta));
+  _renderPreviewContratoMasivo();
 }
 
 function cerrarModalConfirmacionMasivo(){
@@ -1930,68 +2071,14 @@ function confirmarYGenerarContratosMasivo(){
   const contenidos = [];
   let generados = 0;
 
-  const tipo = document.getElementById(`cfg-tipo-${gid}`).value;
-  const { jornada_dias, horas_semanales, distribucion_jornada } = _leerJornadaGrupo(gid);
-  const fechaFirma = document.getElementById(`cfg-firma-${gid}`).value;
-  const eppDatos = _leerFormularioEpp(`cfg-${gid}`);
+  const cfg = _leerConfigGrupoMasivo(gid);
+  const cfgCompleto = _construirCfgCompletoMasivo(gid, cfg);
   const mandanteObj = empresas.find(e => e.id === g.mandanteId || e.rut === g.mandanteId);
-
-  const cfg = {
-    tipo_contrato:  tipo,
-    faena:          document.getElementById(`cfg-faena-${gid}`).value.trim(),
-    ciudad_firma:   document.getElementById(`cfg-ciudad-${gid}`).value.trim(),
-    temporada:      tipo === 'temporada' ? document.getElementById(`cfg-temporada-${gid}`).value.trim() : '',
-    fecha_termino:  tipo !== 'indefinido' ? document.getElementById(`cfg-termino-${gid}`).value : '',
-    colacion:       document.getElementById(`cfg-colacion-${gid}`).value.trim(),
-    jornada_dias, horas_semanales, distribucion_jornada,
-    fecha_firma:    fechaFirma,
-    forma_pago:     document.getElementById(`cfg-formapago-${gid}`).value,
-    valor:          parseInt(document.getElementById(`cfg-valor-${gid}`).value) || 0,
-    epp_entregados: eppDatos.epp_entregados,
-    epp_otro:       eppDatos.epp_otro,
-    epp_fecha_entrega: fechaFirma, // misma fecha que la firma, según lo acordado
-    irl_fecha_induccion: fechaFirma, // misma fecha que la firma, según lo acordado
-    irl_tipo:       document.getElementById(`cfg-${gid}-irl-tipo`)?.value || '',
-    irl_declarado:  eppDatos.irl_declarado,
-  };
-
-  const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[cfg.tipo_contrato] || cfg.tipo_contrato;
+  const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[cfgCompleto.tipo_contrato] || cfgCompleto.tipo_contrato;
 
   g.trabajadores.forEach(t => {
     const emp = getEmpresaEmpleadora(t.empresa_propia_id);
-
-    const datos = {
-      trabajador_id: t.id,
-      trabajador_rut: t.rut,
-      empresa_rut: mandanteObj?.rut || '',
-      empresa_propia_id: t.empresa_propia_id || '',
-      tipo: cfg.tipo_contrato,
-      ciudad_firma: cfg.ciudad_firma,
-      fecha_firma: cfg.fecha_firma,
-      funcion_cargo: t.funcion_cargo || '',
-      nombre_faena: cfg.faena || '',
-      ubicacion_faena: [mandanteObj?.direccion, mandanteObj?.comuna].filter(Boolean).join(', '),
-      region: mandanteObj?.region || '',
-      mandante_id: g.mandanteId || '',
-      mandante_nombre: mandanteObj?.nombre || '',
-      mandante_rut: mandanteObj?.rut || '',
-      mandante_direccion: mandanteObj?.direccion || '',
-      mandante_comuna: mandanteObj?.comuna || '',
-      mandante_region: mandanteObj?.region || '',
-      temporada: cfg.temporada || '',
-      fecha_inicio: t.fecha_ingreso || '',
-      fecha_termino: cfg.fecha_termino || '',
-      horas_semanales: cfg.horas_semanales,
-      distribucion_jornada: cfg.distribucion_jornada,
-      jornada_dias: cfg.jornada_dias,
-      colacion: cfg.colacion,
-      tipo_remuneracion: cfg.forma_pago,
-      sueldo_monto: cfg.valor,
-      sueldo_escrito: numeroALetras(cfg.valor).trim() + ' pesos',
-      beneficios: [],
-      estado: 'activo',
-      creado_en: new Date().toISOString(),
-    };
+    const datos = _construirDatosContratoMasivo(g, cfgCompleto, t, mandanteObj);
 
     const existe = contratos.findIndex(c => c.trabajador_id === t.id);
     if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
@@ -2004,21 +2091,21 @@ function confirmarYGenerarContratosMasivo(){
     // Trabajadores, Alertas, QR, Exportar). Un solo campo (Hallazgo #5).
     Object.assign(t, {
       mandante_id: g.mandanteId || '',
-      epp_entregados: cfg.epp_entregados,
-      epp_otro: cfg.epp_otro,
-      epp_fecha_entrega: cfg.epp_fecha_entrega,
-      irl_fecha_induccion: cfg.irl_fecha_induccion,
-      irl_tipo: cfg.irl_tipo,
-      irl_declarado: cfg.irl_declarado,
+      epp_entregados: cfgCompleto.epp_entregados,
+      epp_otro: cfgCompleto.epp_otro,
+      epp_fecha_entrega: cfgCompleto.epp_fecha_entrega,
+      irl_fecha_induccion: cfgCompleto.irl_fecha_induccion,
+      irl_tipo: cfgCompleto.irl_tipo,
+      irl_declarado: cfgCompleto.irl_declarado,
     });
 
     registrarDocumentoCarpeta({
       trabajador_id:  t.id,
       trabajador_rut: t.rut,
       tipo:           'contrato',
-      subtipo:        cfg.tipo_contrato,
-      fecha_firma:    cfg.fecha_firma,
-      descripcion:    `Contrato ${tipoTxt} — ${cfg.faena||''} (Masivo)`.trim(),
+      subtipo:        cfgCompleto.tipo_contrato,
+      fecha_firma:    cfgCompleto.fecha_firma,
+      descripcion:    `Contrato ${tipoTxt} — ${cfgCompleto.faena||''} (Masivo)`.trim(),
     });
 
     const { htmlCompleto } = construirDocumentoContrato(t, emp, mandanteObj, datos);
