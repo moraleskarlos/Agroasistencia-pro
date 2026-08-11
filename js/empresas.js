@@ -686,7 +686,7 @@ function verTrabajadoresEmpresaPropia(id){
 }
 
 function poblarSelectsEmpresaPropia(){
-  const ids = ['filtro-empresa-propia', 'filtro-empresa-propia-ext', 'asignar-ep-select', 'm-empresa-contratista', 'c-empresa-propia', 'lote-empresa-propia', 'epp-f-empresa'];
+  const ids = ['filtro-empresa-propia', 'filtro-empresa-propia-ext', 'asignar-ep-select', 'm-empresa-contratista', 'c-empresa-propia', 'lote-empresa-propia', 'epp-f-empresa', 'manual-empresa'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if(!el) return;

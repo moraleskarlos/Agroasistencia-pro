@@ -6,6 +6,7 @@ function initAsistencia(){
   document.getElementById('asist-fecha-hasta').value = hoy;
   const manualFecha = document.getElementById('manual-fecha');
   if(manualFecha) manualFecha.value = hoy;
+  if(typeof poblarSelectsEmpresaPropia === 'function') poblarSelectsEmpresaPropia();
   switchTabAsistencia('dia');
   cambiarModoManualAsistencia('individual');
   cargarAsistencia();
@@ -162,12 +163,8 @@ function _renderAsistenciaDia(fecha){
   const titulo = document.getElementById('asist-card-title');
   if(titulo) titulo.innerHTML = `<i class="ti ti-calendar-check"></i> Asistencia del Día — ${fmtFecha(fecha)}`;
 
-  const acciones = document.getElementById('asist-card-acciones');
-  if(acciones) acciones.innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-refresh"></i> Actualizar</button>
-    <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPorMandante()"><i class="ti ti-building-factory"></i> Por mandante</button>
-    <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>
-    <button class="btn btn-dark btn-sm" onclick="cierreMasivoTurno()"><i class="ti ti-door-exit"></i> Cierre masivo turno</button>`;
+  const accionesDia = document.getElementById('asist-acciones-dia');
+  if(accionesDia) accionesDia.style.display = 'contents';
 
   const thead = document.getElementById('thead-asistencia');
   if(thead) thead.innerHTML = `<tr>
@@ -191,25 +188,42 @@ function _renderAsistenciaDia(fecha){
     return;
   }
 
-  const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre)
-    ? cfg.admin_nombre.split(' ')[0]
-    : 'Admin';
-
   tbody.innerHTML = lista.map((t, i) => {
     const ini      = (t.nombre||'??').split(' ').slice(0,2).map(n=>n[0]).join('').toUpperCase();
     const rid      = t.rut.replace(/\./g,'').replace('-','');
     const registro = data.find(x => x.rut === t.rut);
-    const bloq     = !!registro && !_filasEditandoAsist.has(t.rut);
+    const editando = _filasEditandoAsist.has(t.rut);
+    const activo   = !!registro && !registro.hora_salida;
 
     const horasGuardadas = registro ? registro.horas_trabajadas : null;
     const { jornada }    = calcularJornada(horasGuardadas);
     const horasTxt        = horasGuardadas !== null && horasGuardadas !== undefined
       ? horasGuardadas.toFixed(1) + ' h' : '—';
 
+    let celdaIngreso, celdaSalida, celdaAccion;
+
+    if(editando){
+      celdaIngreso = `<input type="time" id="hora-entrada-${rid}" value="${registro?.hora_entrada||''}"
+          style="width:90px;padding:4px 7px;font-size:12px;" onchange="previewHoras('${rid}')">`;
+      celdaSalida  = `<input type="time" id="hora-salida-${rid}" value="${registro?.hora_salida||''}"
+          style="width:90px;padding:4px 7px;font-size:12px;" onchange="previewHoras('${rid}')">`;
+      celdaAccion  = `<button class="btn btn-primary btn-sm" onclick="guardarMarcacion('${t.rut}')"><i class="ti ti-check"></i> Guardar</button>
+                      <button class="btn btn-secondary btn-sm" onclick="cancelarEdicionAsistencia('${t.rut}')" title="Cancelar"><i class="ti ti-x"></i></button>`;
+    } else if(registro){
+      celdaIngreso = `<span style="font-size:13px;">${registro.hora_entrada || '—'}</span>`;
+      celdaSalida  = `<span style="font-size:13px;">${registro.hora_salida || '—'}</span>`;
+      celdaAccion  = `<button class="btn btn-secondary btn-sm" onclick="habilitarEdicionAsistencia('${t.rut}')"><i class="ti ti-edit"></i> Corregir</button>
+                      <button class="btn btn-secondary btn-sm" onclick="eliminarMarcacionAsistencia('${t.rut}')" title="Eliminar"><i class="ti ti-trash"></i></button>`;
+    } else {
+      celdaIngreso = `<span style="font-size:13px;color:var(--texto3);">Sin marcar</span>`;
+      celdaSalida  = `<span style="font-size:13px;color:var(--texto3);">Sin marcar</span>`;
+      celdaAccion  = `<span style="font-size:12px;color:var(--texto3);">—</span>`;
+    }
+
     return `<tr id="fila-${rid}">
       <td style="text-align:center;">
         <input type="checkbox" class="asist-check" data-rut="${t.rut}"
-          ${bloq ? 'disabled' : ''}
+          ${activo ? '' : 'disabled'} title="${activo ? 'Seleccionar para cierre masivo' : 'Solo disponible para turnos activos'}"
           style="width:16px;height:16px;accent-color:var(--verde);cursor:pointer;">
       </td>
       <td>
@@ -220,22 +234,10 @@ function _renderAsistenciaDia(fecha){
       </td>
       <td class="rut-mono">${t.rut}</td>
       <td style="font-size:12px;color:var(--texto2);">
-        ${registro?.registrado_por || registradoPor}
+        ${registro?.registrado_por || '—'}
       </td>
-      <td>
-        <input type="time" id="hora-entrada-${rid}"
-          value="${registro?.hora_entrada||''}"
-          ${bloq ? 'disabled' : ''}
-          style="width:90px;padding:4px 7px;font-size:12px;"
-          onchange="previewHoras('${rid}')">
-      </td>
-      <td>
-        <input type="time" id="hora-salida-${rid}"
-          value="${registro?.hora_salida||''}"
-          ${bloq ? 'disabled' : ''}
-          style="width:90px;padding:4px 7px;font-size:12px;"
-          onchange="previewHoras('${rid}')">
-      </td>
+      <td>${celdaIngreso}</td>
+      <td>${celdaSalida}</td>
       <td id="total-horas-${rid}" style="font-size:13px;font-weight:500;text-align:center;">
         ${horasTxt}
       </td>
@@ -243,13 +245,7 @@ function _renderAsistenciaDia(fecha){
         ${badgeJornada(jornada)}
       </td>
       <td>${badgeEstado(registro)}</td>
-      <td>
-        ${bloq
-          ? `<button class="btn btn-secondary btn-sm" onclick="habilitarEdicionAsistencia('${t.rut}')" title="Editar"><i class="ti ti-edit"></i></button>
-             <button class="btn btn-secondary btn-sm" onclick="eliminarMarcacionAsistencia('${t.rut}')" title="Eliminar"><i class="ti ti-trash"></i></button>`
-          : `<button class="btn btn-primary btn-sm" onclick="guardarMarcacion('${t.rut}')"><i class="ti ti-check"></i> ${registro ? 'Guardar cambios' : 'Marcar'}</button>`
-        }
-      </td>
+      <td style="white-space:nowrap;">${celdaAccion}</td>
     </tr>`;
   }).join('');
 }
@@ -299,9 +295,8 @@ function _renderAsistenciaRango(inicio, fin){
   const titulo = document.getElementById('asist-card-title');
   if(titulo) titulo.innerHTML = `<i class="ti ti-calendar-stats"></i> Detalle del período — ${fmtFecha(inicio)} a ${fmtFecha(fin)}`;
 
-  const acciones = document.getElementById('asist-card-acciones');
-  if(acciones) acciones.innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-refresh"></i> Actualizar</button>`;
+  const accionesDia = document.getElementById('asist-acciones-dia');
+  if(accionesDia) accionesDia.style.display = 'none';
 
   const thead = document.getElementById('thead-asistencia');
   if(thead) thead.innerHTML = `<tr>
@@ -417,6 +412,11 @@ function habilitarEdicionAsistencia(rut){
   cargarAsistencia();
 }
 
+function cancelarEdicionAsistencia(rut){
+  _filasEditandoAsist.delete(rut);
+  cargarAsistencia();
+}
+
 function eliminarMarcacionAsistencia(rut){
   const t = trabajadores.find(x => x.rut === rut);
   if(!confirm(`¿Eliminar la marcación de ${t?.nombre||rut}? Esta acción no se puede deshacer.`)) return;
@@ -448,10 +448,7 @@ function cierreMasivoTurno(){
   checks.forEach(cb => {
     const rut = cb.dataset.rut;
     const idx = data.findIndex(x => x.rut === rut);
-    const rid = rut.replace(/\./g,'').replace('-','');
-    const entrada = idx >= 0
-      ? data[idx].hora_entrada
-      : (document.getElementById(`hora-entrada-${rid}`)?.value || hora);
+    const entrada = idx >= 0 ? data[idx].hora_entrada : hora;
 
     const horas           = calcularHoras(entrada, hora);
     const { jornada, alerta } = calcularJornada(horas);
@@ -542,39 +539,44 @@ function cambiarModoManualAsistencia(modo){
   document.getElementById('btn-manual-modo-masivo').className     = 'btn btn-sm ' + (esIndividual ? 'btn-secondary' : 'btn-primary');
   document.getElementById('bloque-manual-individual').style.display = esIndividual ? '' : 'none';
   document.getElementById('bloque-manual-masivo').style.display     = esIndividual ? 'none' : '';
+  if(esIndividual) _renderListaManualTrabajador();
 }
 
-function buscarTrabajadorManual(){
+function _renderListaManualTrabajador(){
+  const empId  = document.getElementById('manual-empresa')?.value || '';
   const buscar = (document.getElementById('manual-buscar')?.value || '').toLowerCase().trim();
-  const cont = document.getElementById('manual-resultados');
+  const cont   = document.getElementById('manual-lista-trabajador');
   if(!cont) return;
 
-  if(!buscar){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
+  let lista = trabajadores.filter(t => t.estado === 'activo');
+  if(empId) lista = lista.filter(t => t.empresa_propia_id === empId);
+  if(buscar) lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
+  lista.sort((a,b) => a.nombre?.localeCompare(b.nombre));
 
-  const resultados = trabajadores
-    .filter(t => t.estado === 'activo')
-    .filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar))
-    .slice(0, 8);
-
-  if(!resultados.length){
-    cont.style.display = 'block';
-    cont.innerHTML = `<div style="padding:10px;font-size:12px;color:var(--texto3);">Sin resultados</div>`;
+  if(!lista.length){
+    cont.innerHTML = `<div style="padding:18px;text-align:center;color:var(--texto3);font-size:13px;">Sin trabajadores para mostrar</div>`;
     return;
   }
 
-  cont.style.display = 'block';
-  cont.innerHTML = resultados.map(t => `
-    <div onclick="seleccionarTrabajadorManual('${t.rut}')"
-      style="padding:8px 10px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--borde);"
-      onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-      ${t.nombre} <span class="rut-mono">${t.rut}</span>
-    </div>`).join('');
+  cont.innerHTML = lista.map(t => {
+    const seleccionado = _manualRutSeleccionado === t.rut;
+    return `<div onclick="seleccionarTrabajadorManual('${t.rut}')"
+        style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
+        border-bottom:1px solid var(--borde);background:${seleccionado?'#EFF6FF':'#fff'};"
+        onmouseover="this.style.background='${seleccionado?'#EFF6FF':'#f8fafc'}'"
+        onmouseout="this.style.background='${seleccionado?'#EFF6FF':'#fff'}'">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;">${t.nombre}</div>
+        <div style="font-size:11px;color:var(--texto3);">${t.funcion_cargo||'—'}</div>
+      </div>
+      <span class="rut-mono">${t.rut}</span>
+    </div>`;
+  }).join('');
 }
 
 function seleccionarTrabajadorManual(rut){
   _manualRutSeleccionado = rut;
-  document.getElementById('manual-buscar').value = '';
-  document.getElementById('manual-resultados').style.display = 'none';
+  _renderListaManualTrabajador();
   _cargarFormularioManual();
 }
 
@@ -603,12 +605,10 @@ function _manualFechaCambio(){
 /* Botón Cancelar: limpia la selección/formulario sin guardar ni eliminar */
 function cancelarFormularioManual(){
   _manualRutSeleccionado = null;
-  document.getElementById('manual-buscar').value = '';
-  document.getElementById('manual-resultados').style.display = 'none';
-  document.getElementById('manual-resultados').innerHTML = '';
   document.getElementById('manual-form-horas').style.display = 'none';
   document.getElementById('manual-hora-entrada').value = '';
   document.getElementById('manual-hora-salida').value  = '';
+  _renderListaManualTrabajador();
 }
 
 function guardarMarcacionManual(){
