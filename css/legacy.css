@@ -146,13 +146,35 @@
        Se aplican fila por fila, revisando cada módulo — no es
        un reemplazo global de .form-grid.
        ═══════════════════════════════════════════════════════ */
-    .fila-compacta{display:grid;grid-template-columns:max-content max-content;gap:16px;justify-content:start;align-items:start}
+    /* .fila-compacta ahora usa flexbox en vez de grid — mismo resultado
+       visual que antes para 2 campos (cada uno se achica a su contenido),
+       pero ahora también sirve para filas de 3, 4 o más campos cortos
+       (ej. filtros), sin tener que hardcodear la cantidad de columnas. */
+    .fila-compacta{display:flex;flex-wrap:wrap;gap:16px;align-items:start}
+    .fila-compacta>.form-group,.fila-compacta>.f-group{flex:0 0 auto}
     .fila-compacta .form-group select,
-    .fila-compacta .form-group input{width:auto;min-width:200px}
+    .fila-compacta .form-group input,
+    .fila-compacta .f-group select,
+    .fila-compacta .f-group input{width:auto;min-width:200px}
 
-    .fila-mixta{display:grid;grid-template-columns:max-content 1fr;gap:16px;align-items:start}
+    .fila-mixta{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:16px;align-items:start}
     .fila-mixta .form-group:first-child input,
-    .fila-mixta .form-group:first-child select{width:auto;min-width:180px}
+    .fila-mixta .form-group:first-child select,
+    .fila-mixta .f-group:first-child input,
+    .fila-mixta .f-group:first-child select{width:auto;min-width:180px}
+
+    /* .fila-adaptable: la versión de .fila-mixta para filas de 3+ campos
+       que mezclan uno de texto libre (búsqueda, etc.) con varios cortos
+       (ej. fechas). Por defecto cada campo se achica a su contenido; el
+       que lleve la clase .campo-flex se lleva el espacio sobrante — se
+       marca a mano porque, a diferencia de .fila-mixta, acá no hay una
+       posición fija (primero/último) que sirva de regla general. */
+    .fila-adaptable{display:flex;flex-wrap:wrap;gap:16px;align-items:start}
+    .fila-adaptable>.form-group,.fila-adaptable>.f-group{flex:0 0 auto;min-width:160px}
+    .fila-adaptable .form-group select,.fila-adaptable .form-group input,
+    .fila-adaptable .f-group select,.fila-adaptable .f-group input{width:auto;min-width:160px}
+    .fila-adaptable>.campo-flex{flex:1 1 240px;min-width:240px;max-width:420px}
+    .fila-adaptable>.campo-flex select,.fila-adaptable>.campo-flex input{width:100%}
 
     /* Empresa Contratista puede tener razones sociales largas —
        mínimo más generoso que el resto de los selects compactos. */
@@ -166,8 +188,13 @@
     .fila-ancha{display:grid;grid-template-columns:minmax(280px,520px);gap:16px}
 
     @media(max-width:640px){
-      .fila-compacta,.fila-mixta,.fila-ancha{grid-template-columns:1fr}
+      .fila-compacta,.fila-adaptable{flex-direction:column}
+      .fila-mixta,.fila-ancha{grid-template-columns:1fr}
       .fila-compacta .form-group select,.fila-compacta .form-group input,
+      .fila-compacta .f-group select,.fila-compacta .f-group input,
+      .fila-adaptable .form-group select,.fila-adaptable .form-group input,
+      .fila-adaptable .f-group select,.fila-adaptable .f-group input,
+      .fila-adaptable>.campo-flex,
       .fila-mixta .form-group:first-child input,.fila-mixta .form-group:first-child select{width:100%;min-width:0}
     }
     .form-group{display:flex;flex-direction:column;gap:5px}
