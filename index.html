@@ -2213,7 +2213,10 @@
 
         <!-- SUBMÓDULO ASISTENCIA DEL DÍA (centro de control en vivo, unificado con rango de fechas) -->
         <div id="sub-tab-asist-dia">
-        <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--borde);">
+
+        <div class="kpi-grid" id="asist-kpi-grid" style="margin-bottom:16px;"></div>
+
+        <div class="card" style="margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Filtrar</div>
           <div class="fila-adaptable">
             <div class="f-group">
@@ -2228,12 +2231,15 @@
               <label class="form-label">Fecha hasta</label>
               <input type="date" id="asist-fecha-hasta" class="f-input" onchange="cargarAsistencia()">
             </div>
-            <div class="f-group">
-              <label class="form-label">&nbsp;</label>
-              <button class="btn btn-primary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-search"></i> Generar reporte</button>
+            <div class="f-group campo-flex">
+              <label class="form-label">Buscar trabajador</label>
+              <input type="text" id="asist-buscar" class="f-input" oninput="cargarAsistencia()" placeholder="Buscar nombre o RUT...">
             </div>
-            <div class="f-group" style="position:relative;">
-              <label class="form-label">&nbsp;</label>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--borde);padding-top:12px;margin-top:12px;">
+            <button class="btn btn-primary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-search"></i> Generar reporte</button>
+            <div style="position:relative;">
               <button class="btn btn-secondary btn-sm" onclick="toggleMenuRangoAsistencia()"><i class="ti ti-calendar-stats"></i> Ver rango de fechas <i class="ti ti-chevron-down" style="font-size:12px;"></i></button>
               <div id="menu-rango-asist" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid var(--borde);border-radius:8px;box-shadow:var(--shadow-md);z-index:20;min-width:160px;overflow:hidden;">
                 <button class="btn" style="display:block;width:100%;text-align:left;border-radius:0;background:none;" onclick="rangoRapidoAsistencia('hoy')">Hoy</button>
@@ -2244,29 +2250,22 @@
                 <button class="btn" style="display:block;width:100%;text-align:left;border-radius:0;background:none;" onclick="rangoRapidoAsistencia('mes_pasado')">Mes pasado</button>
               </div>
             </div>
-            <div class="f-group campo-flex">
-              <label class="form-label">Buscar trabajador</label>
-              <input type="text" id="asist-buscar" class="f-input" oninput="cargarAsistencia()" placeholder="Buscar nombre o RUT...">
-            </div>
-            <div class="f-group">
-              <label class="form-label">&nbsp;</label>
-              <button class="btn btn-secondary btn-sm" onclick="_exportarAsistenciaSegunModo()"><i class="ti ti-download"></i> Excel</button>
-            </div>
+            <button class="btn btn-secondary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-refresh"></i> Actualizar</button>
+
+            <div style="width:1px;height:20px;background:var(--borde);margin:0 4px;"></div>
+            <span style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;">Reportes</span>
+            <button class="btn btn-secondary btn-sm" onclick="_exportarAsistenciaSegunModo()"><i class="ti ti-download"></i> Excel</button>
+            <span id="asist-acciones-dia" style="display:contents;">
+              <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPorMandante()"><i class="ti ti-building-factory"></i> Por mandante</button>
+              <div style="width:1px;height:20px;background:var(--borde);margin:0 4px;"></div>
+              <button class="btn btn-dark btn-sm" onclick="cierreMasivoTurno()"><i class="ti ti-door-exit"></i> Cierre masivo turno</button>
+            </span>
           </div>
         </div>
 
-        <div class="kpi-grid" id="asist-kpi-grid" style="margin-bottom:16px;"></div>
-
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-            <div class="card-title" style="margin:0;" id="asist-card-title"><i class="ti ti-calendar-check"></i> Asistencia del Día</div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="asist-card-acciones">
-              <button class="btn btn-secondary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-refresh"></i> Actualizar</button>
-              <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPorMandante()"><i class="ti ti-building-factory"></i> Por mandante</button>
-              <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>
-              <button class="btn btn-dark btn-sm" onclick="cierreMasivoTurno()"><i class="ti ti-door-exit"></i> Cierre masivo turno</button>
-            </div>
-          </div>
+          <div class="card-title" style="margin-bottom:12px;" id="asist-card-title"><i class="ti ti-calendar-check"></i> Asistencia del Día</div>
           <div class="tabla-wrap">
             <table class="tabla">
               <thead id="thead-asistencia"></thead>
@@ -2293,17 +2292,17 @@
           </div>
 
           <!-- INDIVIDUAL -->
-          <div id="bloque-manual-individual" class="card" style="max-width:520px;">
+          <div id="bloque-manual-individual" class="card" style="max-width:560px;">
             <div class="card-title"><i class="ti ti-edit"></i> Cargar marcación manual</div>
-            <div class="form-group">
-              <label>Fecha</label>
-              <input type="date" id="manual-fecha" class="f-input" onchange="_manualFechaCambio()">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+              <div class="form-group"><label>Fecha</label><input type="date" id="manual-fecha" class="f-input" onchange="_manualFechaCambio()"></div>
+              <div class="form-group"><label>Empresa</label><select id="manual-empresa" class="f-input" onchange="_renderListaManualTrabajador()"><option value="">— Todas las empresas —</option></select></div>
             </div>
-            <div class="form-group">
-              <label>Buscar trabajador</label>
-              <input type="text" id="manual-buscar" class="f-input" placeholder="Nombre o RUT..." oninput="buscarTrabajadorManual()" autocomplete="off">
-              <div id="manual-resultados" style="border:1px solid var(--borde);border-radius:8px;margin-top:4px;max-height:180px;overflow-y:auto;display:none;"></div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label>Trabajador</label>
+              <input type="text" id="manual-buscar" class="f-input" placeholder="Filtrar por nombre o RUT..." oninput="_renderListaManualTrabajador()" autocomplete="off">
             </div>
+            <div id="manual-lista-trabajador" style="border:1px solid var(--borde);border-radius:8px;max-height:220px;overflow-y:auto;margin-bottom:14px;"></div>
             <div id="manual-form-horas" style="display:none;">
               <div style="font-size:13px;font-weight:700;margin:10px 0 8px;" id="manual-trabajador-nombre"></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
