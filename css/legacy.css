@@ -125,7 +125,7 @@
     .row-av-info .nombre{font-size:13px;font-weight:500}
     .row-av-info .sub{font-size:11px;color:var(--texto2)}
     /* GRÁFICO */
-    .chart-bars{display:flex;align-items:flex-end;gap:8px;height:80px;padding-bottom:4px}
+    .chart-bars{display:flex;align-items:flex-end;gap:8px;height:140px;padding-bottom:4px}
     .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
     .chart-bar{width:100%;border-radius:4px 4px 0 0;transition:height 0.4s ease;min-height:3px}
     .chart-lbl{font-size:10px;color:var(--texto3)}
