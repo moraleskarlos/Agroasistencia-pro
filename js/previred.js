@@ -297,7 +297,7 @@ function _construirLineaPrevired(liq, t, periodo, cfgEmp){
   f[3]  = t.apellido_materno || '';
   f[4]  = (t.nombre||'').split(' ').slice(0, -2).join(' ') || t.nombre || '';
   f[5]  = t.sexo || 'M';
-  f[6]  = (t.nacionalidad && t.nacionalidad !== 'Chileno') ? '1' : '0';
+  f[6]  = esNacionalidadExtranjera(t.nacionalidad) ? '1' : '0';
   f[7]  = '01'; // Tipo pago: 01 remuneraciones del mes
   f[8]  = _periodoMMAAAA(periodo);
   f[9]  = '';

@@ -56,7 +56,7 @@ function exportarTrabajadoresExcel(){
 
 /* ── 1b. NÓMINA DE TRABAJADORES EXTRANJEROS ────────────── */
 function exportarExtranjerosExcel(){
-  const extranjeros = trabajadores.filter(t => t.nacionalidad && t.nacionalidad !== 'Chileno');
+  const extranjeros = trabajadores.filter(t => esNacionalidadExtranjera(t.nacionalidad));
   if(!extranjeros.length){
     toast('⚠️ Sin trabajadores extranjeros para exportar','error');
     return;

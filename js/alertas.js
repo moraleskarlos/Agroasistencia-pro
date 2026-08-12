@@ -118,7 +118,7 @@ function calcularAlertas(){
 
   // Documento migratorio (usa el mismo semáforo que ya se ve en Trabajadores)
   activos.forEach(t => {
-    if(t.nacionalidad && t.nacionalidad !== 'Chileno'){
+    if(esNacionalidadExtranjera(t.nacionalidad)){
       const sem = _calcularSemaforo(t.fecha_venc_migratorio);
       if(sem === 'gris'){
         alertas.push(_alerta('critico','Trabajadores',`mig_sin_fecha_${t.rut}`,

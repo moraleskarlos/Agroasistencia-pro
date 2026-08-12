@@ -257,7 +257,7 @@ function renderKpisExtranjeros(){
   const zona = document.getElementById('kpi-extranjeros-zone');
   if(!zona) return;
 
-  const extranjeros = trabajadores.filter(t => t.nacionalidad && t.nacionalidad !== 'Chileno');
+  const extranjeros = trabajadores.filter(t => esNacionalidadExtranjera(t.nacionalidad));
   const conteo = { verde:0, amarillo:0, rojo:0, negro:0, sinFecha:0 };
   extranjeros.forEach(t => {
     const sem = _calcularSemaforo(t.fecha_venc_migratorio);
@@ -282,7 +282,7 @@ function renderTablaExtranjeros(){
   if(!tbody) return;
 
   const extranjeros = trabajadores.filter(t => {
-    const esExtranjero = t.nacionalidad && t.nacionalidad !== 'Chileno';
+    const esExtranjero = esNacionalidadExtranjera(t.nacionalidad);
     if(!esExtranjero) return false;
 
     const m = findMandante(t);
@@ -437,7 +437,7 @@ function _renderDatosPersonalesPerfil(t, contenedorId){
     </div>`;
 
   let migratorioHTML = '';
-  if(t.nacionalidad && t.nacionalidad !== 'Chileno'){
+  if(esNacionalidadExtranjera(t.nacionalidad)){
     const semaforo = _calcularSemaforo(t.fecha_venc_migratorio);
     migratorioHTML = `
       <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
