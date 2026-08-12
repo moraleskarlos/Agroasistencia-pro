@@ -243,6 +243,8 @@ function cargarEnFormulario(t){
   set('m-domicilio',     t.domicilio);
   set('m-afp',           t.afiliacion_afp);
   set('m-salud',         t.sistema_salud);
+  const chkPensionado = document.getElementById('m-pensionado-invalidez');
+  if(chkPensionado) chkPensionado.checked = !!t.pensionado_invalidez_parcial;
   set('m-fecha-ingreso', t.fecha_ingreso);
 
   // Nacionalidad — verificar si es una opción del select o valor libre
@@ -359,6 +361,7 @@ function _leerDatosFormularioRegistro(){
     domicilio:         document.getElementById('m-domicilio').value.trim(),
     afiliacion_afp:    document.getElementById('m-afp').value,
     sistema_salud:     document.getElementById('m-salud').value,
+    pensionado_invalidez_parcial: document.getElementById('m-pensionado-invalidez')?.checked || false,
     empresa_propia_id: document.getElementById('m-empresa-contratista')?.value || '',
     // Mandante eliminado de Registro Personal — se fija al generar el
     // Contrato (contratos.js sincroniza mandante_id — un solo campo,
@@ -916,7 +919,7 @@ function _actualizarSemaforoMigratorio(){
 const _BORRADOR_KEY = 'rp_borrador_trabajador';
 const _CAMPOS_BORRADOR = [
   'm-rut','m-nombre','m-nacionalidad','m-otra-nac','m-fecha-nac','m-sexo','m-estado-civil',
-  'm-correo','m-domicilio','m-afp','m-salud','m-empresa-contratista',
+  'm-correo','m-domicilio','m-afp','m-salud','m-pensionado-invalidez','m-empresa-contratista',
   'm-cargo','cargo-otro','m-fecha-ingreso',
   'm-tipo-doc-mig','m-num-doc-mig','m-fecha-venc-mig','m-rut-original',
 ];
@@ -932,8 +935,8 @@ function _autoguardarBorrador(){
   _CAMPOS_BORRADOR.forEach(id => {
     const el = document.getElementById(id);
     if(!el) return;
-    campos[id] = el.value;
-    if(el.value && id !== 'm-rut-original') tieneContenido = true;
+    campos[id] = el.type === 'checkbox' ? el.checked : el.value;
+    if(el.type === 'checkbox' ? el.checked : (el.value && id !== 'm-rut-original')) tieneContenido = true;
   });
 
   if(!tieneContenido){ _borrarBorrador(); return; }
@@ -982,7 +985,9 @@ function _recuperarBorrador(){
 
   Object.entries(guardado.campos).forEach(([id, valor]) => {
     const el = document.getElementById(id);
-    if(el) el.value = valor;
+    if(!el) return;
+    if(el.type === 'checkbox') el.checked = !!valor;
+    else el.value = valor;
   });
 
   // Cargo y Estado Civil dependen del Sexo — se reconstruyen según el

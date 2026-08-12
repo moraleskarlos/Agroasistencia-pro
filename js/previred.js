@@ -279,7 +279,6 @@ function _fmtFechaPrevired(fecha){
    CONSTRUCCIÓN DE LA LÍNEA (105 CAMPOS) DE UN TRABAJADOR
    ════════════════════════════════════════════════════════ */
 function _construirLineaPrevired(liq, t, periodo, cfgEmp){
-  const ind       = getIndicadoresPorPeriodo(periodo);
   const contrato  = _getContratoVigente(t.rut, periodo);
   const rutT      = _splitRUT(t.rut);
   const mov       = _movimientoPersonal(t, contrato, periodo);
@@ -288,8 +287,6 @@ function _construirLineaPrevired(liq, t, periodo, cfgEmp){
   const diasTrab  = Math.max(0, Math.min(30, 30 - (liq.dias_a_descontar||0)));
   const jornadaCompleta = (parseFloat(contrato?.horas_semanales)||45) >= 30;
   const esIsapre  = (liq.sistema_salud||'').toLowerCase().includes('isapre');
-  const pctExpVida = (ind.exp_vida ?? 0.9) / 100; // configurable en Indicadores — la ley puede ajustarlo con el tiempo
-  const cotExpVida = esAFP ? Math.round((liq.base_afp||0) * pctExpVida) : 0; // Ley reforma previsional — cargo empleador
 
   const f = new Array(105).fill('');
 
@@ -305,7 +302,7 @@ function _construirLineaPrevired(liq, t, periodo, cfgEmp){
   f[8]  = _periodoMMAAAA(periodo);
   f[9]  = '';
   f[10] = regimen;
-  f[11] = '0'; // tipo trabajador: activo
+  f[11] = liq.pensionado_invalidez_parcial ? '9' : '0'; // tipo trabajador: 0=Activo, 9=Pensionado Invalidez Parcial
   f[12] = String(diasTrab);
   f[13] = '00'; // tipo de línea: principal
   f[14] = mov.codigo;
@@ -360,10 +357,10 @@ function _construirLineaPrevired(liq, t, periodo, cfgEmp){
   for(let i=84;i<=89;i++) f[i] = '0';
   f[89] = (!esIsapre && ccaf) ? String(Math.round((liq.base_afp||0)*0.052)) : '0';
   f[90] = '0';
-  f[91] = '0'; // RIMA — solo aplica con licencia médica
+  f[91] = String(Math.round(liq.rima||0)); // RIMA — Campo 92, solo si hubo licencia médica en el período
   f[92] = jornadaCompleta ? '1' : '2';
-  f[93] = String(cotExpVida);
-  f[94] = '0'; // rentabilidad protegida — uso futuro (agosto 2026)
+  f[93] = String(Math.round(liq.monto_exp_vida||0));
+  f[94] = String(Math.round(liq.monto_rentabilidad_protegida||0)); // Campo 95 — Reforma Previsional, agosto 2026
 
   // 9. Mutual
   const mutual = cfgEmp.mutual && cfgEmp.mutual !== '00' ? cfgEmp.mutual : '';
@@ -446,7 +443,12 @@ function exportarPreviredExcel(){
     'Código AFP':             _codAFPPrevired(liq.afp),
     'Renta imponible AFP':    Math.round(liq.base_afp||0),
     'Cotización AFP trab.':   Math.round(liq.monto_afp||0),
+    'Tipo trabajador':        liq.pensionado_invalidez_parcial ? 'Pensionado Invalidez Parcial' : 'Activo',
+    'Días licencia médica':   liq.dias_licencia_medica || 0,
+    'RIMA (Campo 92)':        Math.round(liq.rima||0),
     'SIS (cargo empleador)':  Math.round(liq.monto_sis||0),
+    'Expectativa de Vida':    Math.round(liq.monto_exp_vida||0),
+    'Rentabilidad Protegida': Math.round(liq.monto_rentabilidad_protegida||0),
     'Institución salud':      liq.sistema_salud||'Fonasa',
     'Código salud':           _codSaludPrevired(liq.sistema_salud),
     'Cotización salud':       Math.round(liq.monto_salud||0),

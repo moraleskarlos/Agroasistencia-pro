@@ -276,6 +276,7 @@ function _llenarFormulario(ind){
   // D — SIS
   setD('ind-f-sis', ind.sis);
   setD('ind-f-exp-vida', ind.exp_vida);
+  setD('ind-f-rentabilidad-protegida', ind.rentabilidad_protegida);
 
   // C — AFP
   const afpKeys = ['capital','cuprum','habitat','planvital','provida','modelo','uno'];
@@ -344,6 +345,7 @@ function guardarIndicadorPeriodo(){
     renta_casa_particular: getM('ind-f-renta-casa'),
     sis:                 getD('ind-f-sis'),
     exp_vida:            getD('ind-f-exp-vida'),
+    rentabilidad_protegida: getD('ind-f-rentabilidad-protegida'),
     afp,
     afc: {
       indefinido:         { empleador: getD('ind-f-afc-indef-emp'), trabajador: getD('ind-f-afc-indef-trab') },

@@ -85,6 +85,7 @@ function construirVariablesRemuneracion(rut, periodo){
     periodo,
     afp:             (t.afiliacion_afp || '').toLowerCase(),
     sistema_salud:   t.sistema_salud || 'Fonasa',
+    pensionado_invalidez_parcial: !!t.pensionado_invalidez_parcial,
 
     // Contrato
     tipo_contrato,

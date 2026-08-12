@@ -9,6 +9,22 @@
    AgroContratista · Versión 1.0
    ════════════════════════════════════════════════════════ */
 
+/* Retrocede un período "AAAA-MM" en uno — usado para la RIMA (Renta
+   Imponible Mes Anterior a la Licencia), que se calcula sobre la base
+   imponible del período INMEDIATAMENTE ANTERIOR al que se está declarando. */
+function _periodoAnterior(periodo){
+  const [y, m] = periodo.split('-').map(Number);
+  const d = new Date(y, m - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function _baseImponibleMesAnterior(rut, periodo){
+  const periodoAnt = _periodoAnterior(periodo);
+  const lista = (typeof liquidaciones_guardadas !== 'undefined') ? liquidaciones_guardadas : [];
+  const liqAnt = lista.find(l => l.rut === rut && l.periodo === periodoAnt);
+  return liqAnt ? (liqAnt.base_afp || 0) : 0;
+}
+
 /* ════════════════════════════════════════════════════════
    FUNCIÓN PRINCIPAL — recibe variables de variables.js
    y retorna la liquidación completa calculada
@@ -61,9 +77,44 @@ function calcularLiquidacion(vars, periodo){
   const liquido          = Math.max(0, vars.total_haberes - total_descuentos);
 
   // ── Cargo empleador ──────────────────────────────────
+  // RIMA (Renta Imponible Mes Anterior a la Licencia, Campo 92 Previred)
+  // — solo aplica cuando hay días de licencia médica en el período
+  // (Movimiento de Personal Cód. 3 o 6). Se calcula proporcional a la
+  // base imponible del PERÍODO ANTERIOR, no del actual — porque en un
+  // mes con licencia médica, la base de ESTE mes ya viene reducida.
+  const dias_licencia_medica = vars.dias_licencia_medica || 0;
+  const rima = dias_licencia_medica > 0
+    ? Math.round((_baseImponibleMesAnterior(vars.rut, periodo) / 30) * dias_licencia_medica)
+    : 0;
+
+  // El SIS y la cotización de Expectativa de Vida no aplican a
+  // trabajadores Pensionados por Invalidez Parcial (Tipo Trabajador
+  // código 9) — sí aplica Rentabilidad Protegida.
+  const esPensionadoInvalidezParcial = !!vars.pensionado_invalidez_parcial;
+
   const pct_afp_emp    = (tasaAFP.empleador || 0.1) / 100;
   const monto_afp_emp  = Math.round(base_afp * pct_afp_emp);
-  const monto_sis      = Math.round(base_afp * ((ind.sis || 0) / 100));
+
+  // SIS (Campo 29) — días trabajados + RIMA. No aplica a Pensionado
+  // por Invalidez Parcial.
+  const pct_sis   = ind.sis || 0;
+  const monto_sis = esPensionadoInvalidezParcial ? 0
+    : Math.round(base_afp * (pct_sis/100)) + Math.round(rima * (pct_sis/100));
+
+  // Expectativa de Vida (Campo 94) — días trabajados + RIMA. Aplica a
+  // Activos y a Pensionados por Invalidez Parcial.
+  const pct_exp_vida   = ind.exp_vida || 0;
+  const monto_exp_vida = Math.round(base_afp * (pct_exp_vida/100)) + Math.round(rima * (pct_exp_vida/100));
+
+  // Rentabilidad Protegida (Campo 95, NUEVO — agosto 2026) — solo sobre
+  // días trabajados, SIN término RIMA (la licencia médica es de cargo
+  // de la entidad pagadora de subsidio, no se cotiza sobre esos días).
+  // Aplica a Activos y a Pensionados por Invalidez Parcial.
+  const pct_rentabilidad_protegida = ind.rentabilidad_protegida || 0;
+  const monto_rentabilidad_protegida = base_afp > 0
+    ? Math.round(base_afp * (pct_rentabilidad_protegida/100))
+    : 0;
+
   const monto_afc_emp  = _calcularAFCEmpleador(vars, ind, base_afc);
   const total_cargo_emp = monto_afp_emp + monto_sis + monto_afc_emp;
 
@@ -86,6 +137,8 @@ function calcularLiquidacion(vars, periodo){
     dias_a_descontar:         vars.dias_a_descontar,
     dias_permiso_sin_goce:    vars.dias_permiso_sin_goce,
     dias_trabajados:          vars.dias_trabajados,
+    dias_licencia_medica,
+    pensionado_invalidez_parcial: esPensionadoInvalidezParcial,
     sistema_salud:            vars.sistema_salud,
 
     // Bases de cálculo
@@ -107,8 +160,13 @@ function calcularLiquidacion(vars, periodo){
     // Cargo empleador
     monto_afp_emp,
     pct_afp_emp:     tasaAFP.empleador,
+    rima,
     monto_sis,
-    pct_sis:         ind.sis,
+    pct_sis,
+    monto_exp_vida,
+    pct_exp_vida,
+    monto_rentabilidad_protegida,
+    pct_rentabilidad_protegida,
     monto_afc_emp,
     total_cargo_emp,
 
