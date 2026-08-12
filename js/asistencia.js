@@ -446,6 +446,54 @@ function eliminarMarcacionAsistencia(rut){
   cargarAsistencia();
 }
 
+/* Recorre las marcaciones ya guardadas en el rango de fechas elegido en el
+   filtro (funciona en modo día o rango) y vuelve a calcular horas/jornada
+   de cada una, usando la colación real del contrato vigente de cada
+   trabajador en esa fecha. No borra ni agrega marcaciones — solo corrige
+   los números de lo que ya existe. Útil para corregir datos cargados
+   antes de que Asistencia descontara la colación (o si algún otro
+   criterio de cálculo cambia más adelante). */
+function recalcularHorasRango(){
+  const desde = document.getElementById('asist-fecha-desde')?.value;
+  const hasta = document.getElementById('asist-fecha-hasta')?.value;
+  if(!desde || !hasta){ toast('⚠️ Selecciona un rango de fechas primero', 'error'); return; }
+
+  const fechas = _fechasEnRango(desde, hasta);
+  if(!confirm(`¿Recalcular las horas de todas las marcaciones guardadas entre ${fmtFecha(desde)} y ${fmtFecha(hasta)}?\n\nSe vuelve a calcular horas y jornada de cada marcación existente, usando la colación del contrato de cada trabajador. No se borra ni se agrega ninguna marcación.`)) return;
+
+  let corregidas = 0;
+  let revisadas  = 0;
+
+  fechas.forEach(fecha => {
+    const clave = 'asistencia_' + fecha;
+    const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+    if(!data.length) return;
+
+    let cambioEnEsteDia = false;
+    data.forEach(m => {
+      if(!m.hora_entrada || !m.hora_salida) return;
+      revisadas++;
+
+      const colMin = _colacionMinutosTrabajador(m.rut, fecha);
+      const horasNuevas = calcularHoras(m.hora_entrada, m.hora_salida, colMin);
+      const { jornada, valor } = calcularJornada(horasNuevas);
+
+      if(horasNuevas !== m.horas_trabajadas){
+        m.horas_trabajadas = horasNuevas;
+        m.jornada          = jornada;
+        m.jornada_valor    = valor;
+        cambioEnEsteDia    = true;
+        corregidas++;
+      }
+    });
+
+    if(cambioEnEsteDia) localStorage.setItem(clave, JSON.stringify(data));
+  });
+
+  toast(`✅ ${corregidas} de ${revisadas} marcaciones corregidas`, 'exito');
+  cargarAsistencia();
+}
+
 function cierreMasivoTurno(){
   const checks = [...document.querySelectorAll('.asist-check:checked')];
   if(!checks.length){ toast('⚠️ Selecciona trabajadores primero', 'error'); return; }
