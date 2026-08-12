@@ -390,6 +390,15 @@ function getEmpresaEmpleadora(epId){
    "extranjero". Con la versión femenina agregada, hay que reconocer
    ambas formas — este helper único evita repetir la lista en cada
    archivo (mismo criterio que ya usamos con findMandante). */
+/* Colación del contrato viene como texto libre ("30", "30 minutos", "1 hora")
+   — mismo criterio de lectura que ya usaba contratos.js para la jornada
+   semanal, ahora centralizado acá para que Asistencia también lo use al
+   calcular horas trabajadas (antes no descontaba la colación en absoluto). */
+function _colacionMinutosContrato(contrato){
+  const raw = contrato?.colacion || '';
+  return parseInt(raw) || 0;
+}
+
 function esNacionalidadExtranjera(nacionalidad){
   return !!nacionalidad && nacionalidad !== 'Chileno' && nacionalidad !== 'Chilena';
 }

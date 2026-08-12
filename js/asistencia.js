@@ -24,14 +24,23 @@ function switchTabAsistencia(tab){
   document.getElementById('sub-tab-asist-manual').style.display = esDia ? 'none' : '';
 }
 
-function calcularHoras(entrada, salida){
+function calcularHoras(entrada, salida, colacionMin){
   if(!entrada || !salida) return null;
   const h1 = new Date('1970-01-01T' + entrada);
   let   h2 = new Date('1970-01-01T' + salida);
   // Manejo trabajo nocturno
   if(h2 <= h1) h2 = new Date('1970-01-02T' + salida);
-  const horas = (h2 - h1) / (1000 * 60 * 60);
-  return Math.round(horas * 10) / 10; // redondear a 1 decimal
+  const horas = (h2 - h1) / (1000 * 60 * 60) - ((colacionMin||0) / 60);
+  return Math.round(Math.max(0, horas) * 10) / 10; // redondear a 1 decimal
+}
+
+/* Busca el contrato vigente del trabajador para la fecha de la marcación
+   y devuelve sus minutos de colación — la fuente real es el Contrato, no
+   un valor inventado en Asistencia. */
+function _colacionMinutosTrabajador(rut, fecha){
+  const periodo   = (fecha||'').slice(0,7);
+  const contrato  = (typeof _getContratoVigente === 'function') ? _getContratoVigente(rut, periodo) : null;
+  return _colacionMinutosContrato(contrato);
 }
 
 function calcularJornada(horas){
@@ -355,7 +364,10 @@ function exportarReporteAsistenciaExcel(){
 function previewHoras(rid){
   const entrada = document.getElementById(`hora-entrada-${rid}`)?.value;
   const salida  = document.getElementById(`hora-salida-${rid}`)?.value;
-  const horas   = calcularHoras(entrada, salida);
+  const rut     = document.querySelector(`#fila-${rid} .asist-check`)?.dataset.rut || '';
+  const fecha   = document.getElementById('asist-fecha-desde').value;
+  const colMin  = _colacionMinutosTrabajador(rut, fecha);
+  const horas   = calcularHoras(entrada, salida, colMin);
   const { jornada } = calcularJornada(horas);
 
   const totalEl   = document.getElementById(`total-horas-${rid}`);
@@ -372,7 +384,8 @@ function guardarMarcacion(rut){
   const salida  = document.getElementById(`hora-salida-${rid}`)?.value || '';
   const fecha   = document.getElementById('asist-fecha-desde').value;
 
-  const horas           = calcularHoras(entrada, salida);
+  const colMin           = _colacionMinutosTrabajador(rut, fecha);
+  const horas           = calcularHoras(entrada, salida, colMin);
   const { jornada, alerta } = calcularJornada(horas);
 
   if(alerta){
@@ -450,7 +463,8 @@ function cierreMasivoTurno(){
     const idx = data.findIndex(x => x.rut === rut);
     const entrada = idx >= 0 ? data[idx].hora_entrada : hora;
 
-    const horas           = calcularHoras(entrada, hora);
+    const colMin           = _colacionMinutosTrabajador(rut, fecha);
+    const horas           = calcularHoras(entrada, hora, colMin);
     const { jornada, alerta } = calcularJornada(horas);
 
     const marcacion = {
@@ -625,7 +639,8 @@ function guardarMarcacionManual(){
   const salida  = document.getElementById('manual-hora-salida').value;
   if(!entrada){ toast('⚠️ Ingresa al menos la hora de entrada', 'error'); return; }
 
-  const horas = salida ? calcularHoras(entrada, salida) : null;
+  const colMin = _colacionMinutosTrabajador(rut, fecha);
+  const horas = salida ? calcularHoras(entrada, salida, colMin) : null;
   const { jornada, valor } = calcularJornada(horas);
 
   const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre) ? cfg.admin_nombre.split(' ')[0] : 'Admin';
@@ -791,7 +806,8 @@ function subirMasivoAsistencia(){
     const data  = JSON.parse(localStorage.getItem(clave) || '[]');
 
     porFecha[fecha].forEach(d => {
-      const horas = d.salida ? calcularHoras(d.entrada, d.salida) : null;
+      const colMin = _colacionMinutosTrabajador(d.rut, fecha);
+      const horas = d.salida ? calcularHoras(d.entrada, d.salida, colMin) : null;
       const { jornada, valor } = calcularJornada(horas);
 
       const marcacion = {
