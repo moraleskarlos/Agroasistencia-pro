@@ -2330,23 +2330,27 @@
           </div>
 
           <!-- MASIVO -->
-          <div id="bloque-manual-masivo" class="card" style="display:none;max-width:640px;">
-            <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva de marcaciones</div>
-            <div class="excel-hint">
-              <strong>📋 Columnas del Excel:</strong>
-              <ul><li>RUT · Fecha (AAAA-MM-DD) · Hora Entrada · Hora Salida (opcional)</li></ul>
+          <div id="bloque-manual-masivo" style="display:none;">
+            <div class="card" style="max-width:640px;margin-bottom:14px;">
+              <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva de marcaciones</div>
+              <div class="excel-hint">
+                <strong>📋 Columnas del Excel:</strong>
+                <ul><li>RUT · Fecha (AAAA-MM-DD) · Hora Entrada · Hora Salida (opcional)</li></ul>
+              </div>
+              <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" onclick="descargarPlantillaAsistencia()"><i class="ti ti-file-download"></i> Descargar plantilla Excel</button>
+              <div class="zona-drop" id="zona-drop-excel-asist" onclick="_clickZonaDropExcelAsist()">
+                <i class="ti ti-file-spreadsheet"></i>
+                <div class="drop-title">Arrastra tu archivo Excel aquí</div>
+                <div class="drop-sub">o haz clic para explorar · .xlsx / .xls</div>
+              </div>
+              <input type="file" id="archivo-excel-asist" accept=".xlsx,.xls" style="display:none;" onchange="procesarExcelAsistencia(event)">
             </div>
-            <button class="btn btn-secondary btn-full" style="margin-bottom:12px;" onclick="descargarPlantillaAsistencia()"><i class="ti ti-file-download"></i> Descargar plantilla Excel</button>
-            <div class="zona-drop" id="zona-drop-excel-asist" onclick="_clickZonaDropExcelAsist()">
-              <i class="ti ti-file-spreadsheet"></i>
-              <div class="drop-title">Arrastra tu archivo Excel aquí</div>
-              <div class="drop-sub">o haz clic para explorar · .xlsx / .xls</div>
-            </div>
-            <input type="file" id="archivo-excel-asist" accept=".xlsx,.xls" style="display:none;" onchange="procesarExcelAsistencia(event)">
-            <div id="seccion-preview-asist" style="display:none;margin-top:14px;">
+
+            <div class="card" id="seccion-preview-asist" style="display:none;">
+              <div class="card-title"><i class="ti ti-table"></i> Vista previa</div>
               <div style="font-size:13px;font-weight:600;margin-bottom:10px;" id="preview-count-asist"></div>
               <div id="preview-avisos-asist" style="margin-bottom:10px;"></div>
-              <div class="tabla-wrap" style="max-height:280px;overflow-y:auto;margin-bottom:14px;">
+              <div class="tabla-wrap" style="max-height:420px;overflow-y:auto;margin-bottom:14px;">
                 <table class="tabla" id="tabla-excel-asist">
                   <thead><tr><th>RUT</th><th>Trabajador</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Estado</th></tr></thead>
                   <tbody></tbody>
