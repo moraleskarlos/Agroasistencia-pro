@@ -289,7 +289,7 @@ function renderDashboard(){
   const dias=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
   const { vals, idxHoy } = _asistenciaSemanalDashboard();
   const max=Math.max(...vals,1);
-  document.getElementById('chart-semanal').innerHTML=dias.map((d,i)=>`<div class="chart-col"><div class="chart-val">${vals[i]||''}</div><div class="chart-bar" style="height:${Math.round(vals[i]/max*60)+4}px;background:${i===idxHoy?'#2563EB':'#D1FAE5'}"></div><div class="chart-lbl">${d}</div></div>`).join('');
+  document.getElementById('chart-semanal').innerHTML=dias.map((d,i)=>`<div class="chart-col"><div class="chart-val">${vals[i]||''}</div><div class="chart-bar" style="height:${Math.round(vals[i]/max*116)+4}px;background:${i===idxHoy?'#2563EB':'#D1FAE5'}"></div><div class="chart-lbl">${d}</div></div>`).join('');
 
   const bMan=document.getElementById('badge-mandantes-tab'); if(bMan) bMan.textContent=empresas.length;
   const bMis=document.getElementById('badge-mis-empresas'); if(bMis) bMis.textContent=empresas_propias.length;
