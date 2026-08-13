@@ -163,9 +163,8 @@ const ANX_CATALOG = {
   cambio_jornada: {
     materia: 'la jornada ordinaria de trabajo del Trabajador',
     fuente:  'jornada',
-    campos: [
-      { id:'anx-nueva-jornada', label:'Nueva Distribución de Jornada', tipo:'texto', ph:'Ej: Lunes a Sábado, 08:00 a 17:00' },
-    ],
+    campos: [], // formulario propio (día por día) — ver onCambioTipoAnexo/leerValoresAnexo
+    esJornada: true,
     detalle: v => `Nueva jornada: ${v['anx-nueva-jornada']||''}`,
     segunda: v => ({
       titulo: 'Modificación de la jornada ordinaria de trabajo',
@@ -282,6 +281,23 @@ const ANX_CATALOG = {
   },
 };
 
+/* Jornada vigente de un trabajador para una fecha puntual: primero busca
+   un anexo de Cambio de Jornada vigente (el más reciente con
+   fecha_vigencia ≤ fecha) — si no hay ninguno, cae al jornada_dias del
+   contrato vigente. La usa Asistencia para saber cuánto se esperaba
+   trabajar ese día en particular. */
+function _jornadaVigenteTrabajador(rut, fecha){
+  const anexosJornada = (anexos || [])
+    .filter(a => a.trabajador_rut === rut && a.tipo === 'cambio_jornada' && a.jornada_dias && a.fecha_vigencia <= fecha)
+    .sort((a,b) => b.fecha_vigencia.localeCompare(a.fecha_vigencia));
+
+  if(anexosJornada.length) return anexosJornada[0].jornada_dias;
+
+  const periodo   = (fecha||'').slice(0,7);
+  const contrato  = (typeof _getContratoVigente === 'function') ? _getContratoVigente(rut, periodo) : null;
+  return contrato?.jornada_dias || null;
+}
+
 /* ───────── Formulario dinámico según catálogo ───────── */
 
 /* ───────── Modo Individual / Masivo ───────── */
@@ -312,8 +328,11 @@ function onCambioTipoAnexo(){
       <div style="font-size:11px;font-weight:700;color:#1E40AF;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;">
         <i class="ti ti-edit"></i> ${TIPOS_ANEXO[tipo]}
       </div>
-      ${def.campos.map(campoHTML).join('')}
+      ${def.esJornada
+        ? `<div id="anx-jornada-dias" style="border:1px solid var(--borde);border-radius:8px;overflow:hidden;background:#fff;"></div>`
+        : def.campos.map(campoHTML).join('')}
     </div>`;
+  if(def.esJornada && typeof _renderJornadaAnexo === 'function') _renderJornadaAnexo();
   actualizarPreviaAnexo();
 }
 
@@ -330,7 +349,18 @@ function onCambioMontoAnexo(){
 function leerValoresAnexo(tipo){
   const def = ANX_CATALOG[tipo];
   const v = {};
-  if(def) def.campos.forEach(c => { v[c.id] = document.getElementById(c.id)?.value?.trim() || ''; });
+  if(!def) return v;
+
+  if(def.esJornada && typeof _leerJornadaAnexo === 'function'){
+    const { jornada } = _leerJornadaAnexo();
+    const activos = DIAS_JORNADA.filter(d => jornada[d]?.activo);
+    v['anx-nueva-jornada'] = activos.length
+      ? activos.map(d => `${d} ${jornada[d].inicio}-${jornada[d].fin}`).join(', ')
+      : '';
+    v._jornada_dias = jornada; // estructurado, para guardarAnexo — no entra al documento tal cual
+  } else {
+    def.campos.forEach(c => { v[c.id] = document.getElementById(c.id)?.value?.trim() || ''; });
+  }
   return v;
 }
 
@@ -573,6 +603,8 @@ function guardarAnexo(){
     nuevo_sueldo:   tipo === 'cambio_remuneracion'
       ? (parseFloat(valores['anx-nuevo-sueldo'] || 0) || null)
       : null,
+    // Jornada estructurada para cambio_jornada — usada por asistencia.js
+    jornada_dias:   tipo === 'cambio_jornada' ? (valores._jornada_dias || null) : null,
   };
 
   anexos.push(nuevoAnexo);

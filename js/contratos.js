@@ -42,50 +42,72 @@ function _migrarNumerosContratoRetroactivo(){
   guardarContratos();
 }
 
-function renderJornadaDias(jornadaGuardada){
-  const cont = document.getElementById('jornada-dias');
+/* Generador de jornada día por día — base común reutilizada por Contrato
+   Individual, Contrato Masivo y el anexo de Cambio de Jornada. idFn(tipo, i)
+   arma el id real de cada input ('dia' | 'dia-ini' | 'dia-fin', índice del
+   día 0-6) — cada llamador mantiene su propio esquema de ids para no romper
+   nada que ya dependa de ellos (Masivo, por ejemplo, ya tenía el suyo). */
+function _renderJornadaDiasBase(contenedorId, idFn, jornadaGuardada, onChangeAttr){
+  const cont = document.getElementById(contenedorId);
   if(!cont) return;
   const g = jornadaGuardada || {};
 
   cont.innerHTML = DIAS_JORNADA.map((dia,i) => {
     const d   = g[dia] || {};
-    // Por defecto Lun-Vie activos 08:00-18:00, fin de semana inactivo
     const act = d.activo !== undefined ? d.activo : i < 5;
     const ini = d.inicio || (i < 5 ? '08:00' : '');
     const fin = d.fin    || (i < 5 ? '18:00' : '');
+    const idAct = idFn('dia', i), idIni = idFn('dia-ini', i), idFin = idFn('dia-fin', i);
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:${i<6?'1px solid var(--borde)':'none'};background:${act?'#F0FDF4':'#fff'};">
-        <input type="checkbox" id="dia-${i}" ${act?'checked':''} onchange="onJornadaChange()" style="width:16px;height:16px;accent-color:var(--verde);cursor:pointer;">
-        <label for="dia-${i}" style="flex:1;font-size:13px;font-weight:500;color:var(--texto);cursor:pointer;text-transform:none;letter-spacing:0;">${dia}</label>
-        <input type="time" id="dia-ini-${i}" value="${ini}" onchange="onJornadaChange()" style="width:95px;padding:4px 7px;font-size:12px;">
+        <input type="checkbox" id="${idAct}" ${act?'checked':''} onchange="${onChangeAttr}" style="width:16px;height:16px;accent-color:var(--verde);cursor:pointer;">
+        <label for="${idAct}" style="flex:1;font-size:13px;font-weight:500;color:var(--texto);cursor:pointer;text-transform:none;letter-spacing:0;">${dia}</label>
+        <input type="time" id="${idIni}" value="${ini}" onchange="${onChangeAttr}" style="width:95px;padding:4px 7px;font-size:12px;">
         <span style="color:var(--texto3);font-size:12px;">–</span>
-        <input type="time" id="dia-fin-${i}" value="${fin}" onchange="onJornadaChange()" style="width:95px;padding:4px 7px;font-size:12px;">
+        <input type="time" id="${idFin}" value="${fin}" onchange="${onChangeAttr}" style="width:95px;padding:4px 7px;font-size:12px;">
       </div>`;
   }).join('');
+}
 
+function _leerJornadaDiasBase(idFn, colacionMin){
+  const j = {};
+  let totalHoras = 0;
+  const colHoras = (colacionMin||0) / 60;
+
+  DIAS_JORNADA.forEach((dia,i) => {
+    const act = document.getElementById(idFn('dia', i))?.checked || false;
+    const ini = document.getElementById(idFn('dia-ini', i))?.value || '';
+    const fin = document.getElementById(idFn('dia-fin', i))?.value || '';
+    j[dia] = { activo: act, inicio: ini, fin: fin };
+    if(act && ini && fin){
+      const h = calcularHoras(ini, fin);
+      if(h) totalHoras += Math.max(0, h - colHoras);
+    }
+  });
+  return { jornada: j, totalHoras: Math.round(totalHoras*10)/10 };
+}
+
+function renderJornadaDias(jornadaGuardada){
+  _renderJornadaDiasBase('jornada-dias', (tipo,i) => `${tipo}-${i}`, jornadaGuardada, 'onJornadaChange()');
   onJornadaChange();
 }
 
 function leerJornadaDias(){
-  const j = {};
-  let totalHoras = 0;
-
   // Leer colación en horas (puede venir como "30 minutos", "60", "1 hora", etc.)
   const colRaw = document.getElementById('c-colacion')?.value || '';
   const colMin = parseInt(colRaw) || 0; // extrae el primer número
-  const colHoras = colMin / 60;
+  return _leerJornadaDiasBase((tipo,i) => `${tipo}-${i}`, colMin);
+}
 
-  DIAS_JORNADA.forEach((dia,i) => {
-    const act = document.getElementById(`dia-${i}`)?.checked || false;
-    const ini = document.getElementById(`dia-ini-${i}`)?.value || '';
-    const fin = document.getElementById(`dia-fin-${i}`)?.value || '';
-    j[dia] = { activo: act, inicio: ini, fin: fin };
-    if(act && ini && fin){
-      const h = calcularHoras(ini, fin);
-      if(h) totalHoras += Math.max(0, h - colHoras); // descontar colación por día
-    }
-  });
-  return { jornada: j, totalHoras: Math.round(totalHoras*10)/10 };
+/* Tercera instancia — anexo "Cambio de Jornada". No descuenta colación acá
+   (la colación queda pactada en el contrato base, el anexo solo cambia
+   horarios), así que horas_semanales de este helper es solo informativo. */
+function _renderJornadaAnexo(jornadaGuardada){
+  _renderJornadaDiasBase('anx-jornada-dias', (tipo,i) => `anx-${tipo}-${i}`, jornadaGuardada, 'actualizarPreviaAnexo()');
+}
+
+function _leerJornadaAnexo(){
+  return _leerJornadaDiasBase((tipo,i) => `anx-${tipo}-${i}`, 0);
 }
 
 function resumenJornadaTexto(){
@@ -1784,22 +1806,9 @@ function _onCambioTipoConfigGrupo(gid){
   _actualizarAvisoFirmaGrupo(gid);
 }
 
-/* Misma estructura visual que renderJornadaDias() de Individual, con ids propios por grupo */
+/* Misma base que Individual (_renderJornadaDiasBase), con ids propios por grupo */
 function _renderJornadaDiasGrupo(gid){
-  const cont = document.getElementById(`cfg-jornada-${gid}`);
-  if(!cont) return;
-  cont.innerHTML = DIAS_JORNADA.map((dia,i) => {
-    const act = i < 5;
-    const ini = i < 5 ? '08:00' : '';
-    const fin = i < 5 ? '18:00' : '';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:${i<6?'1px solid var(--borde)':'none'};">
-      <input type="checkbox" id="cfg-dia-${gid}-${i}" ${act?'checked':''} onchange="_actualizarHorasGrupo('${gid}')" style="width:16px;height:16px;accent-color:var(--verde);">
-      <label style="flex:1;font-size:12px;">${dia}</label>
-      <input type="time" id="cfg-dia-ini-${gid}-${i}" value="${ini}" onchange="_actualizarHorasGrupo('${gid}')" style="width:90px;padding:3px 6px;font-size:11px;">
-      <span style="font-size:11px;">–</span>
-      <input type="time" id="cfg-dia-fin-${gid}-${i}" value="${fin}" onchange="_actualizarHorasGrupo('${gid}')" style="width:90px;padding:3px 6px;font-size:11px;">
-    </div>`;
-  }).join('');
+  _renderJornadaDiasBase(`cfg-jornada-${gid}`, (tipo,i) => `cfg-${tipo}-${gid}-${i}`, null, `_actualizarHorasGrupo('${gid}')`);
   _onCambioTipoConfigGrupo(gid);
   _actualizarHorasGrupo(gid);
 }
@@ -1810,23 +1819,11 @@ function _actualizarHorasGrupo(gid){
 }
 
 function _leerJornadaGrupo(gid){
-  const j = {};
-  let totalHoras = 0;
   const colMin = parseInt(document.getElementById(`cfg-colacion-${gid}`)?.value) || 0;
-  const colHoras = colMin / 60;
-  DIAS_JORNADA.forEach((dia,i) => {
-    const act = document.getElementById(`cfg-dia-${gid}-${i}`)?.checked || false;
-    const ini = document.getElementById(`cfg-dia-ini-${gid}-${i}`)?.value || '';
-    const fin = document.getElementById(`cfg-dia-fin-${gid}-${i}`)?.value || '';
-    j[dia] = { activo: act, inicio: ini, fin: fin };
-    if(act && ini && fin){
-      const h = calcularHoras(ini, fin);
-      if(h) totalHoras += Math.max(0, h - colHoras);
-    }
-  });
+  const { jornada: j, totalHoras } = _leerJornadaDiasBase((tipo,i) => `cfg-${tipo}-${gid}-${i}`, colMin);
   const activos = DIAS_JORNADA.filter(d => j[d].activo);
   const distribucion = activos.length ? activos.map(d => `${d.slice(0,3)} ${j[d].inicio}-${j[d].fin}`).join(', ') : 'Sin días asignados';
-  return { jornada_dias: j, horas_semanales: Math.round(totalHoras*10)/10, distribucion_jornada: distribucion };
+  return { jornada_dias: j, horas_semanales: totalHoras, distribucion_jornada: distribucion };
 }
 
 /* Art. 9 Código del Trabajo: 5 días para contratos de Temporada (obra/faena <30 días),

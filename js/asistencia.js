@@ -43,6 +43,98 @@ function _colacionMinutosTrabajador(rut, fecha){
   return _colacionMinutosContrato(contrato);
 }
 
+const _NOMBRES_DIA_SEMANA = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+/* Horas esperadas para un trabajador en un día puntual, según su jornada
+   vigente (anexo de Cambio de Jornada si existe, si no el contrato base —
+   ver _jornadaVigenteTrabajador en anexos.js). Devuelve null si no hay
+   jornada configurada (no se puede comparar), o el número de horas
+   esperadas (0 si ese día no le corresponde trabajar). */
+function _horasEsperadasDia(rut, fecha){
+  const jornada = (typeof _jornadaVigenteTrabajador === 'function') ? _jornadaVigenteTrabajador(rut, fecha) : null;
+  if(!jornada) return null;
+
+  const diaSemana = _NOMBRES_DIA_SEMANA[new Date(fecha + 'T00:00:00').getDay()];
+  const d = jornada[diaSemana];
+  if(!d || !d.activo || !d.inicio || !d.fin) return 0;
+
+  const colMin = _colacionMinutosTrabajador(rut, fecha);
+  return calcularHoras(d.inicio, d.fin, colMin) || 0;
+}
+
+/* Horas extra ya cargadas como novedad (Bonos y Horas Extras) para ese
+   trabajador y fecha — para no avisar dos veces algo que ya está
+   registrado como corresponde. */
+function _horasExtraRegistradasDia(rut, fecha){
+  const lista = (typeof novedades !== 'undefined') ? novedades : [];
+  return lista
+    .filter(n => n.trabajador_rut === rut && n.tipo === 'hora_extra' && n.fecha === fecha)
+    .reduce((s,n) => s + (parseFloat(n.horas) || 0), 0);
+}
+
+/* Suma las horas trabajadas de la semana (lunes a domingo) que contiene
+   la fecha dada, para validar el máximo legal de 42 horas semanales. */
+function _horasSemanaTrabajador(rut, fecha){
+  const d = new Date(fecha + 'T00:00:00');
+  const diaISO = (d.getDay() + 6) % 7; // lunes=0 ... domingo=6
+  const lunes = new Date(d);
+  lunes.setDate(d.getDate() - diaISO);
+
+  let total = 0;
+  for(let i = 0; i < 7; i++){
+    const f = new Date(lunes);
+    f.setDate(lunes.getDate() + i);
+    const fechaStr = f.toISOString().split('T')[0];
+    const data = JSON.parse(localStorage.getItem('asistencia_' + fechaStr) || '[]');
+    const reg = data.find(x => x.rut === rut);
+    if(reg?.horas_trabajadas) total += reg.horas_trabajadas;
+  }
+  return Math.round(total * 10) / 10;
+}
+
+/* Aviso de horas para una marcación puntual — compara contra lo esperado
+   ese día, cruza con Horas Extra ya cargadas, y valida los 2 topes legales
+   (2h extra diarias, 42h semanales). Devuelve null si no hay nada que
+   avisar, o { nivel: 'info'|'aviso'|'critico', texto }. No bloquea nada,
+   es solo informativo para quien revisa Asistencia. */
+function _avisoHorasDia(rut, fecha, horasReales){
+  if(horasReales === null || horasReales === undefined) return null;
+  const avisos = [];
+
+  const esperadas = _horasEsperadasDia(rut, fecha);
+  if(esperadas !== null){
+    const diff = Math.round((horasReales - esperadas) * 10) / 10;
+    if(Math.abs(diff) >= 0.05){
+      if(diff < 0){
+        avisos.push({ nivel:'info', texto:`Se esperaban ${esperadas}h, se registraron ${horasReales}h` });
+      } else {
+        const horasExtraCargadas = _horasExtraRegistradasDia(rut, fecha);
+        const sinExplicar = Math.round((diff - horasExtraCargadas) * 10) / 10;
+        if(sinExplicar > 0.05){
+          avisos.push({
+            nivel: diff > 2 ? 'critico' : 'aviso',
+            texto: diff > 2
+              ? `Trabajó ${diff}h de más — supera el máximo legal de 2h extra diarias`
+              : `Trabajó ${diff}h de más — ¿es hora extra? Cárgala en Bonos y Horas Extras`,
+          });
+        } else if(diff > 2){
+          avisos.push({ nivel:'critico', texto:`Supera el máximo legal de 2h extra diarias (${diff}h de más)` });
+        }
+      }
+    }
+  }
+
+  const totalSemana = _horasSemanaTrabajador(rut, fecha);
+  if(totalSemana > 42){
+    avisos.push({ nivel:'critico', texto:`Semana con ${totalSemana}h — supera el máximo legal de 42h semanales` });
+  }
+
+  if(!avisos.length) return null;
+  const nivel = avisos.some(a => a.nivel === 'critico') ? 'critico'
+    : avisos.some(a => a.nivel === 'aviso') ? 'aviso' : 'info';
+  return { nivel, texto: avisos.map(a => a.texto).join(' · ') };
+}
+
 function calcularJornada(horas){
   if(horas === null || horas === undefined) return { jornada: '—', valor: null, alerta: false };
   if(horas === 0)   return { jornada: 'Ausente',   valor: 0,   alerta: false };
@@ -229,6 +321,10 @@ function _renderAsistenciaDia(fecha){
       celdaAccion  = `<span style="font-size:12px;color:var(--texto3);">—</span>`;
     }
 
+    const aviso = registro ? _avisoHorasDia(t.rut, fecha, horasGuardadas) : null;
+    const colorAviso = aviso?.nivel === 'critico' ? '#DC2626' : aviso?.nivel === 'aviso' ? '#D97706' : '#2563EB';
+    const iconoAviso = aviso ? `<i class="ti ${aviso.nivel==='critico'?'ti-alert-triangle':'ti-info-circle'}" title="${aviso.texto.replace(/"/g,'&quot;')}" style="color:${colorAviso};margin-left:4px;cursor:help;font-size:14px;vertical-align:middle;"></i>` : '';
+
     return `<tr id="fila-${rid}">
       <td style="text-align:center;">
         <input type="checkbox" class="asist-check" data-rut="${t.rut}"
@@ -248,7 +344,7 @@ function _renderAsistenciaDia(fecha){
       <td>${celdaIngreso}</td>
       <td>${celdaSalida}</td>
       <td id="total-horas-${rid}" style="font-size:13px;font-weight:500;text-align:center;">
-        ${horasTxt}
+        ${horasTxt}${iconoAviso}
       </td>
       <td id="jornada-badge-${rid}">
         ${badgeJornada(jornada)}
@@ -373,7 +469,11 @@ function previewHoras(rid){
   const totalEl   = document.getElementById(`total-horas-${rid}`);
   const jornadaEl = document.getElementById(`jornada-badge-${rid}`);
 
-  if(totalEl)   totalEl.textContent   = horas !== null ? horas.toFixed(1) + ' h' : '—';
+  const aviso = horas !== null ? _avisoHorasDia(rut, fecha, horas) : null;
+  const colorAviso = aviso?.nivel === 'critico' ? '#DC2626' : aviso?.nivel === 'aviso' ? '#D97706' : '#2563EB';
+  const iconoAviso = aviso ? `<i class="ti ${aviso.nivel==='critico'?'ti-alert-triangle':'ti-info-circle'}" title="${aviso.texto.replace(/"/g,'&quot;')}" style="color:${colorAviso};margin-left:4px;cursor:help;font-size:14px;vertical-align:middle;"></i>` : '';
+
+  if(totalEl)   totalEl.innerHTML     = (horas !== null ? horas.toFixed(1) + ' h' : '—') + iconoAviso;
   if(jornadaEl) jornadaEl.innerHTML   = badgeJornada(jornada);
 }
 
