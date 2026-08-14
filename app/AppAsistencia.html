@@ -149,6 +149,59 @@
     padding:8px 16px;border-radius:99px;box-shadow:var(--shadow-md);
     display:none;align-items:center;gap:6px;z-index:100;
   }
+
+  /* Pantalla de inicio — 3 botones grandes */
+  .home-btn{
+    width:100%;display:flex;align-items:center;gap:14px;text-align:left;
+    background:#fff;border:none;border-radius:var(--radius-lg);
+    padding:18px;margin-bottom:12px;box-shadow:var(--shadow);
+  }
+  .home-btn:active{transform:scale(0.98)}
+  .home-btn-icon{
+    width:48px;height:48px;border-radius:14px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:24px;
+  }
+  .home-btn-titulo{font-size:15px;font-weight:700}
+  .home-btn-sub{font-size:12px;color:var(--texto2);margin-top:2px}
+  .home-btn-badge{
+    font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;
+    flex-shrink:0;
+  }
+
+  /* Encabezado de submódulo, con volver */
+  .modulo-header{
+    display:flex;align-items:center;gap:10px;padding:14px 16px;
+    background:#fff;border-bottom:1px solid var(--borde);
+    position:sticky;top:70px;z-index:49;
+  }
+  .modulo-header button{
+    background:var(--gris-bg);border:none;border-radius:10px;
+    width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  }
+  .modulo-header-titulo{font-size:15px;font-weight:700}
+
+  /* Switch Todos / Individual */
+  .switch-row{display:flex;background:var(--gris-bg);border-radius:var(--radius);padding:4px;margin-bottom:12px;}
+  .switch-btn{
+    flex:1;padding:10px;border:none;background:none;border-radius:9px;
+    font-size:13px;font-weight:700;color:var(--texto2);
+  }
+  .switch-btn.activo{background:var(--azul);color:#fff}
+
+  /* Fila con checkbox (Salida individual) */
+  .check-row{
+    display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;
+    padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow);
+  }
+  .check-row input[type=checkbox]{width:22px;height:22px;accent-color:var(--verde);flex-shrink:0;}
+
+  /* Mensaje de resultado — colores fuertes, pensados para pleno sol */
+  .result-banner-fuerte{
+    border-radius:14px;padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;
+  }
+  .result-banner-fuerte .icono{font-size:28px;flex-shrink:0;}
+  .result-banner-fuerte .titulo{font-size:16px;font-weight:800;line-height:1.2;}
+  .result-banner-fuerte .detalle{font-size:12px;font-weight:600;opacity:0.85;margin-top:2px;}
 </style>
 </head>
 <body>
@@ -209,17 +262,48 @@
     <button class="header-close-btn" onclick="cerrarSesionApp()"><i class="ti ti-logout"></i></button>
   </div>
 
-  <div class="tabs">
-    <button id="tab-marcar" class="tab-btn activo" onclick="cambiarTab('marcar')">
-      <i class="ti ti-scan"></i> Marcar
+  <!-- PANTALLA INICIO — 3 BOTONES -->
+  <div id="pantalla-home" class="pantalla-contenido">
+    <button class="home-btn" onclick="irAModulo('ingreso')">
+      <div class="home-btn-icon" style="background:var(--verde-sel);color:var(--verde-dark);">
+        <i class="ti ti-login-2"></i>
+      </div>
+      <div style="flex:1;">
+        <div class="home-btn-titulo">Registrar ingreso</div>
+        <div class="home-btn-sub">Elegí la hora y escaneá</div>
+      </div>
+      <i class="ti ti-chevron-right" style="color:var(--texto3);"></i>
     </button>
-    <button id="tab-gestion" class="tab-btn" onclick="cambiarTab('gestion')">
-      <i class="ti ti-list-check"></i> Gestión del día
+
+    <button class="home-btn" onclick="irAModulo('salida')">
+      <div class="home-btn-icon" style="background:var(--warn-bg);color:#92400E;">
+        <i class="ti ti-door-exit"></i>
+      </div>
+      <div style="flex:1;">
+        <div class="home-btn-titulo">Registrar salida</div>
+        <div class="home-btn-sub">Todos, o elegí quién se va</div>
+      </div>
+      <span class="home-btn-badge" id="home-badge-activos" style="background:var(--verde-sel);color:var(--verde-dark);">0 activos</span>
+    </button>
+
+    <button class="home-btn" onclick="irAModulo('resumen')">
+      <div class="home-btn-icon" style="background:#DBEAFE;color:#1E40AF;">
+        <i class="ti ti-list-check"></i>
+      </div>
+      <div style="flex:1;">
+        <div class="home-btn-titulo">Resumen del día</div>
+        <div class="home-btn-sub">KPIs y lista de trabajadores</div>
+      </div>
+      <i class="ti ti-chevron-right" style="color:var(--texto3);"></i>
     </button>
   </div>
 
-  <!-- PANTALLA MARCAR -->
-  <div id="pantalla-marcar" class="pantalla-contenido">
+  <!-- MÓDULO INGRESO -->
+  <div id="pantalla-ingreso" class="pantalla-contenido" style="display:none;">
+    <div class="modulo-header" style="margin:-16px -16px 16px;">
+      <button onclick="irAModulo('home')"><i class="ti ti-arrow-left"></i></button>
+      <div class="modulo-header-titulo">Registrar ingreso</div>
+    </div>
 
     <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <div>
@@ -260,28 +344,71 @@
     </div>
 
     <div id="resultado-marcacion"></div>
-
   </div>
 
-  <!-- PANTALLA GESTIÓN -->
-  <div id="pantalla-gestion" class="pantalla-contenido" style="display:none;">
+  <!-- MÓDULO SALIDA -->
+  <div id="pantalla-salida" class="pantalla-contenido" style="display:none;">
+    <div class="modulo-header" style="margin:-16px -16px 16px;">
+      <button onclick="irAModulo('home')"><i class="ti ti-arrow-left"></i></button>
+      <div class="modulo-header-titulo">Registrar salida</div>
+    </div>
+
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div style="font-size:11px;color:var(--texto3);text-transform:uppercase;font-weight:700;letter-spacing:.3px;">
+        Hora de salida
+      </div>
+      <input type="time" id="hora-salida-elegida" style="width:96px;padding:9px;
+        border-radius:10px;border:1.5px solid var(--borde);font-size:15px;font-weight:700;text-align:center;">
+    </div>
+
+    <div class="switch-row">
+      <button id="switch-todos" class="switch-btn activo" onclick="cambiarModoSalida('todos')">Marcar a todos</button>
+      <button id="switch-individual" class="switch-btn" onclick="cambiarModoSalida('individual')">Individual</button>
+    </div>
+
+    <div id="salida-individual-zona" style="display:none;">
+      <input type="text" id="buscar-salida" class="form-input" style="margin-bottom:12px;"
+        placeholder="Buscar nombre o RUT..." oninput="renderListaSalida()">
+      <div id="lista-salida"></div>
+    </div>
+
+    <div id="salida-todos-zona" class="card" style="text-align:center;color:var(--texto2);font-size:13px;">
+      Se va a cerrar la jornada de <strong id="salida-todos-conteo">0</strong> trabajador(es) activo(s), a la hora elegida arriba.
+    </div>
+
+    <button class="btn btn-full" id="btn-confirmar-salida" style="margin-top:14px;background:var(--warn);color:#fff;" onclick="confirmarSalida()">
+      <i class="ti ti-door-exit"></i> <span id="btn-confirmar-salida-txt">Cerrar jornada</span>
+    </button>
+
+    <div id="resultado-salida"></div>
+  </div>
+
+  <!-- MÓDULO RESUMEN -->
+  <div id="pantalla-resumen" class="pantalla-contenido" style="display:none;">
+    <div class="modulo-header" style="margin:-16px -16px 16px;">
+      <button onclick="irAModulo('home')"><i class="ti ti-arrow-left"></i></button>
+      <div class="modulo-header-titulo">Resumen del día</div>
+    </div>
 
     <div class="kpi-row">
       <div class="kpi-box"><div class="kpi-num" id="kpi-total">0</div><div class="kpi-label">Marcados</div></div>
       <div class="kpi-box"><div class="kpi-num" id="kpi-activos" style="color:var(--verde-dark);">0</div><div class="kpi-label">Activos</div></div>
       <div class="kpi-box"><div class="kpi-num" id="kpi-cerrados" style="color:var(--texto2);">0</div><div class="kpi-label">Cerrados</div></div>
     </div>
+    <div class="kpi-row" style="grid-template-columns:1fr;">
+      <div class="kpi-box"><div class="kpi-num" id="kpi-anticipadas" style="color:#92400E;">0</div><div class="kpi-label">Salidas anticipadas (≤5h)</div></div>
+    </div>
 
-    <div class="card" style="display:flex;gap:8px;flex-wrap:wrap;">
-      <input type="text" id="buscar-trabajador" class="form-input" style="flex:1;min-width:140px;"
-        placeholder="Buscar nombre o RUT..." oninput="renderGestion()">
-      <button class="btn btn-secondary" onclick="cierreMasivo()">
-        <i class="ti ti-door-exit"></i> Cierre masivo
-      </button>
+    <div class="card">
+      <input type="text" id="buscar-trabajador" class="form-input"
+        placeholder="Buscar nombre o RUT..." oninput="renderResumen()">
+    </div>
+
+    <div style="font-size:11px;color:var(--texto3);text-align:center;margin-bottom:8px;">
+      Tocá un trabajador para corregir o borrar su marcación de hoy
     </div>
 
     <div id="lista-gestion"></div>
-
   </div>
 
 </div>
@@ -464,7 +591,7 @@ function _mostrarApp(){
     { weekday:'long', day:'numeric', month:'long' });
   document.getElementById('pantalla-login').style.display = 'none';
   document.getElementById('app-main').style.display       = 'block';
-  cambiarTab('marcar');
+  irAModulo('home');
 }
 
 function restaurarSesionApp(){
@@ -535,16 +662,54 @@ function renovarSesionApp(){
 }
 
 /* ══════════════════════════════════════════
-   TABS
+   NAVEGACIÓN — home + 3 módulos
 ══════════════════════════════════════════ */
-function cambiarTab(tab){
-  tabActual = tab;
-  document.getElementById('tab-marcar').classList.toggle('activo', tab==='marcar');
-  document.getElementById('tab-gestion').classList.toggle('activo', tab==='gestion');
-  document.getElementById('pantalla-marcar').style.display  = tab==='marcar'  ? 'block' : 'none';
-  document.getElementById('pantalla-gestion').style.display = tab==='gestion' ? 'block' : 'none';
-  if(tab==='gestion') renderGestion();
+function irAModulo(modulo){
+  tabActual = modulo;
+  if(qrStream && modulo !== 'ingreso') detenerCamara();
+
+  ['home','ingreso','salida','resumen'].forEach(m => {
+    const el = document.getElementById('pantalla-' + m);
+    if(el) el.style.display = (m === modulo) ? 'block' : 'none';
+  });
+
+  if(modulo === 'home')    _actualizarBadgeHome();
+  if(modulo === 'salida')  _initModuloSalida();
+  if(modulo === 'resumen') renderResumen();
 }
+
+function _actualizarBadgeHome(){
+  const hoy   = new Date().toISOString().split('T')[0];
+  const data  = JSON.parse(localStorage.getItem(LS_ASIST + hoy) || '[]');
+  const ruts  = trabajadoresDelMandante().map(t => t.rut);
+  const activos = data.filter(r => ruts.includes(r.rut) && !r.hora_salida).length;
+  const badge = document.getElementById('home-badge-activos');
+  if(badge) badge.textContent = `${activos} activo${activos!==1?'s':''}`;
+}
+
+/* ══════════════════════════════════════════
+   SONIDOS — 2 tonos generados, sin archivos
+   externos (funcionan aunque no haya internet)
+══════════════════════════════════════════ */
+let _audioCtxApp = null;
+function _tono(frecuencia, duracionMs, delayMs){
+  try{
+    _audioCtxApp = _audioCtxApp || new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = _audioCtxApp.createOscillator();
+    const gain = _audioCtxApp.createGain();
+    osc.frequency.value = frecuencia;
+    osc.type = 'sine';
+    osc.connect(gain);
+    gain.connect(_audioCtxApp.destination);
+    const inicio = _audioCtxApp.currentTime + (delayMs||0)/1000;
+    gain.gain.setValueAtTime(0.2, inicio);
+    gain.gain.exponentialRampToValueAtTime(0.001, inicio + duracionMs/1000);
+    osc.start(inicio);
+    osc.stop(inicio + duracionMs/1000);
+  }catch{ /* audio no disponible — no bloquea la marcación */ }
+}
+function sonidoExito(){ _tono(880, 140); }
+function sonidoAlerta(){ _tono(330, 130); _tono(330, 130, 180); }
 
 /* ══════════════════════════════════════════
    CÁMARA QR
@@ -564,7 +729,8 @@ async function toggleCamara(){
     escanearQR();
   } catch(e){
     btn.innerHTML = '<i class="ti ti-camera"></i> Activar cámara';
-    mostrarResultado('❌ No se pudo acceder a la cámara', 'error');
+    sonidoAlerta();
+    mostrarResultado('error', 'Sin acceso a la cámara', '');
   }
 }
 
@@ -609,28 +775,52 @@ function procesarQrLeido(data){
     const url = new URL(data);
     rut = url.searchParams.get('rut') || data;
   } catch{ /* no es URL */ }
-  registrarMarcacion(decodeURIComponent(rut));
+  registrarIngreso(decodeURIComponent(rut));
 }
 
 function marcarPorRut(){
   const rut = document.getElementById('rut-manual').value.trim();
-  if(!rut){ mostrarResultado('⚠️ Ingresa un RUT', 'error'); return; }
-  registrarMarcacion(rut);
+  if(!rut){ sonidoAlerta(); mostrarResultado('warn', 'Ingresa un RUT', ''); return; }
+  registrarIngreso(rut);
   document.getElementById('rut-manual').value = '';
 }
 
+/* Mismo cálculo de horas/jornada que usa el sistema principal (descuenta
+   la colación real del contrato) — compartido entre Ingreso (cierre
+   individual histórico, si se necesitara) y el módulo de Salida. */
+function _calcularHorasYJornadaApp(horaEntrada, horaSalida, rut){
+  const [eh,em] = horaEntrada.split(':').map(Number);
+  const [sh,sm] = horaSalida.split(':').map(Number);
+  let horas = (sh*60+sm - (eh*60+em)) / 60;
+  if(horas < 0) horas += 24;
+  const colMin = _colacionMinutosTrabajadorApp(rut);
+  horas = Math.max(0, horas - (colMin/60));
+  horas = Math.round(horas * 10) / 10;
+
+  let jornada = '—', jornada_valor = null;
+  if(horas === 0)      { jornada = 'Ausente';  jornada_valor = 0; }
+  else if(horas <= 5)  { jornada = 'Media';    jornada_valor = 0.5; }
+  else if(horas <= 10) { jornada = 'Completa'; jornada_valor = 1; }
+  else if(horas <= 12) { jornada = 'Extendida';jornada_valor = 1.5; }
+  else                 { jornada = '⚠️ Revisar'; }
+  return { horas, jornada, jornada_valor };
+}
+
 /* ══════════════════════════════════════════
-   REGISTRAR MARCACIÓN
-   Formato compatible con asistencia.js del sistema principal
+   REGISTRAR INGRESO — SOLO entrada. Si el
+   trabajador ya tiene entrada hoy, bloquea y
+   avisa; no la convierte en salida (eso ahora
+   vive exclusivamente en el módulo Salida).
 ══════════════════════════════════════════ */
-function registrarMarcacion(rut){
+function registrarIngreso(rut){
   const rutLimpio = rut.replace(/\./g,'');
   const t = trabajadores.find(x => x.rut === rut || x.rut.replace(/\./g,'') === rutLimpio);
-  if(!t){ mostrarResultado(`❌ RUT ${rut} no encontrado en el sistema`, 'error'); return; }
+  if(!t){ sonidoAlerta(); mostrarResultado('error', 'RUT no encontrado', rut); return; }
 
   const m = findMandante(t);
   if((m?.id || m?.rut) !== sesion.mandante_id){
-    mostrarResultado(`⚠️ ${t.nombre} no pertenece a esta empresa mandante`, 'error');
+    sonidoAlerta();
+    mostrarResultado('error', 'No pertenece a esta empresa', t.nombre);
     return;
   }
 
@@ -638,79 +828,56 @@ function registrarMarcacion(rut){
   const clave        = LS_ASIST + hoy;
   const data         = JSON.parse(localStorage.getItem(clave) || '[]');
   const horaEstandar = document.getElementById('hora-estandar').value || '08:00';
-  const ahoraReal    = new Date().toTimeString().slice(0,5);
-  const idx          = data.findIndex(r => r.rut === t.rut);
+  const ahoraReal     = new Date().toTimeString().slice(0,5);
+  const idx           = data.findIndex(r => r.rut === t.rut);
 
-  if(idx < 0){
-    // ENTRADA — formato exacto de asistencia.js
-    const marcacion = {
-      rut:              t.rut,
-      fecha:            hoy,
-      hora_entrada:     horaEstandar,
-      hora_entrada_real:ahoraReal,
-      hora_salida:      null,
-      horas_trabajadas: null,
-      jornada_valor:    null,
-      jornada:          null,
-      registrado_por:   sesion.usuario,
-    };
-    data.push(marcacion);
-    localStorage.setItem(clave, JSON.stringify(data));
-    mostrarResultado(`✅ Entrada — ${t.nombre} (${horaEstandar})`, 'exito');
-
-  } else if(!data[idx].hora_salida){
-    // SALIDA — calcula horas igual que asistencia.js (descuenta colación real del contrato)
-    const [eh,em] = data[idx].hora_entrada.split(':').map(Number);
-    const [sh,sm] = ahoraReal.split(':').map(Number);
-    let horas = (sh*60+sm - (eh*60+em)) / 60;
-    if(horas < 0) horas += 24;
-    const colMin = _colacionMinutosTrabajadorApp(t.rut);
-    horas = Math.max(0, horas - (colMin/60));
-    horas = Math.round(horas * 10) / 10;
-
-    // Calcular jornada igual que calcularJornada() en asistencia.js
-    let jornada = '—', jornada_valor = null;
-    if(horas === 0)      { jornada = 'Ausente';  jornada_valor = 0; }
-    else if(horas <= 5)  { jornada = 'Media';    jornada_valor = 0.5; }
-    else if(horas <= 10) { jornada = 'Completa'; jornada_valor = 1; }
-    else if(horas <= 12) { jornada = 'Extendida';jornada_valor = 1.5; }
-    else                 { jornada = '⚠️ Revisar'; }
-
-    data[idx].hora_salida      = ahoraReal;
-    data[idx].horas_trabajadas = horas;
-    data[idx].jornada          = jornada;
-    data[idx].jornada_valor    = jornada_valor;
-    data[idx].fecha            = hoy;
-
-    localStorage.setItem(clave, JSON.stringify(data));
-    mostrarResultado(`✅ Salida — ${t.nombre} (${ahoraReal} · ${horas}h · ${jornada})`, 'exito');
-
-  } else {
-    mostrarResultado(`⚠️ ${t.nombre} ya completó su jornada (${data[idx].hora_entrada} – ${data[idx].hora_salida})`, 'warn');
+  if(idx >= 0){
+    // Ya tiene entrada hoy — bloquea, no toca el registro existente.
+    sonidoAlerta();
+    mostrarResultado('warn', 'Ya registrado', `${t.nombre} — entrada a las ${data[idx].hora_entrada}`);
     return;
   }
 
-  if(tabActual === 'gestion') renderGestion();
+  const marcacion = {
+    rut:              t.rut,
+    fecha:            hoy,
+    hora_entrada:     horaEstandar,
+    hora_entrada_real:ahoraReal,
+    hora_salida:      null,
+    horas_trabajadas: null,
+    jornada_valor:    null,
+    jornada:          null,
+    registrado_por:   sesion.usuario,
+  };
+  data.push(marcacion);
+  localStorage.setItem(clave, JSON.stringify(data));
+  sonidoExito();
+  mostrarResultado('exito', 'Entrada registrada', `${t.nombre} — ${horaEstandar}`);
 }
 
-function mostrarResultado(msg, tipo){
-  const el = document.getElementById('resultado-marcacion');
-  const colores = {
-    exito:{ bg:'#D1FAE5', txt:'#065F46', icon:'circle-check' },
-    error:{ bg:'#FEE2E2', txt:'#991B1B', icon:'circle-x' },
-    warn: { bg:'#FEF3C7', txt:'#92400E', icon:'alert-triangle' },
+function mostrarResultado(tipo, titulo, detalle, contenedorId){
+  const el = document.getElementById(contenedorId || 'resultado-marcacion');
+  if(!el) return;
+  const estilos = {
+    exito:{ bg:'#059669', icon:'circle-check' },
+    error:{ bg:'#DC2626', icon:'circle-x' },
+    warn: { bg:'#D97706', icon:'alert-triangle' },
   };
-  const c = colores[tipo] || colores.exito;
-  el.innerHTML = `<div class="result-banner fade-in" style="background:${c.bg};color:${c.txt};">
-    <i class="ti ti-${c.icon}" style="font-size:20px;flex-shrink:0;"></i> ${msg}
+  const c = estilos[tipo] || estilos.exito;
+  el.innerHTML = `<div class="result-banner-fuerte fade-in" style="background:${c.bg};color:#fff;">
+    <i class="ti ti-${c.icon} icono"></i>
+    <div>
+      <div class="titulo">${titulo}</div>
+      ${detalle ? `<div class="detalle">${detalle}</div>` : ''}
+    </div>
   </div>`;
   setTimeout(() => { if(el) el.innerHTML = ''; }, 4000);
 }
 
 /* ══════════════════════════════════════════
-   GESTIÓN DEL DÍA
+   RESUMEN DEL DÍA
 ══════════════════════════════════════════ */
-function renderGestion(){
+function renderResumen(){
   const hoy    = new Date().toISOString().split('T')[0];
   const clave  = LS_ASIST + hoy;
   const data   = JSON.parse(localStorage.getItem(clave) || '[]');
@@ -721,19 +888,26 @@ function renderGestion(){
     return t.nombre.toLowerCase().includes(buscar) || t.rut.replace(/\./g,'').toLowerCase().includes(buscar);
   });
 
-  let activos = 0, cerrados = 0, marcados = 0;
+  let activos = 0, cerrados = 0, marcados = 0, anticipadas = 0;
   const filas = lista.map(t => {
     const r = data.find(x => x.rut === t.rut);
-    if(r){ marcados++; if(r.hora_salida) cerrados++; else activos++; }
+    if(r){
+      marcados++;
+      if(r.hora_salida){
+        cerrados++;
+        if(r.horas_trabajadas !== null && r.horas_trabajadas > 0 && r.horas_trabajadas <= 5) anticipadas++;
+      } else activos++;
+    }
     return { t, r };
   }).sort((a,b) => {
-    const rank = x => !x.r ? 2 : x.r.hora_salida ? 1 : 0;
+    const rank = x => !x.r ? 3 : !x.r.hora_salida ? 0 : (x.r.horas_trabajadas > 0 && x.r.horas_trabajadas <= 5) ? 1 : 2;
     return rank(a) - rank(b);
   });
 
-  document.getElementById('kpi-total').textContent    = marcados;
-  document.getElementById('kpi-activos').textContent  = activos;
-  document.getElementById('kpi-cerrados').textContent = cerrados;
+  document.getElementById('kpi-total').textContent       = marcados;
+  document.getElementById('kpi-activos').textContent     = activos;
+  document.getElementById('kpi-cerrados').textContent    = cerrados;
+  document.getElementById('kpi-anticipadas').textContent = anticipadas;
 
   const cont = document.getElementById('lista-gestion');
   if(!filas.length){
@@ -743,13 +917,16 @@ function renderGestion(){
   }
 
   cont.innerHTML = filas.map(({t,r}) => {
+    const esAnticipada = r?.hora_salida && r.horas_trabajadas > 0 && r.horas_trabajadas <= 5;
     const estado = !r
       ? { txt:'Sin marcar', bg:'#F1F5F9', col:'var(--texto3)', icon:'clock' }
       : !r.hora_salida
         ? { txt:'Activo', bg:'#D1FAE5', col:'#065F46', icon:'circle-check' }
-        : { txt:'Cerrado', bg:'#F1F5F9', col:'#475569', icon:'door-exit' };
+        : esAnticipada
+          ? { txt:'Salida anticipada', bg:'#FEF3C7', col:'#92400E', icon:'alert-triangle' }
+          : { txt:'Cerrado', bg:'#FEE2E2', col:'#991B1B', icon:'door-exit' };
 
-    return `<div class="worker-row">
+    return `<div class="worker-row" ${r ? `onclick="_confirmarBorrarMarcacion('${t.rut}','${t.nombre.replace(/'/g,"\\'")}')" style="cursor:pointer;"` : ''}>
       <div class="worker-info">
         <div class="worker-name">${t.nombre}</div>
         <div class="worker-rut">${t.rut}${r?.jornada ? ' · '+r.jornada : ''}</div>
@@ -769,43 +946,119 @@ function renderGestion(){
   }).join('');
 }
 
-function cierreMasivo(){
-  const hoy          = new Date().toISOString().split('T')[0];
-  const clave        = LS_ASIST + hoy;
-  const data         = JSON.parse(localStorage.getItem(clave) || '[]');
-  const ahoraReal    = new Date().toTimeString().slice(0,5);
-  const mandanteRuts = trabajadoresDelMandante().map(t => t.rut);
-  let cerrados       = 0;
+/* Tocar una fila con marcación permite deshacerla, sin salir de la App —
+   antes solo se podía corregir desde el sistema Web. */
+function _confirmarBorrarMarcacion(rut, nombre){
+  if(!confirm(`¿Borrar la marcación de hoy de ${nombre}?\n\nEsto no se puede deshacer.`)) return;
+  const hoy   = new Date().toISOString().split('T')[0];
+  const clave = LS_ASIST + hoy;
+  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+  const idx   = data.findIndex(x => x.rut === rut);
+  if(idx < 0) return;
+  data.splice(idx, 1);
+  localStorage.setItem(clave, JSON.stringify(data));
+  renderResumen();
+}
 
-  data.forEach(r => {
-    if(!mandanteRuts.includes(r.rut) || r.hora_salida) return;
-    const [eh,em] = r.hora_entrada.split(':').map(Number);
-    const [sh,sm] = ahoraReal.split(':').map(Number);
-    let horas = (sh*60+sm - (eh*60+em)) / 60;
-    if(horas < 0) horas += 24;
-    const colMin = _colacionMinutosTrabajadorApp(r.rut);
-    horas = Math.max(0, horas - (colMin/60));
-    horas = Math.round(horas*10)/10;
+/* ══════════════════════════════════════════
+   MÓDULO SALIDA
+══════════════════════════════════════════ */
+let _modoSalida = 'todos';
 
-    let jornada = '—', jornada_valor = null;
-    if(horas<=5){ jornada='Media'; jornada_valor=0.5; }
-    else if(horas<=10){ jornada='Completa'; jornada_valor=1; }
-    else if(horas<=12){ jornada='Extendida'; jornada_valor=1.5; }
-    else{ jornada='⚠️ Revisar'; }
+function _initModuloSalida(){
+  const horaEl = document.getElementById('hora-salida-elegida');
+  if(horaEl && !horaEl.value) horaEl.value = new Date().toTimeString().slice(0,5);
+  cambiarModoSalida(_modoSalida);
+}
 
-    r.hora_salida      = ahoraReal;
-    r.horas_trabajadas = horas;
-    r.jornada          = jornada;
-    r.jornada_valor    = jornada_valor;
-    r.fecha            = hoy;
+function cambiarModoSalida(modo){
+  _modoSalida = modo;
+  document.getElementById('switch-todos').classList.toggle('activo', modo==='todos');
+  document.getElementById('switch-individual').classList.toggle('activo', modo==='individual');
+  document.getElementById('salida-todos-zona').style.display      = modo==='todos' ? 'block' : 'none';
+  document.getElementById('salida-individual-zona').style.display = modo==='individual' ? 'block' : 'none';
+
+  const activos = _trabajadoresActivosHoy();
+  document.getElementById('salida-todos-conteo').textContent = activos.length;
+  document.getElementById('btn-confirmar-salida-txt').textContent =
+    modo === 'todos' ? 'Cerrar jornada' : 'Cerrar seleccionados';
+
+  if(modo === 'individual') renderListaSalida();
+}
+
+/* Trabajadores del mandante con entrada hoy y sin salida todavía */
+function _trabajadoresActivosHoy(){
+  const hoy  = new Date().toISOString().split('T')[0];
+  const data = JSON.parse(localStorage.getItem(LS_ASIST + hoy) || '[]');
+  const ruts = trabajadoresDelMandante().map(t => t.rut);
+  return data.filter(r => ruts.includes(r.rut) && !r.hora_salida);
+}
+
+function renderListaSalida(){
+  const buscar  = (document.getElementById('buscar-salida')?.value || '').toLowerCase().replace(/\./g,'');
+  const activos = _trabajadoresActivosHoy();
+  const cont    = document.getElementById('lista-salida');
+
+  const filas = activos
+    .map(r => ({ r, t: trabajadores.find(t => t.rut === r.rut) }))
+    .filter(({t}) => t && (!buscar || t.nombre.toLowerCase().includes(buscar) || t.rut.replace(/\./g,'').toLowerCase().includes(buscar)));
+
+  if(!filas.length){
+    cont.innerHTML = `<div class="card" style="text-align:center;padding:24px;color:var(--texto3);">
+      Sin trabajadores activos para cerrar</div>`;
+    return;
+  }
+
+  cont.innerHTML = filas.map(({t,r}) => `
+    <label class="check-row">
+      <input type="checkbox" class="chk-salida-individual" value="${t.rut}">
+      <div style="flex:1;">
+        <div class="worker-name">${t.nombre}</div>
+        <div class="worker-rut">Entrada ${r.hora_entrada}</div>
+      </div>
+    </label>`).join('');
+}
+
+function confirmarSalida(){
+  const horaSalida = document.getElementById('hora-salida-elegida').value;
+  if(!horaSalida){ sonidoAlerta(); mostrarResultado('warn', 'Elegí la hora de salida', '', 'resultado-salida'); return; }
+
+  let ruts;
+  if(_modoSalida === 'todos'){
+    ruts = _trabajadoresActivosHoy().map(r => r.rut);
+  } else {
+    ruts = [...document.querySelectorAll('.chk-salida-individual:checked')].map(cb => cb.value);
+  }
+
+  if(!ruts.length){
+    sonidoAlerta();
+    mostrarResultado('warn', 'Nada para cerrar', _modoSalida==='todos' ? 'No hay trabajadores activos' : 'Seleccioná al menos uno', 'resultado-salida');
+    return;
+  }
+
+  if(!confirm(`¿Cerrar jornada de ${ruts.length} trabajador${ruts.length>1?'es':''} a las ${horaSalida}?`)) return;
+
+  const hoy   = new Date().toISOString().split('T')[0];
+  const clave = LS_ASIST + hoy;
+  const data  = JSON.parse(localStorage.getItem(clave) || '[]');
+  let cerrados = 0;
+
+  ruts.forEach(rut => {
+    const idx = data.findIndex(r => r.rut === rut && !r.hora_salida);
+    if(idx < 0) return;
+    const { horas, jornada, jornada_valor } = _calcularHorasYJornadaApp(data[idx].hora_entrada, horaSalida, rut);
+    data[idx].hora_salida      = horaSalida;
+    data[idx].horas_trabajadas = horas;
+    data[idx].jornada          = jornada;
+    data[idx].jornada_valor    = jornada_valor;
+    data[idx].fecha            = hoy;
     cerrados++;
   });
 
-  if(!cerrados){ alert('No hay marcaciones activas para cerrar'); return; }
-  if(!confirm(`¿Cerrar jornada de ${cerrados} trabajador${cerrados>1?'es':''} a las ${ahoraReal}?`)) return;
-
   localStorage.setItem(clave, JSON.stringify(data));
-  renderGestion();
+  sonidoExito();
+  mostrarResultado('exito', `${cerrados} jornada${cerrados>1?'s':''} cerrada${cerrados>1?'s':''}`, `A las ${horaSalida}`, 'resultado-salida');
+  cambiarModoSalida(_modoSalida);
 }
 
 /* ══════════════════════════════════════════
