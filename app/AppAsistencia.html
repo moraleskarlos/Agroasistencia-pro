@@ -317,6 +317,7 @@ const SUPERADMIN_APP = { usuario:'admin', password:'agro2024' };
 const LS_CFG         = 'agro_cfg';
 const LS_EMPRESAS    = 'agro_empresas';
 const LS_TRABAJ      = 'agro_trabajadores';
+const LS_CONTRATOS   = 'agro_contratos';
 const LS_ASIST       = 'asistencia_';
 const SESSION_KEY_APP= 'agro_sesion_app';
 const SESSION_HORAS  = 8;
@@ -325,6 +326,7 @@ const SESSION_HORAS  = 8;
 let cfg          = {};
 let empresas     = [];
 let trabajadores = [];
+let contratos    = [];
 let sesion       = null;
 let qrStream     = null;
 let qrAnimId     = null;
@@ -338,6 +340,23 @@ function cargarDatos(){
   try{ cfg          = JSON.parse(localStorage.getItem(LS_CFG))      || {}; }catch{ cfg={}; }
   try{ empresas     = JSON.parse(localStorage.getItem(LS_EMPRESAS)) || {}; }catch{ empresas=[]; }
   try{ trabajadores = JSON.parse(localStorage.getItem(LS_TRABAJ))   || []; }catch{ trabajadores=[]; }
+  try{ contratos    = JSON.parse(localStorage.getItem(LS_CONTRATOS))|| []; }catch{ contratos=[]; }
+}
+
+/* Mismo criterio que _getContratoVigente()/_colacionMinutosContrato() del
+   sistema principal (js/variables.js, js/core.js) — el más reciente por
+   fecha de firma, entre los contratos del trabajador. Reimplementado acá
+   porque la App es un archivo autocontenido, sin los demás .js del
+   sistema. Si el criterio de "contrato vigente" cambia allá, hay que
+   actualizarlo también acá. */
+function _colacionMinutosTrabajadorApp(rut){
+  const lista = contratos.filter(c => c.trabajador_rut === rut);
+  if(!lista.length) return 0;
+  const ordenados = [...lista].sort((a,b) =>
+    new Date(b.fecha_firma||b.fecha_inicio||0) - new Date(a.fecha_firma||a.fecha_inicio||0)
+  );
+  const colRaw = ordenados[0]?.colacion || '';
+  return parseInt(colRaw) || 0;
 }
 
 function findMandante(t){
@@ -640,11 +659,13 @@ function registrarMarcacion(rut){
     mostrarResultado(`✅ Entrada — ${t.nombre} (${horaEstandar})`, 'exito');
 
   } else if(!data[idx].hora_salida){
-    // SALIDA — calcula horas igual que asistencia.js
+    // SALIDA — calcula horas igual que asistencia.js (descuenta colación real del contrato)
     const [eh,em] = data[idx].hora_entrada.split(':').map(Number);
     const [sh,sm] = ahoraReal.split(':').map(Number);
     let horas = (sh*60+sm - (eh*60+em)) / 60;
     if(horas < 0) horas += 24;
+    const colMin = _colacionMinutosTrabajadorApp(t.rut);
+    horas = Math.max(0, horas - (colMin/60));
     horas = Math.round(horas * 10) / 10;
 
     // Calcular jornada igual que calcularJornada() en asistencia.js
@@ -762,6 +783,8 @@ function cierreMasivo(){
     const [sh,sm] = ahoraReal.split(':').map(Number);
     let horas = (sh*60+sm - (eh*60+em)) / 60;
     if(horas < 0) horas += 24;
+    const colMin = _colacionMinutosTrabajadorApp(r.rut);
+    horas = Math.max(0, horas - (colMin/60));
     horas = Math.round(horas*10)/10;
 
     let jornada = '—', jornada_valor = null;
