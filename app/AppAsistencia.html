@@ -176,7 +176,8 @@
   }
   .modulo-header button{
     background:var(--gris-bg);border:none;border-radius:10px;
-    width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    gap:6px;padding:0 12px;font-size:13px;font-weight:700;color:var(--texto);
   }
   .modulo-header-titulo{font-size:15px;font-weight:700}
 
@@ -301,7 +302,7 @@
   <!-- MÓDULO INGRESO -->
   <div id="pantalla-ingreso" class="pantalla-contenido" style="display:none;">
     <div class="modulo-header" style="margin:-16px -16px 16px;">
-      <button onclick="irAModulo('home')"><i class="ti ti-arrow-left"></i></button>
+      <button onclick="irAModulo('home')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="modulo-header-titulo">Registrar ingreso</div>
     </div>
 
@@ -349,7 +350,7 @@
   <!-- MÓDULO SALIDA -->
   <div id="pantalla-salida" class="pantalla-contenido" style="display:none;">
     <div class="modulo-header" style="margin:-16px -16px 16px;">
-      <button onclick="irAModulo('home')"><i class="ti ti-arrow-left"></i></button>
+      <button onclick="irAModulo('home')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="modulo-header-titulo">Registrar salida</div>
     </div>
 
@@ -372,8 +373,11 @@
       <div id="lista-salida"></div>
     </div>
 
-    <div id="salida-todos-zona" class="card" style="text-align:center;color:var(--texto2);font-size:13px;">
-      Se va a cerrar la jornada de <strong id="salida-todos-conteo">0</strong> trabajador(es) activo(s), a la hora elegida arriba.
+    <div id="salida-todos-zona">
+      <div style="font-size:12px;color:var(--texto2);text-align:center;margin-bottom:10px;">
+        Se va a cerrar la jornada de <strong id="salida-todos-conteo">0</strong> trabajador(es), a la hora elegida arriba:
+      </div>
+      <div id="lista-salida-todos"></div>
     </div>
 
     <button class="btn btn-full" id="btn-confirmar-salida" style="margin-top:14px;background:var(--warn);color:#fff;" onclick="confirmarSalida()">
@@ -386,7 +390,7 @@
   <!-- MÓDULO RESUMEN -->
   <div id="pantalla-resumen" class="pantalla-contenido" style="display:none;">
     <div class="modulo-header" style="margin:-16px -16px 16px;">
-      <button onclick="irAModulo('home')"><i class="ti ti-arrow-left"></i></button>
+      <button onclick="irAModulo('home')"><i class="ti ti-arrow-left"></i> Volver</button>
       <div class="modulo-header-titulo">Resumen del día</div>
     </div>
 
@@ -688,28 +692,37 @@ function _actualizarBadgeHome(){
 }
 
 /* ══════════════════════════════════════════
-   SONIDOS — 2 tonos generados, sin archivos
+   SONIDOS — 3 tonos generados, sin archivos
    externos (funcionan aunque no haya internet)
 ══════════════════════════════════════════ */
 let _audioCtxApp = null;
-function _tono(frecuencia, duracionMs, delayMs){
+function _tono(frecuencia, duracionMs, delayMs, frecuenciaFinal){
   try{
     _audioCtxApp = _audioCtxApp || new (window.AudioContext || window.webkitAudioContext)();
     const osc  = _audioCtxApp.createOscillator();
     const gain = _audioCtxApp.createGain();
-    osc.frequency.value = frecuencia;
     osc.type = 'sine';
+    const inicio = _audioCtxApp.currentTime + (delayMs||0)/1000;
+    osc.frequency.setValueAtTime(frecuencia, inicio);
+    if(frecuenciaFinal) osc.frequency.exponentialRampToValueAtTime(frecuenciaFinal, inicio + duracionMs/1000);
     osc.connect(gain);
     gain.connect(_audioCtxApp.destination);
-    const inicio = _audioCtxApp.currentTime + (delayMs||0)/1000;
-    gain.gain.setValueAtTime(0.2, inicio);
+    gain.gain.setValueAtTime(0.35, inicio);
     gain.gain.exponentialRampToValueAtTime(0.001, inicio + duracionMs/1000);
     osc.start(inicio);
     osc.stop(inicio + duracionMs/1000);
   }catch{ /* audio no disponible — no bloquea la marcación */ }
 }
-function sonidoExito(){ _tono(880, 140); }
-function sonidoAlerta(){ _tono(330, 130); _tono(330, 130, 180); }
+/* Ingreso — beep único, corto y agudo (mismo lenguaje que un escáner de
+   supermercado: "buena lectura"). */
+function sonidoExito(){ _tono(1800, 100); }
+/* Salida — el mismo beep de "se está registrando algo", repetido dos
+   veces (no es un sonido distinto, es el mismo confirmando dos pasos). */
+function sonidoSalidaOk(){ _tono(1800, 100); _tono(1800, 100, 160); }
+/* Error / advertencia — un solo tono, más largo y grave, descendente al
+   final — mismo criterio que usan los escáneres reales para avisar un
+   error (no una ráfaga de beeps repetidos). */
+function sonidoAlerta(){ _tono(600, 450, 0, 280); }
 
 /* ══════════════════════════════════════════
    CÁMARA QR
@@ -984,6 +997,7 @@ function cambiarModoSalida(modo){
     modo === 'todos' ? 'Cerrar jornada' : 'Cerrar seleccionados';
 
   if(modo === 'individual') renderListaSalida();
+  else renderListaSalidaTodos();
 }
 
 /* Trabajadores del mandante con entrada hoy y sin salida todavía */
@@ -1017,6 +1031,34 @@ function renderListaSalida(){
         <div class="worker-rut">Entrada ${r.hora_entrada}</div>
       </div>
     </label>`).join('');
+}
+
+/* Modo "Marcar a todos" — misma lista que Individual, pero de solo
+   lectura (sin checkbox), para que quede a la vista a quiénes se les va
+   a cerrar la jornada antes de confirmar. Antes esto era un texto ciego
+   con solo un número. */
+function renderListaSalidaTodos(){
+  const activos = _trabajadoresActivosHoy();
+  const cont    = document.getElementById('lista-salida-todos');
+
+  const filas = activos
+    .map(r => ({ r, t: trabajadores.find(t => t.rut === r.rut) }))
+    .filter(({t}) => t);
+
+  if(!filas.length){
+    cont.innerHTML = `<div class="card" style="text-align:center;padding:24px;color:var(--texto3);">
+      Sin trabajadores activos para cerrar</div>`;
+    return;
+  }
+
+  cont.innerHTML = filas.map(({t,r}) => `
+    <div class="check-row">
+      <i class="ti ti-circle-check" style="color:var(--verde-dark);font-size:20px;flex-shrink:0;"></i>
+      <div style="flex:1;">
+        <div class="worker-name">${t.nombre}</div>
+        <div class="worker-rut">Entrada ${r.hora_entrada}</div>
+      </div>
+    </div>`).join('');
 }
 
 function confirmarSalida(){
@@ -1056,7 +1098,7 @@ function confirmarSalida(){
   });
 
   localStorage.setItem(clave, JSON.stringify(data));
-  sonidoExito();
+  sonidoSalidaOk();
   mostrarResultado('exito', `${cerrados} jornada${cerrados>1?'s':''} cerrada${cerrados>1?'s':''}`, `A las ${horaSalida}`, 'resultado-salida');
   cambiarModoSalida(_modoSalida);
 }
