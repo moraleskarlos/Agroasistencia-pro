@@ -57,6 +57,20 @@
   gap: var(--space-2);
 }
 
+/* Prueba: título de card como barra de color, en vez de solo texto.
+   Ciruela oscuro (#2E1065) — elegido junto al usuario para que no
+   compita con ningún color de estado ya existente (verde=editable,
+   azul=info/KPI, ámbar=aviso, rojo=peligro, navy=formulario).
+   En prueba solo en Contratos y Anexos — no tocar otros módulos
+   hasta que el usuario confirme si expande el alcance. */
+.card-title-oscuro {
+  color: #fff;
+  background: #2E1065;
+  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) var(--space-4) calc(-1 * var(--space-6));
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
 /* ── Grillas de layout ─────────────────────────── */
 
 .g2 {
