@@ -671,6 +671,12 @@ function eliminarNovedad(id){
   _renderKPIsGL();
 }
 
+function limpiarFiltroTrabajadorNov(){
+  _buscadoresGL['nov-rev']?.reset();
+  renderNovedades();
+  _renderKPIsGL();
+}
+
 function _badgeNovedad(tipo){
   const map = {
     licencia_medica:       ['badge-azul',     '🏥 Lic. Médica'],
@@ -811,6 +817,12 @@ function limpiarFiltroFechaHaber(){
 function limpiarFiltroEmpresaHaber(){
   const el = document.getElementById('gl-hab-rev-empresa');
   if(el){ el.value = ''; _buscadoresGL['hab-rev']?.reset(); renderHaberes(); _renderKPIsGL(); }
+}
+
+function limpiarFiltroTrabajadorHaber(){
+  _buscadoresGL['hab-rev']?.reset();
+  renderHaberes();
+  _renderKPIsGL();
 }
 
 function _badgeHaber(tipo){
@@ -974,6 +986,12 @@ function eliminarDescuento(id){
   if(!confirm('¿Eliminar esta cuota? (Solo se borra la de este mes; las demás cuotas del mismo descuento no se ven afectadas)')) return;
   descuentos = descuentos.filter(x => x.id!==id);
   guardarDescuentos();
+  renderDescuentos();
+  _renderKPIsGL();
+}
+
+function limpiarFiltroTrabajadorDescuento(){
+  _buscadoresGL['des-rev']?.reset();
   renderDescuentos();
   _renderKPIsGL();
 }
@@ -1193,6 +1211,12 @@ function limpiarFiltroFechaJornada(){
 function limpiarFiltroEmpresaJornada(){
   const el = document.getElementById('gl-jor-rev-empresa');
   if(el){ el.value = ''; _buscadoresGL['jor-rev']?.reset(); renderJornada(); _renderKPIsGL(); }
+}
+
+function limpiarFiltroTrabajadorJornada(){
+  _buscadoresGL['jor-rev']?.reset();
+  renderJornada();
+  _renderKPIsGL();
 }
 
 function _badgeJornada(tipo){
