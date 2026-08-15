@@ -1144,6 +1144,24 @@ function guardarJornada(){
   // horas extraordinarias por día. Solo aplica al tipo "hora_extra" — los
   // otros 3 tipos no son horas extraordinarias legales, no tienen tope.
   if(tipo === 'hora_extra'){
+    // ✅ NUEVO — Bloqueo legal (Art. 32 Código del Trabajo): la hora extra
+    // es, por definición, tiempo trabajado "en exceso de la jornada
+    // pactada" — exige que haya existido una jornada ordinaria ese día.
+    // Si el trabajador tiene una ausencia registrada ese día (licencia
+    // médica, permiso con o sin goce, vacaciones, injustificada), no
+    // pudo haber trabajado jornada ordinaria, así que tampoco puede
+    // haber hora extra — no es cuestión de criterio, es estructuralmente
+    // imposible. Licencia médica además está prohibida por ley: trabajar
+    // durante ella es fraude frente al sistema de salud (fiscalizado por
+    // la SUSESO), sin importar si se paga como hora extra o no.
+    const novedadEseDia = novedades.find(n =>
+      n.trabajador_rut === rut && n.fecha_inicio <= fecha && n.fecha_fin >= fecha);
+    if(novedadEseDia){
+      const t = trabajadores.find(x => x.rut === rut);
+      toast(`❌ ${t?.nombre||'Este trabajador'} tiene "${_labelNovedad(novedadEseDia.tipo)}" registrado el ${_fmtFecha(fecha)} — no puede tener horas extra ese día (Art. 32 CT exige jornada ordinaria trabajada para poder excederla)`, 'error');
+      return;
+    }
+
     const yaHorasDia = jornada_especial
       .filter(j => j.trabajador_rut === rut && j.tipo === 'hora_extra' && j.fecha === fecha)
       .reduce((s,j) => s + (parseFloat(j.horas)||0), 0);
