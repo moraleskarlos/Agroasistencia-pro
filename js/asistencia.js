@@ -249,6 +249,7 @@ function _renderAsistenciaDia(fecha){
     const r = data.find(x => x.rut === t.rut);
     if(r){ if(!r.hora_salida) activos++; else cerrados++; }
   });
+  const sinMarcar = lista.length - activos - cerrados;
   const anticipadas = data.filter(r => {
     const h = r.horas_trabajadas;
     return h !== null && h !== undefined && h > 0 && h <= 5;
@@ -259,6 +260,7 @@ function _renderAsistenciaDia(fecha){
     <div class="kpi azul"><div class="kpi-label">Trabajadores</div><div class="kpi-value">${lista.length}</div><div class="kpi-sub">activos ese día</div></div>
     <div class="kpi verde"><div class="kpi-label">Activos</div><div class="kpi-value">${activos}</div><div class="kpi-sub">jornada en curso</div></div>
     <div class="kpi"><div class="kpi-label">Cerrados</div><div class="kpi-value">${cerrados}</div><div class="kpi-sub">jornada completa</div></div>
+    <div class="kpi"><div class="kpi-label">Sin marcar</div><div class="kpi-value">${sinMarcar}</div><div class="kpi-sub">sin registro hoy</div></div>
     <div class="kpi amarillo"><div class="kpi-label">Salidas anticipadas</div><div class="kpi-value">${anticipadas}</div><div class="kpi-sub">≤5 horas</div></div>`;
 
   const titulo = document.getElementById('asist-card-title');
