@@ -49,8 +49,8 @@ function _poblarFiltroEmpresaVacaciones(){
 
 /* Antigüedad completa en meses entre dos fechas */
 function _mesesCompletos(fechaInicio, fechaCorte){
-  const ini = new Date(fechaInicio);
-  const fin = new Date(fechaCorte);
+  const ini = fechaLocal(fechaInicio);
+  const fin = fechaLocal(fechaCorte);
   let meses = (fin.getFullYear() - ini.getFullYear()) * 12 + (fin.getMonth() - ini.getMonth());
   if(fin.getDate() < ini.getDate()) meses--;
   return Math.max(0, meses);
@@ -117,6 +117,14 @@ function calcularSaldoVacaciones(rut, fechaCorte){
   };
 }
 
+/* Antigüedad legible: en meses si es menor a 1 año (más claro que "0.1
+   años" para alguien recién ingresado), en años con 1 decimal desde el
+   año 1 en adelante. */
+function _fmtAntiguedad(meses){
+  if(meses < 12) return `${meses} mes${meses===1?'':'es'}`;
+  return `${(meses/12).toFixed(1)} años`;
+}
+
 /* ════════════════════════════════════════════════════════
    RENDER PRINCIPAL — tabla de saldos
    ════════════════════════════════════════════════════════ */
@@ -146,7 +154,7 @@ function renderVacaciones(){
       <td class="rut-mono">${s.rut}</td>
       <td style="font-size:13px;font-weight:500;">${s.nombre}</td>
       <td style="font-size:12px;">${fmtFecha(s.fecha_ingreso)}</td>
-      <td style="font-size:12px;text-align:center;">${s.antiguedad_anios} años</td>
+      <td style="font-size:12px;text-align:center;">${_fmtAntiguedad(s.antiguedad_meses)}</td>
       <td style="font-size:12px;text-align:center;">${s.dias_devengados_total}</td>
       <td style="font-size:12px;text-align:center;">${s.dias_tomados}</td>
       <td style="font-size:13px;text-align:center;font-weight:700;${alerta?'color:#dc2626;':'color:#065f46;'}">

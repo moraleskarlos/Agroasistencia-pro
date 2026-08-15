@@ -193,7 +193,7 @@ function _renderKPIsGL(){
   const mesNov      = document.getElementById('gl-nov-rev-mes')?.value || '';
   const mandanteNov = document.getElementById('gl-nov-rev-empresa')?.value || '';
   const rutsNov     = _rutsFiltrados(mandanteNov);
-  const novPer      = novedades.filter(n => n.periodo === mesNov && rutsNov.includes(n.trabajador_rut));
+  const novPer      = novedades.filter(n => _novedadTocaPeriodo(n, mesNov) && rutsNov.includes(n.trabajador_rut));
   const contarTrabajadores = tipo => new Set(novPer.filter(n => n.tipo === tipo).map(n => n.trabajador_rut)).size;
   _setKPI('gl-kpi-goce',         contarTrabajadores('permiso_goce'),          'trabajadores');
   _setKPI('gl-kpi-singoce',      contarTrabajadores('permiso_sin_goce'),      'trabajadores');
@@ -261,7 +261,7 @@ function renderNovedades(){
   if(!tbody) return;
 
   const ausencias  = _leerAusenciasAsistencia(periodo, ruts);
-  const novsPer    = novedades.filter(n => n.periodo === periodo && ruts.includes(n.trabajador_rut));
+  const novsPer    = novedades.filter(n => _novedadTocaPeriodo(n, periodo) && ruts.includes(n.trabajador_rut));
 
   const rutsMostrar = filtroRut ? [filtroRut] : ruts;
   const filas = rutsMostrar.map(rut => {
@@ -285,7 +285,7 @@ function renderNovedades(){
       if(!novsRut.some(n => n.tipo === filtroTipo)) return null;
     }
 
-    const totalDias   = novsRut.reduce((s,n) => s + (n.dias||1), 0);
+    const totalDias   = novsRut.reduce((s,n) => s + _diasNovedadEnPeriodo(n, periodo), 0);
 
     return { rut, t, sinClasif, novsRut, totalDias };
   }).filter(Boolean);
@@ -359,6 +359,35 @@ function _reabrirDetalleSiCorresponde(){
   if(btn) btn.className = 'ti ti-chevron-up';
 }
 
+/* Set de "días sin clasificar" con el mini-formulario inline abierto —
+   clave: `${rut}|${fecha}`. Mismo criterio que _filasEditandoAsist en
+   asistencia.js para persistir el estado abierto entre re-renders. */
+let _pendientesEditandoGL = new Set();
+
+function toggleClasificarInline(rut, fecha){
+  const clave = `${rut}|${fecha}`;
+  if(_pendientesEditandoGL.has(clave)) _pendientesEditandoGL.delete(clave);
+  else _pendientesEditandoGL.add(clave);
+  renderNovedades();
+}
+
+function guardarNovedadInline(rut, fecha){
+  const clave = `${rut}|${fecha}`;
+  const rid   = clave.replace(/\W/g,'_');
+  const tipo  = document.getElementById(`inline-tipo-${rid}`)?.value;
+  const obs   = document.getElementById(`inline-obs-${rid}`)?.value || '';
+
+  if(!tipo){ toast('⚠️ Selecciona el motivo de la ausencia','error'); return; }
+
+  const ok = _guardarNovedadCore({ rut, tipo, inicio: fecha, fin: fecha, obs });
+  if(!ok) return;
+
+  toast('✅ Novedad registrada','exito');
+  _pendientesEditandoGL.delete(clave);
+  renderNovedades();
+  _renderKPIsGL();
+}
+
 function _htmlDetalleNovedad(f){
   // Una sola lista ordenada por fecha. Los "sin clasificar" se listan uno
   // por uno (cada día es una clasificación pendiente independiente). Las
@@ -376,14 +405,41 @@ function _htmlDetalleNovedad(f){
 
   const filasHtml = combinado.map(item => {
     if(item.tipoFila === 'pendiente'){
-      const a = item.a;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--borde);">
-        <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(a.fecha)}</span>
-        <span class="badge badge-amarillo">⚠️ Sin clasificar</span>
-        <span style="font-size:12px;color:var(--texto3);flex:1;">Detectada desde Asistencia</span>
-        <button class="btn btn-secondary btn-sm" onclick="clasificarAusencia('${a.rut}','${a.fecha}')">
-          <i class="ti ti-tag"></i> Registrar
-        </button>
+      const a     = item.a;
+      const clave = `${a.rut}|${a.fecha}`;
+      const rid   = clave.replace(/\W/g,'_');
+      const editando = _pendientesEditandoGL.has(clave);
+      return `<div style="border-bottom:1px solid var(--borde);">
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 0;">
+          <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(a.fecha)}</span>
+          <span class="badge badge-amarillo">⚠️ Sin clasificar</span>
+          <span style="font-size:12px;color:var(--texto3);flex:1;">Detectada desde Asistencia</span>
+          <button class="btn btn-secondary btn-sm" onclick="toggleClasificarInline('${a.rut}','${a.fecha}')">
+            <i class="ti ti-tag"></i> ${editando ? 'Cancelar' : 'Registrar'}
+          </button>
+        </div>
+        ${editando ? `
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:0 0 12px;">
+          <div class="form-group" style="margin:0;min-width:180px;">
+            <label>Motivo de la Ausencia</label>
+            <select id="inline-tipo-${rid}">
+              <option value="">— Seleccionar —</option>
+              <option value="licencia_medica">🏥 Licencia Médica</option>
+              <option value="permiso_goce">✅ Permiso con goce de sueldo</option>
+              <option value="permiso_sin_goce">⚠️ Permiso sin goce de sueldo</option>
+              <option value="vacaciones">🏖️ Vacaciones</option>
+              <option value="ausencia_injustificada">❌ Ausencia injustificada</option>
+              <option value="otro">📋 Otro</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;flex:1;min-width:200px;">
+            <label>Observación</label>
+            <input type="text" id="inline-obs-${rid}" placeholder="Opcional">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="guardarNovedadInline('${a.rut}','${a.fecha}')">
+            <i class="ti ti-check"></i> Guardar
+          </button>
+        </div>` : ''}
       </div>`;
     }
     const n = item.n;
@@ -493,6 +549,25 @@ function guardarNovedad(){
   if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
   if(!rut || !tipo || !inicio){ toast('⚠️ Completa trabajador, tipo y fecha inicio','error'); return; }
 
+  const ok = _guardarNovedadCore({ rut, tipo, inicio, fin, obs });
+  if(!ok) return;
+
+  toast('✅ Novedad registrada','exito');
+  _resetForm('form-novedad');
+  _buscadoresGL['nov-reg']?.reset();
+  document.getElementById('gl-nov-form-wrap').style.display = 'none';
+  renderNovedades();
+  _renderKPIsGL();
+}
+
+/* Núcleo de guardado de una novedad — comparte validaciones y persistencia
+   entre el formulario de arriba (Registrar Ausencia) y el mini-formulario
+   inline de "Clasificar" dentro del detalle (misma lógica, dos entradas
+   distintas). Devuelve true/false según si guardó o no; el llamador
+   decide qué hacer con el resultado (toast, cerrar formulario, etc.). */
+function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
+  if(_guardandoGL) return false;
+
   // ✅ Validación cruzada contra Asistencia — reemplaza al paso de
   // aprobación manual que se eliminó. Si el trabajador ya tiene una
   // marcación real (hora_entrada) en algún día del rango, no se permite
@@ -502,7 +577,7 @@ function guardarNovedad(){
   if(conflictos.length){
     const t = trabajadores.find(x => x.rut === rut);
     toast(`⚠️ ${t?.nombre||'El trabajador'} ya tiene asistencia marcada el ${_fmtFecha(conflictos[0])}${conflictos.length>1?` (y ${conflictos.length-1} día(s) más)`:''} — no se puede registrar una ausencia en un día con asistencia confirmada`, 'error');
-    return;
+    return false;
   }
 
   // ✅ NUEVO — Validación cruzada entre novedades: un trabajador no puede
@@ -516,7 +591,7 @@ function guardarNovedad(){
   if(conflictoNov){
     const t = trabajadores.find(x => x.rut === rut);
     toast(`⚠️ ${t?.nombre||'Este trabajador'} ya tiene "${_labelNovedad(conflictoNov.tipo)}" registrado entre ${_fmtFecha(conflictoNov.fecha_inicio)} y ${_fmtFecha(conflictoNov.fecha_fin)} — no puede tener dos motivos en fechas que se cruzan`, 'error');
-    return;
+    return false;
   }
 
   _guardandoGL = true;
@@ -548,13 +623,9 @@ function guardarNovedad(){
     subtipo: tipo,
     descripcion: `${_labelNovedad(tipo)} — ${_fmtFecha(inicio)}${fin&&fin!==inicio?' al '+_fmtFecha(fin):''}`,
   });
-  toast('✅ Novedad registrada','exito');
-  _resetForm('form-novedad');
-  _buscadoresGL['nov-reg']?.reset();
-  document.getElementById('gl-nov-form-wrap').style.display = 'none';
-  renderNovedades();
-  _renderKPIsGL();
+
   _guardandoGL = false;
+  return true;
 }
 
 function eliminarNovedad(id){
@@ -1180,6 +1251,39 @@ function _calcDias(inicio, fin){
   return Math.max(1, Math.round((d2-d1)/(1000*60*60*24))+1);
 }
 
+/* Primer y último día ISO de un período 'YYYY-MM' — comparación por
+   string, sin pasar por Date (los strings ISO ordenan igual que las
+   fechas reales, no hace falta anclar nada acá). */
+function _rangoPeriodo(periodo){
+  const [anio, mes] = periodo.split('-').map(Number);
+  const desde = `${periodo}-01`;
+  const hasta = `${periodo}-${String(new Date(anio, mes, 0).getDate()).padStart(2,'0')}`;
+  return { desde, hasta };
+}
+
+/* ¿La novedad (fecha_inicio–fecha_fin) toca este período, aunque haya
+   empezado en otro mes? Reemplaza la comparación exacta n.periodo===X,
+   que dejaba afuera cualquier ausencia que cruzara de mes. */
+function _novedadTocaPeriodo(n, periodo){
+  if(!periodo) return false;
+  const { desde, hasta } = _rangoPeriodo(periodo);
+  const fin = n.fecha_fin || n.fecha_inicio;
+  return n.fecha_inicio <= hasta && fin >= desde;
+}
+
+/* Cuántos días de la novedad caen DENTRO de este período específico
+   (prorrateado) — para que una licencia que cruza de mes no cuente sus
+   días totales dos veces (una en cada mes), sino solo los que corresponden
+   a cada uno. */
+function _diasNovedadEnPeriodo(n, periodo){
+  if(!_novedadTocaPeriodo(n, periodo)) return 0;
+  const { desde, hasta } = _rangoPeriodo(periodo);
+  const fin = n.fecha_fin || n.fecha_inicio;
+  const desdeClip = n.fecha_inicio > desde ? n.fecha_inicio : desde;
+  const hastaClip = fin < hasta ? fin : hasta;
+  return _calcDias(desdeClip, hastaClip);
+}
+
 /* Suma un día a una fecha ISO (YYYY-MM-DD) — usado para recorrer el rango
    completo de una novedad al calcular qué días ya quedaron clasificados. */
 function _sumarDiaISO(fechaISO){
@@ -1215,7 +1319,9 @@ function _resetForm(id){
 
 /* ── API PÚBLICA PARA REMUNERACIONES ───────────────────── */
 function getNovedadesPorRut(rut, periodo){
-  return novedades.filter(n => n.trabajador_rut===rut && n.periodo===periodo);
+  return novedades
+    .filter(n => n.trabajador_rut===rut && _novedadTocaPeriodo(n, periodo))
+    .map(n => ({ ...n, dias: _diasNovedadEnPeriodo(n, periodo) }));
 }
 function getHaberesPorRut(rut, periodo){
   return haberes_variables.filter(h => h.trabajador_rut===rut && h.periodo===periodo);
