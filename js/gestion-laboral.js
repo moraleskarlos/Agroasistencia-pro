@@ -375,11 +375,13 @@ function guardarNovedadInline(rut, fecha){
   const clave = `${rut}|${fecha}`;
   const rid   = clave.replace(/\W/g,'_');
   const tipo  = document.getElementById(`inline-tipo-${rid}`)?.value;
+  const fin   = document.getElementById(`inline-fin-${rid}`)?.value || fecha;
   const obs   = document.getElementById(`inline-obs-${rid}`)?.value || '';
 
   if(!tipo){ toast('⚠️ Selecciona el motivo de la ausencia','error'); return; }
+  if(fin < fecha){ toast('⚠️ La fecha término no puede ser anterior a la fecha de inicio','error'); return; }
 
-  const ok = _guardarNovedadCore({ rut, tipo, inicio: fecha, fin: fecha, obs });
+  const ok = _guardarNovedadCore({ rut, tipo, inicio: fecha, fin, obs });
   if(!ok) return;
 
   toast('✅ Novedad registrada','exito');
@@ -389,6 +391,10 @@ function guardarNovedadInline(rut, fecha){
 }
 
 function _htmlDetalleNovedad(f){
+  // Set de fechas sin clasificar de este trabajador, para detectar rachas
+  // consecutivas (ej. una licencia de 5 días que generó 5 "sin clasificar"
+  // seguidos) y sugerir la fecha término automáticamente al registrar.
+  const sinClasifSet = new Set(f.sinClasif.map(a => a.fecha));
   // Una sola lista ordenada por fecha. Los "sin clasificar" se listan uno
   // por uno (cada día es una clasificación pendiente independiente). Las
   // novedades YA REGISTRADAS se muestran como UNA fila por registro —no una
@@ -409,6 +415,17 @@ function _htmlDetalleNovedad(f){
       const clave = `${a.rut}|${a.fecha}`;
       const rid   = clave.replace(/\W/g,'_');
       const editando = _pendientesEditandoGL.has(clave);
+
+      // Sugerir fecha término = último día de la racha consecutiva sin
+      // clasificar a partir de este día (ej. si el 10,11,12 están sin
+      // clasificar seguidos, al abrir el 10 sugiere el 12 como término).
+      let finSugerido = a.fecha;
+      let siguiente   = _sumarDiaISO(finSugerido);
+      while(sinClasifSet.has(siguiente)){
+        finSugerido = siguiente;
+        siguiente   = _sumarDiaISO(siguiente);
+      }
+
       return `<div style="border-bottom:1px solid var(--borde);">
         <div style="display:flex;align-items:center;gap:10px;padding:7px 0;">
           <span style="font-size:12px;color:var(--texto2);min-width:90px;">${_fmtFecha(a.fecha)}</span>
@@ -419,26 +436,37 @@ function _htmlDetalleNovedad(f){
           </button>
         </div>
         ${editando ? `
-        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:0 0 12px;">
-          <div class="form-group" style="margin:0;min-width:180px;">
-            <label>Motivo de la Ausencia</label>
-            <select id="inline-tipo-${rid}">
-              <option value="">— Seleccionar —</option>
-              <option value="licencia_medica">🏥 Licencia Médica</option>
-              <option value="permiso_goce">✅ Permiso con goce de sueldo</option>
-              <option value="permiso_sin_goce">⚠️ Permiso sin goce de sueldo</option>
-              <option value="vacaciones">🏖️ Vacaciones</option>
-              <option value="ausencia_injustificada">❌ Ausencia injustificada</option>
-              <option value="otro">📋 Otro</option>
-            </select>
+        <div style="padding:0 0 12px;">
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:6px;">
+            <div class="form-group" style="margin:0;min-width:180px;">
+              <label>Motivo de la Ausencia</label>
+              <select id="inline-tipo-${rid}">
+                <option value="">— Seleccionar —</option>
+                <option value="licencia_medica">🏥 Licencia Médica</option>
+                <option value="permiso_goce">✅ Permiso con goce de sueldo</option>
+                <option value="permiso_sin_goce">⚠️ Permiso sin goce de sueldo</option>
+                <option value="vacaciones">🏖️ Vacaciones</option>
+                <option value="ausencia_injustificada">❌ Ausencia injustificada</option>
+                <option value="otro">📋 Otro</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label>Desde</label>
+              <input type="date" value="${a.fecha}" disabled style="background:var(--gris-bg);color:var(--texto2);">
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label>Hasta</label>
+              <input type="date" id="inline-fin-${rid}" value="${finSugerido}" min="${a.fecha}">
+            </div>
+            <div class="form-group" style="margin:0;flex:1;min-width:200px;">
+              <label>Observación</label>
+              <input type="text" id="inline-obs-${rid}" placeholder="Ej: Certificado N° 1234">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="guardarNovedadInline('${a.rut}','${a.fecha}')">
+              <i class="ti ti-check"></i> Guardar
+            </button>
           </div>
-          <div class="form-group" style="margin:0;flex:1;min-width:200px;">
-            <label>Observación</label>
-            <input type="text" id="inline-obs-${rid}" placeholder="Opcional">
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="guardarNovedadInline('${a.rut}','${a.fecha}')">
-            <i class="ti ti-check"></i> Guardar
-          </button>
+          ${finSugerido !== a.fecha ? `<div style="font-size:11px;color:var(--texto3);"><i class="ti ti-info-circle"></i> Se detectaron días consecutivos sin clasificar — se precargó el rango completo, ajústalo si hace falta.</div>` : ''}
         </div>` : ''}
       </div>`;
     }
