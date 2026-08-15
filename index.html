@@ -123,16 +123,16 @@
         </div>
         <div class="g2" style="margin-bottom:16px;">
           <div class="card">
-            <div class="card-title"><i class="ti ti-building-factory"></i> Asistencia por Empresa Mandante</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-building-factory"></i> Asistencia por Empresa Mandante</div>
             <div id="barras-contratistas"><div style="font-size:13px;color:var(--texto3);text-align:center;padding:20px 0;">Agrega mandantes para ver el resumen</div></div>
           </div>
           <div class="card">
-            <div class="card-title"><i class="ti ti-clock"></i> Últimas marcaciones</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-clock"></i> Últimas marcaciones</div>
             <div id="ultimas-marcaciones"><div style="font-size:13px;color:var(--texto3);text-align:center;padding:20px 0;">Sin marcaciones hoy</div></div>
           </div>
         </div>
         <div class="card">
-          <div class="card-title"><i class="ti ti-calendar-week"></i> Asistencia semanal</div>
+          <div class="card-title card-title-oscuro"><i class="ti ti-calendar-week"></i> Asistencia semanal</div>
           <div class="chart-bars" id="chart-semanal"></div>
         </div>
       </div>
@@ -158,7 +158,7 @@
         <div id="sub-tab-reg-individual">
         <div class="g2" style="align-items:start;">
         <div class="card card-formulario" style="max-width:900px;">
-            <div class="card-title"><i class="ti ti-user-plus"></i> Registro individual</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-user-plus"></i> Registro individual</div>
             <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;display:flex;gap:8px;align-items:center;justify-content:space-between;">
               <div style="font-size:12px;color:var(--texto2);"><i class="ti ti-info-circle"></i> ¿Vas a editar a alguien? Búscalo en el módulo <strong>Trabajadores</strong> y usa "Editar ficha".</div>
               <button class="btn btn-secondary btn-sm" onclick="limpiarFormulario()"><i class="ti ti-refresh"></i> Nuevo</button>
@@ -410,7 +410,7 @@
         <!-- cierra .card del formulario, sigue dentro de .g2 -->
 
         <div class="card">
-          <div class="card-title"><i class="ti ti-eye"></i> Ficha en vivo</div>
+          <div class="card-title card-title-oscuro"><i class="ti ti-eye"></i> Ficha en vivo</div>
           <div id="registro-ficha-preview">
             <div style="text-align:center;padding:24px;color:var(--texto3);font-size:13px;">Completa el formulario para ver la ficha</div>
           </div>
@@ -420,7 +420,7 @@
 
         <div id="sub-tab-reg-masivo" style="display:none;">
           <div class="card" style="max-width:900px;">
-            <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva desde Excel — una cuadrilla, un cargo</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-table-import"></i> Carga masiva desde Excel — una cuadrilla, un cargo</div>
 
             <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#1E40AF;line-height:1.6;">
               <i class="ti ti-info-circle"></i> <strong>Pensado para cuadrillas completas:</strong> todos los trabajadores del archivo quedan con la misma Empresa y el mismo Cargo. Si necesitás mezclar cargos o empresas distintas, subí archivos separados.
@@ -516,13 +516,9 @@
         </div>
         <div class="card">
       <!-- HEADER -->
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-
-  <div class="card-title" style="margin:0;">
+  <div class="card-title card-title-oscuro">
     <i class="ti ti-list"></i> Lista del Personal
   </div>
-
-</div>
 
 <!-- Filtrar y buscar — etiqueta arriba de cada control, para que se
      entienda de un vistazo qué hace cada cuadro (mismo criterio que ya
@@ -600,7 +596,7 @@
           <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Resumen de Documentos Migratorios</div>
           <div id="kpi-extranjeros-zone" style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;"></div>
           <div class="card">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-world"></i> Trabajadores Extranjeros</div>
 
             <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--borde);">
               <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">Filtrar</div>
@@ -698,7 +694,7 @@
   <!-- Sub-tab Carpeta Laboral -->
   <div id="sub-perfil-carpeta" style="display:none;padding-top:16px;">
     <div class="card">
-      <div class="card-title" style="margin-bottom:12px;">
+      <div class="card-title card-title-oscuro">
         <i class="ti ti-folder"></i> Documentos del trabajador
       </div>
       <div style="overflow-x:auto;">
@@ -1116,7 +1112,7 @@
 
         <!-- MASIVO -->
         <div id="bloque-epp-masivo" class="card" style="display:none;margin-bottom:14px;">
-          <div class="card-title"><i class="ti ti-users"></i> Selección de trabajadores</div>
+          <div class="card-title card-title-oscuro"><i class="ti ti-users"></i> Selección de trabajadores</div>
           <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
             <input type="text" id="epp-cm-buscar" oninput="renderListaEppMasivo()" placeholder="Buscar por RUT o nombre" style="flex:1;min-width:200px;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;">
             <button class="btn btn-secondary btn-sm" onclick="_eppCmSeleccionarTodos(true)">Todos</button>
@@ -1271,8 +1267,8 @@
         <div id="panel-gl-novedades">
           <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;max-width:900px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Ausencia</div>
+            <div class="card-title card-title-oscuro" style="justify-content:space-between;">
+              <span><i class="ti ti-plus"></i> Registrar Ausencia</span>
               <button class="btn btn-primary btn-sm" onclick="toggleFormNovedad()"><i class="ti ti-plus"></i> Registrar Ausencia</button>
             </div>
             <div id="gl-nov-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;">
@@ -1312,7 +1308,7 @@
 
           <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-alert-circle"></i> Ausencias del período</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-alert-circle"></i> Ausencias del período</div>
             <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
               <div class="form-group"><label>Mes</label>
                 <input type="month" id="gl-nov-rev-mes" class="campo-fecha"></div>
@@ -1425,8 +1421,8 @@
         <div id="panel-gl-haberes" style="display:none;">
           <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;max-width:900px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Bonificación</div>
+            <div class="card-title card-title-oscuro" style="justify-content:space-between;">
+              <span><i class="ti ti-plus"></i> Registrar Bonificación</span>
               <button class="btn btn-primary btn-sm" onclick="toggleFormHaber()"><i class="ti ti-plus"></i> Registrar Bonificación</button>
             </div>
             <div id="gl-hab-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;">
@@ -1469,7 +1465,7 @@
 
           <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-cash"></i> Bonificaciones del período</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-cash"></i> Bonificaciones del período</div>
             <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
               <div class="form-group"><label>Mes</label>
                 <input type="month" id="gl-hab-rev-mes" class="campo-fecha"></div>
@@ -1506,8 +1502,8 @@
         <div id="panel-gl-jornada" style="display:none;">
           <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;max-width:900px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Horas Extras</div>
+            <div class="card-title card-title-oscuro" style="justify-content:space-between;">
+              <span><i class="ti ti-plus"></i> Registrar Horas Extras</span>
               <button class="btn btn-primary btn-sm" onclick="toggleFormJornada()"><i class="ti ti-plus"></i> Registrar Horas Extras</button>
             </div>
             <div id="gl-jor-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;">
@@ -1550,7 +1546,7 @@
 
           <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-clock-hour-4"></i> Horas Extras del período</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-clock-hour-4"></i> Horas Extras del período</div>
             <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
               <div class="form-group"><label>Mes</label>
                 <input type="month" id="gl-jor-rev-mes" class="campo-fecha"></div>
@@ -1599,8 +1595,8 @@
         <div id="panel-gl-descuentos">
           <!-- BLOQUE 1 — Registrar -->
           <div class="card" style="margin-bottom:14px;max-width:900px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-plus"></i> Registrar Descuento</div>
+            <div class="card-title card-title-oscuro" style="justify-content:space-between;">
+              <span><i class="ti ti-plus"></i> Registrar Descuento</span>
               <button class="btn btn-primary btn-sm" onclick="toggleFormDescuento()"><i class="ti ti-plus"></i> Registrar Descuento</button>
             </div>
             <div id="gl-des-form-wrap" style="display:none;background:var(--gris-bg);border-radius:var(--radius);padding:16px;">
@@ -1643,7 +1639,7 @@
 
           <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
-            <div class="card-title" style="margin:0 0 12px;"><i class="ti ti-minus-vertical"></i> Descuentos del período</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-minus-vertical"></i> Descuentos del período</div>
             <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
               <div class="form-group"><label>Mes</label>
                 <input type="month" id="gl-des-rev-mes" class="campo-fecha"></div>
@@ -1730,7 +1726,7 @@
 
           <!-- Tabla de liquidaciones -->
           <div class="card">
-            <div class="card-title"><i class="ti ti-list"></i> Liquidaciones del período</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-list"></i> Liquidaciones del período</div>
             <div class="tabla-wrap">
               <table class="tabla" style="min-width:700px;">
                 <thead>
@@ -1861,7 +1857,7 @@
           <!-- Título + acciones -->
           <div class="card" style="margin-bottom:14px;">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-              <div class="card-title" style="margin:0;"><i class="ti ti-file-certificate"></i> Indicadores Previsionales Previred</div>
+              <div class="card-title card-title-oscuro"><i class="ti ti-file-certificate"></i> Indicadores Previsionales Previred</div>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
                 <a href="https://www.previred.com/web/previred/indicadores-previsionales"
                   target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
@@ -1886,7 +1882,7 @@
           <!-- Formulario ingreso manual -->
           <div id="ind-form-wrap" style="display:none;">
             <div class="card card-formulario" style="margin-bottom:14px;max-width:900px;">
-              <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+              <div class="card-title card-title-oscuro" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                 <span><i class="ti ti-pencil"></i> Ingreso de Indicadores Previsionales
                   <span id="ind-form-titulo-periodo" style="font-weight:400;color:var(--texto2);margin-left:8px;"></span>
                 </span>
@@ -2071,7 +2067,7 @@
 
           <!-- Histórico -->
           <div class="card" style="margin-top:14px;">
-            <div class="card-title"><i class="ti ti-history"></i> Períodos registrados</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-history"></i> Períodos registrados</div>
             <div class="tabla-wrap">
               <table class="tabla" style="min-width:600px;">
                 <thead><tr><th>Período</th><th>UF</th><th>UTM</th><th>Tope AFP</th><th>Acciones</th></tr></thead>
@@ -2156,7 +2152,7 @@
 
         <div id="panel-rem-finiquitos">
           <div class="card" style="margin-bottom:14px;max-width:900px;">
-            <div class="card-title"><i class="ti ti-file-text"></i> Generar finiquito</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-file-text"></i> Generar finiquito</div>
             <div class="form-grid">
               <div class="form-group">
                 <label>Trabajador</label>
@@ -2192,7 +2188,7 @@
           </div>
 
           <div class="card">
-            <div class="card-title"><i class="ti ti-list"></i> Finiquitos generados</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-list"></i> Finiquitos generados</div>
             <div class="tabla-wrap">
               <table class="tabla">
                 <thead><tr>
@@ -2278,7 +2274,7 @@
         </div>
 
         <div class="card">
-          <div class="card-title" style="margin-bottom:12px;" id="asist-card-title"><i class="ti ti-calendar-check"></i> Asistencia del Día</div>
+          <div class="card-title card-title-oscuro" id="asist-card-title"><i class="ti ti-calendar-check"></i> Asistencia del Día</div>
           <div class="tabla-wrap">
             <table class="tabla">
               <thead id="thead-asistencia"></thead>
@@ -2306,7 +2302,7 @@
 
           <!-- INDIVIDUAL -->
           <div id="bloque-manual-individual" class="card" style="max-width:560px;">
-            <div class="card-title"><i class="ti ti-edit"></i> Cargar marcación manual</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-edit"></i> Cargar marcación manual</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
               <div class="form-group"><label>Fecha</label><input type="date" id="manual-fecha" class="f-input" onchange="_manualFechaCambio()"></div>
               <div class="form-group"><label>Empresa</label><select id="manual-empresa" class="f-input" onchange="_renderListaManualTrabajador()"><option value="">— Todas las empresas —</option></select></div>
@@ -2333,7 +2329,7 @@
           <!-- MASIVO -->
           <div id="bloque-manual-masivo" style="display:none;">
             <div class="card" style="max-width:640px;margin-bottom:14px;">
-              <div class="card-title"><i class="ti ti-table-import"></i> Carga masiva de marcaciones</div>
+              <div class="card-title card-title-oscuro"><i class="ti ti-table-import"></i> Carga masiva de marcaciones</div>
               <div class="excel-hint">
                 <strong>📋 Columnas del Excel:</strong>
                 <ul><li>RUT · Fecha (AAAA-MM-DD) · Hora Entrada · Hora Salida (opcional)</li></ul>
@@ -2348,7 +2344,7 @@
             </div>
 
             <div class="card" id="seccion-preview-asist" style="display:none;">
-              <div class="card-title"><i class="ti ti-table"></i> Vista previa</div>
+              <div class="card-title card-title-oscuro"><i class="ti ti-table"></i> Vista previa</div>
               <div style="font-size:13px;font-weight:600;margin-bottom:10px;" id="preview-count-asist"></div>
               <div id="preview-avisos-asist" style="margin-bottom:10px;"></div>
               <div class="tabla-wrap" style="max-height:420px;overflow-y:auto;margin-bottom:14px;">
@@ -2371,7 +2367,7 @@
         <div class="sec-header"><div><div class="sec-title">Configuración</div><div class="sec-sub">Sistema y gestión de accesos</div></div></div>
         <div class="g2">
           <div class="card">
-            <div class="card-title"><i class="ti ti-database"></i> Base de datos Supabase</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-database"></i> Base de datos Supabase</div>
             <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--borde);margin-bottom:12px;">
               <div><div style="font-weight:500">Estado de conexión</div><div style="font-size:12px;color:var(--texto2);" id="db-status-txt">Sin configurar</div></div>
               <span class="badge badge-gris" id="db-status-badge">● Desconectado</span>
@@ -2406,7 +2402,7 @@
           
           <!-- USUARIOS -->
           <div class="card" style="margin-top:14px;">
-            <div class="card-title"><i class="ti ti-users"></i> Usuarios del sistema</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-users"></i> Usuarios del sistema</div>
             <div style="font-size:12px;color:var(--texto2);margin-bottom:14px;">
               Gestiona los accesos al sistema según rol.
             </div>
@@ -2462,7 +2458,7 @@
           </div>
 
           <div class="card">
-            <div class="card-title"><i class="ti ti-info-circle"></i> Sobre el sistema</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-info-circle"></i> Sobre el sistema</div>
             <div style="font-size:13px;color:var(--texto2);line-height:1.8;">
               <strong style="color:var(--texto);">AgroContratista</strong><br>
               ✅ Dashboard con KPIs<br>
@@ -2818,8 +2814,8 @@
         <ul id="conf-masivo-trab-lista" style="margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--texto2);max-height:180px;overflow-y:auto;"></ul>
       </details>
 
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div class="card-title" style="margin:0;"><i class="ti ti-file-text"></i> Vista previa del contrato</div>
+      <div class="card-title card-title-oscuro" style="justify-content:space-between;">
+        <span><i class="ti ti-file-text"></i> Vista previa del contrato</span>
         <div id="conf-masivo-nav" style="display:none;gap:6px;align-items:center;">
           <button id="conf-masivo-nav-prev" class="btn btn-secondary btn-sm" onclick="_navPreviewContratoMasivo(-1)">◀</button>
           <span id="conf-masivo-nav-contador" style="font-size:12px;color:var(--texto3);white-space:nowrap;"></span>
