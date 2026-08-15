@@ -1315,7 +1315,10 @@
               <div class="form-group"><label>Empresa</label>
                 <select id="gl-nov-rev-empresa"><option value="">Todas las Empresas</option></select></div>
               <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                <input type="text" id="gl-nov-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <div style="display:flex;gap:4px;">
+                  <input type="text" id="gl-nov-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off" style="flex:1;">
+                  <button type="button" class="btn btn-sm" onclick="limpiarFiltroTrabajadorNov()" title="Limpiar trabajador" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+                </div>
                 <input type="hidden" id="gl-nov-rev-trabajador">
                 <div id="gl-nov-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
               </div>
@@ -1484,7 +1487,10 @@
                 </div>
               </div>
               <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                <input type="text" id="gl-hab-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <div style="display:flex;gap:4px;">
+                  <input type="text" id="gl-hab-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off" style="flex:1;">
+                  <button type="button" class="btn btn-sm" onclick="limpiarFiltroTrabajadorHaber()" title="Limpiar trabajador" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+                </div>
                 <input type="hidden" id="gl-hab-rev-trabajador">
                 <div id="gl-hab-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
               </div>
@@ -1572,7 +1578,10 @@
                 </div>
               </div>
               <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                <input type="text" id="gl-jor-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <div style="display:flex;gap:4px;">
+                  <input type="text" id="gl-jor-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off" style="flex:1;">
+                  <button type="button" class="btn btn-sm" onclick="limpiarFiltroTrabajadorJornada()" title="Limpiar trabajador" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+                </div>
                 <input type="hidden" id="gl-jor-rev-trabajador">
                 <div id="gl-jor-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
               </div>
@@ -1662,7 +1671,10 @@
               <div class="form-group"><label>Empresa</label>
                 <select id="gl-des-rev-empresa"><option value="">Todas las Empresas</option></select></div>
               <div class="form-group" style="position:relative;"><label>Trabajador</label>
-                <input type="text" id="gl-des-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
+                <div style="display:flex;gap:4px;">
+                  <input type="text" id="gl-des-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off" style="flex:1;">
+                  <button type="button" class="btn btn-sm" onclick="limpiarFiltroTrabajadorDescuento()" title="Limpiar trabajador" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+                </div>
                 <input type="hidden" id="gl-des-rev-trabajador">
                 <div id="gl-des-rev-trabajador-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:var(--blanco);border:1px solid var(--borde);border-radius:var(--radius);max-height:220px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.10);"></div>
               </div>
