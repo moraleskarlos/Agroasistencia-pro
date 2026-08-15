@@ -453,6 +453,15 @@ const LS_ASIST       = 'asistencia_';
 const SESSION_KEY_APP= 'agro_sesion_app';
 const SESSION_HORAS  = 8;
 
+/* Fecha de HOY en formato 'YYYY-MM-DD', en hora local del dispositivo
+   (no UTC). Copia local de core.js/hoyISO() — esta App es standalone
+   y no carga core.js. Nunca usar new Date().toISOString() acá: corre
+   la fecha al día siguiente después de las 20:00 hora Chile (BL-052). */
+function hoyISO(){
+  const h = new Date();
+  return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;
+}
+
 /* ── ESTADO ── */
 let cfg          = {};
 let empresas     = [];
@@ -683,7 +692,7 @@ function irAModulo(modulo){
 }
 
 function _actualizarBadgeHome(){
-  const hoy   = new Date().toISOString().split('T')[0];
+  const hoy   = hoyISO();
   const data  = JSON.parse(localStorage.getItem(LS_ASIST + hoy) || '[]');
   const ruts  = trabajadoresDelMandante().map(t => t.rut);
   const activos = data.filter(r => ruts.includes(r.rut) && !r.hora_salida).length;
@@ -837,7 +846,7 @@ function registrarIngreso(rut){
     return;
   }
 
-  const hoy          = new Date().toISOString().split('T')[0];
+  const hoy          = hoyISO();
   const clave        = LS_ASIST + hoy;
   const data         = JSON.parse(localStorage.getItem(clave) || '[]');
   const horaEstandar = document.getElementById('hora-estandar').value || '08:00';
@@ -891,7 +900,7 @@ function mostrarResultado(tipo, titulo, detalle, contenedorId){
    RESUMEN DEL DÍA
 ══════════════════════════════════════════ */
 function renderResumen(){
-  const hoy    = new Date().toISOString().split('T')[0];
+  const hoy    = hoyISO();
   const clave  = LS_ASIST + hoy;
   const data   = JSON.parse(localStorage.getItem(clave) || '[]');
   const buscar = (document.getElementById('buscar-trabajador')?.value || '').toLowerCase().replace(/\./g,'');
@@ -963,7 +972,7 @@ function renderResumen(){
    antes solo se podía corregir desde el sistema Web. */
 function _confirmarBorrarMarcacion(rut, nombre){
   if(!confirm(`¿Borrar la marcación de hoy de ${nombre}?\n\nEsto no se puede deshacer.`)) return;
-  const hoy   = new Date().toISOString().split('T')[0];
+  const hoy   = hoyISO();
   const clave = LS_ASIST + hoy;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
   const idx   = data.findIndex(x => x.rut === rut);
@@ -1002,7 +1011,7 @@ function cambiarModoSalida(modo){
 
 /* Trabajadores del mandante con entrada hoy y sin salida todavía */
 function _trabajadoresActivosHoy(){
-  const hoy  = new Date().toISOString().split('T')[0];
+  const hoy  = hoyISO();
   const data = JSON.parse(localStorage.getItem(LS_ASIST + hoy) || '[]');
   const ruts = trabajadoresDelMandante().map(t => t.rut);
   return data.filter(r => ruts.includes(r.rut) && !r.hora_salida);
@@ -1080,7 +1089,7 @@ function confirmarSalida(){
 
   if(!confirm(`¿Cerrar jornada de ${ruts.length} trabajador${ruts.length>1?'es':''} a las ${horaSalida}?`)) return;
 
-  const hoy   = new Date().toISOString().split('T')[0];
+  const hoy   = hoyISO();
   const clave = LS_ASIST + hoy;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
   let cerrados = 0;
