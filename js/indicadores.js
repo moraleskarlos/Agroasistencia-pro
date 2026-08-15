@@ -358,7 +358,7 @@ function guardarIndicadorPeriodo(){
       monto: getM(`ind-f-af-${tramo}-monto`) ?? 0,
       hasta: getM(`ind-f-af-${tramo}-hasta`) ?? null,
     })),
-    fecha_registro: new Date().toISOString().slice(0,10),
+    fecha_registro: hoyISO(),
   };
 
   const idx = indicadores.findIndex(i => i.periodo === periodo);

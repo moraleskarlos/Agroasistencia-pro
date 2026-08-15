@@ -13,7 +13,7 @@ function _tieneCredencialQR(rut){
 
 function _registrarCredencialesQR(ruts){
   const registro = _credencialesQR();
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyISO();
   ruts.forEach(rut => {
     const existente = registro.find(c => c.rut === rut);
     if(existente) existente.fecha = hoy;

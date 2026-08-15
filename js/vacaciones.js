@@ -79,7 +79,7 @@ function calcularSaldoVacaciones(rut, fechaCorte){
   const t = trabajadores.find(x => x.rut === rut);
   if(!t) return { error: `Trabajador ${rut} no encontrado` };
 
-  const corte = fechaCorte || new Date().toISOString().slice(0,10);
+  const corte = fechaCorte || hoyISO();
   const contrato = (contratos||[])
     .filter(c => c.trabajador_rut === rut)
     .sort((a,b) => new Date(a.fecha_inicio||0) - new Date(b.fecha_inicio||0))[0];
@@ -216,7 +216,7 @@ function exportarVacacionesExcel(){
   ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.min(Math.max(k.length+2, 10), 24) }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Vacaciones');
-  XLSX.writeFile(wb, `Saldo_Vacaciones_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `Saldo_Vacaciones_${hoyISO()}.xlsx`);
   toast('⬇️ Excel exportado', 'exito');
 }
 

@@ -1,7 +1,7 @@
 /* ════ ASISTENCIA ════ */
 
 function initAsistencia(){
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyISO();
   document.getElementById('asist-fecha-desde').value = hoy;
   document.getElementById('asist-fecha-hasta').value = hoy;
   const manualFecha = document.getElementById('manual-fecha');
@@ -192,7 +192,7 @@ function toggleMenuRangoAsistencia(){
 
 /* Atajos rápidos de rango — fijan Desde/Hasta y recargan */
 function rangoRapidoAsistencia(tipo){
-  const hoy = new Date();
+  const hoy = fechaLocal(hoyISO());
   const fmt = d => d.toISOString().slice(0,10);
   let inicio, fin;
 
@@ -750,7 +750,7 @@ function _cargarFormularioManual(){
   const t = trabajadores.find(x => x.rut === rut);
   if(!t) return;
 
-  const fecha = document.getElementById('manual-fecha').value || new Date().toISOString().split('T')[0];
+  const fecha = document.getElementById('manual-fecha').value || hoyISO();
   const data  = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
   const r     = data.find(x => x.rut === rut);
 

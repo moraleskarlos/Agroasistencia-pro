@@ -89,7 +89,7 @@ function calcularYGuardarLiquidacion(rut, periodo){
   if(liq.error) return { error: liq.error };
 
   liq.folio          = _generarFolio(periodo);
-  liq.fecha_emision  = new Date().toISOString().slice(0,10);
+  liq.fecha_emision  = hoyISO();
   liq.estado         = 'generada';
 
   // Reemplazar si ya existe para este período y rut
@@ -367,7 +367,7 @@ function _generarHTMLLiquidacion(liq, guardada){
       <div style="text-align:right;">
         <div class="ld-titulo-label">Liquidación de sueldo</div>
         <div class="ld-titulo-periodo">${_capitalizar(nombreMes)}</div>
-        <div class="ld-folio">Folio N° ${liq.folio||'—'} · Emitido ${fmtFecha(liq.fecha_emision||new Date().toISOString().slice(0,10))}</div>
+        <div class="ld-folio">Folio N° ${liq.folio||'—'} · Emitido ${fmtFecha(liq.fecha_emision||hoyISO())}</div>
       </div>
     </div>
 

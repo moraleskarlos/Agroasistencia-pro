@@ -176,7 +176,7 @@ function generarFiniquito(){
   if(fin.error){ toast(`❌ ${fin.error}`, 'error'); return; }
 
   fin.folio = 'FIN-' + Date.now().toString().slice(-8);
-  fin.fecha_emision = new Date().toISOString().slice(0,10);
+  fin.fecha_emision = hoyISO();
   fin.estado = 'generado'; // generado → ratificado
 
   const idx = finiquitos_guardados.findIndex(f => f.rut === rut && f.fecha_termino === fecha);
@@ -204,7 +204,7 @@ function marcarFiniquitoRatificado(folio){
   if(!f) return;
   if(!confirm(`¿Confirmas que el finiquito de ${f.nombre} fue ratificado ante ministro de fe?`)) return;
   f.estado = 'ratificado';
-  f.fecha_ratificacion = new Date().toISOString().slice(0,10);
+  f.fecha_ratificacion = hoyISO();
   guardarFiniquitos();
   renderListaFiniquitos();
   toast('✅ Finiquito marcado como ratificado', 'exito');

@@ -537,7 +537,7 @@ function guardarNovedad(){
     // quién ingresó la novedad y cuándo.
     aprobado:        true,
     registrado_por:  sesionActiva?.usuario||'admin',
-    fecha_registro:  new Date().toISOString().slice(0,10),
+    fecha_registro:  hoyISO(),
   };
 
   novedades.push(nov);

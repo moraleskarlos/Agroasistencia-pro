@@ -1036,7 +1036,7 @@ function _initBorradorAutosave(){
 
   // RP-004: la fecha de nacimiento nunca puede ser futura
   const fechaNac = document.getElementById('m-fecha-nac');
-  if(fechaNac) fechaNac.max = new Date().toISOString().split('T')[0];
+  if(fechaNac) fechaNac.max = hoyISO();
 
   _verificarBorradorPendiente();
   _actualizarFichaPreviewRegistro(); // primer render (formulario vacío o borrador recuperado)

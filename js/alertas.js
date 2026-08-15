@@ -31,7 +31,7 @@ function _alerta(severidad, modulo, id, titulo, detalle, accion){
    ════════════════════════════════════════════════════════ */
 function _turnosAbiertos(ruts, hoy){
   const resultado = [];
-  const hoyStr = hoy.toISOString().slice(0,10);
+  const hoyStr = hoyISO();
   for(let i = 0; i < localStorage.length; i++){
     const key = localStorage.key(i);
     if(!key || !key.startsWith('asistencia_')) continue;

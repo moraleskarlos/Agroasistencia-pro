@@ -172,11 +172,26 @@ function irA(idPagina, botonEl) {
   }
 }
 
-/* Fecha de hoy en formato 'YYYY-MM-DD', usada por las funciones de
-   Asistencia del Dashboard. */
-function _fechaHoyISO(){
+/* ── UTILIDADES DE FECHA (BL-052) ──────────────────────────
+   hoyISO() y fechaLocal() son las ÚNICAS formas seguras de trabajar
+   con "qué día es hoy" y con fechas ISO existentes en todo el sistema.
+   Nunca usar new Date().toISOString() para esto: devuelve la fecha en
+   UTC, no en hora de Chile, y cualquier acción después de las 20:00
+   (UTC-4) queda registrada al día siguiente. */
+
+/* Fecha de HOY en formato 'YYYY-MM-DD', en hora local del navegador
+   (no UTC). Reemplaza cualquier new Date().toISOString().split('T')[0]. */
+function hoyISO(){
   const h = new Date();
   return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-${String(h.getDate()).padStart(2,'0')}`;
+}
+
+/* Convierte un string ISO 'YYYY-MM-DD' ya existente a un objeto Date,
+   anclado a mediodía local — mismo criterio que gestion-laboral.js
+   (_sumarDiaISO/_semanaDeFecha), el patrón más seguro para evitar que
+   la conversión a/desde UTC corra la fecha a otro día calendario. */
+function fechaLocal(fechaISO){
+  return new Date(fechaISO + 'T12:00:00');
 }
 
 /* Presentes hoy: cuenta trabajadores activos con marcación de entrada
@@ -184,7 +199,7 @@ function _fechaHoyISO(){
    que ya usa variables.js (_leerAsistenciaMes) para no tener dos
    definiciones distintas de "asistió". */
 function _presentesHoyDashboard(){
-  const fecha = _fechaHoyISO();
+  const fecha = hoyISO();
   const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
   const activos = trabajadores.filter(t => t.estado === 'activo');
   const presentes = activos.filter(t => data.some(x => x.rut === t.rut && x.hora_entrada)).length;
@@ -219,7 +234,7 @@ function _asistenciaMesPromedio(){
 
 /* Últimas marcaciones del día de hoy, más recientes primero. */
 function _ultimasMarcacionesHoy(limite){
-  const fecha = _fechaHoyISO();
+  const fecha = hoyISO();
   const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
   return data
     .filter(x => x.hora_entrada)
@@ -245,7 +260,7 @@ function _asistenciaSemanalDashboard(){
     const d = new Date(lunes);
     d.setDate(lunes.getDate() + i);
     const fecha = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if(fecha === _fechaHoyISO()) idxHoy = i;
+    if(fecha === hoyISO()) idxHoy = i;
     if(d > hoy){ vals.push(0); continue; }
     const data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]');
     const presentes = activos.filter(t => data.some(x => x.rut === t.rut && x.hora_entrada)).length;
@@ -487,7 +502,7 @@ function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, tipo, subtip
     tipo,            // 'contrato' | 'anexo' | 'epp_riohs_irl' | 'liquidacion' | 'finiquito' | 'carta' | 'otro'
     subtipo:         subtipo || '',
     folio:           folio   || '',
-    fecha_generacion: new Date().toISOString().slice(0,10),
+    fecha_generacion: hoyISO(),
     fecha_firma:     fecha_firma || '',
     generado_por:    sesionActiva?.usuario || 'admin',
     descripcion:     descripcion || '',

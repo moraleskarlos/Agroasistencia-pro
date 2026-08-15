@@ -1365,7 +1365,7 @@ function _initTabContratosEmitidos(){
 /* Etiquetas de estado combinables — se calculan solas, nada se guarda a mano */
 function _estadoTagsContrato(c, t){
   const tags = [];
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyISO();
   if(c.tipo === 'indefinido' || !c.fecha_termino || c.fecha_termino >= hoy) tags.push({txt:'Vigente', bg:'#D1FAE5', fg:'#065F46'});
   else tags.push({txt:'Vencido', bg:'#FEE2E2', fg:'#991B1B'});
 
@@ -1510,7 +1510,7 @@ function guardarRectificacion(){
     trabajador_rut: c.trabajador_rut,
     tipo:           'rectificacion_contrato',
     subtipo:        campo,
-    fecha_firma:    new Date().toISOString().split('T')[0],
+    fecha_firma:    hoyISO(),
     descripcion:    `Rectificación — ${RECT_CAMPOS_TXT[campo]||campo}: "${valorAnteriorTxt}" → "${valorNuevo}". Motivo: ${motivo}`,
   });
 
