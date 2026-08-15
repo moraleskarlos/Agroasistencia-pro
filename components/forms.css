@@ -76,19 +76,35 @@ textarea {
 }
 
 /* ── Encabezados de sección de formulario ──────── */
-
+/* Estilo "caja oscura" — adoptado del formulario de Previred (que lo
+   tenía como inline style repetido 6 veces) como estándar del sistema.
+   Se propaga automáticamente a los 17 usos existentes en Registro
+   Personal, Contratos (incl. EPP/RIOHS) y Previred, sin tocar su HTML. */
 .form-section {
   font-size: var(--fs-label);
   font-weight: var(--fw-bold);
-  color: var(--texto-secundario);
+  color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  padding: var(--space-2) 0 var(--space-1);
-  border-bottom: 1px solid var(--borde-estructural);
+  background: #1E293B;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
   margin: var(--space-4) 0 var(--space-3);
   display: flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+/* Card de formulario activo/editable — borde verde, adoptado de
+   Previred. Se aplica junto a .card (no lo reemplaza) en las cards
+   donde la persona está completando o editando datos, para reforzar
+   visualmente "esto es lo que estás llenando ahora mismo".
+   Selector compuesto .card.card-formulario (especificidad 0,2,0)
+   a propósito: cards-kpis.css redefine .card con su propio border y
+   se importa DESPUÉS de forms.css, así que un .card-formulario suelto
+   (0,1,0) perdía el empate de cascada contra .card (0,1,0) más nuevo. */
+.card.card-formulario {
+  border: 2px solid var(--verde);
 }
 
 /* Pendiente de Fase 1 (fuera de alcance de esta ronda) */
