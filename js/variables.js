@@ -91,7 +91,7 @@ function construirVariablesRemuneracion(rut, periodo){
     tipo_contrato,
     antiguedad_anios,
     fecha_inicio_contrato: contrato.fecha_inicio || t.fecha_ingreso,
-    horas_semanales: parseFloat(contrato.horas_semana) || 45,
+    horas_semanales: parseFloat(contrato.horas_semanales) || 45,
 
     // Sueldo base
     sueldo_base,
@@ -281,7 +281,7 @@ function _clasificarHaberes(haberes){
 // Art. 32 CT: recargo 50% día hábil, 100% festivo/domingo
 // Valor hora ordinaria = (sueldo_base / 30) / (horas_semanales / 5)
 function _calcularHorasExtra(jornada, sueldo_base, contrato){
-  const horas_semanales = parseFloat(contrato?.horas_semana) || 45;
+  const horas_semanales = parseFloat(contrato?.horas_semanales) || 45;
   // Valor hora ordinaria según jornada pactada
   const valor_hora_ord  = Math.round((sueldo_base / DIVISOR_MES) / (horas_semanales / 5));
 

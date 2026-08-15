@@ -131,28 +131,31 @@ function _poblarSelectsGL(){
 }
 
 /* Puebla los 8 selectores de Empresa (Revisar + Registrar, ×4 submódulos).
-   El de "Registrar" nunca tiene la opción "Todas" — hay que elegir una
-   empresa puntual para poder registrar; si solo existe una empresa
-   mandante en el sistema, se deja preseleccionada automáticamente. */
+   Usa Empresa Propia (la contratista que realmente emplea y paga al
+   trabajador) — no Empresa Mandante (el cliente donde se presta el
+   servicio, sin vínculo laboral con el trabajador). El de "Registrar"
+   nunca tiene la opción "Todas" — hay que elegir una empresa puntual
+   para poder registrar; si solo existe una empresa propia en el
+   sistema, se deja preseleccionada automáticamente. */
 function _poblarEmpresasGL(){
   ['gl-nov-rev-empresa','gl-hab-rev-empresa','gl-des-rev-empresa','gl-jor-rev-empresa'].forEach(id => {
     const sel = document.getElementById(id);
     if(!sel) return;
     const val = sel.value;
-    sel.innerHTML = '<option value="">Todas las Empresas Mandante</option>'
-      + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+    sel.innerHTML = '<option value="">Todas las Empresas</option>'
+      + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
     if(val) sel.value = val;
   });
   ['gl-nov-reg-empresa','gl-hab-reg-empresa','gl-des-reg-empresa','gl-jor-reg-empresa'].forEach(id => {
     const sel = document.getElementById(id);
     if(!sel) return;
     const val = sel.value;
-    if(empresas.length === 1){
-      sel.innerHTML = `<option value="${empresas[0].id}">${empresas[0].nombre}</option>`;
-      sel.value = empresas[0].id;
+    if((empresas_propias||[]).length === 1){
+      sel.innerHTML = `<option value="${empresas_propias[0].id}">${empresas_propias[0].nombre||empresas_propias[0].razon_social}</option>`;
+      sel.value = empresas_propias[0].id;
     } else {
       sel.innerHTML = '<option value="">— Seleccionar empresa —</option>'
-        + empresas.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+        + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
       if(val) sel.value = val;
     }
   });
@@ -201,9 +204,11 @@ function _renderKPIsGL(){
   _setKPI('gl-kpi-inasistencia', contarTrabajadores('ausencia_injustificada'),'trabajadores');
 
   const mesHab      = document.getElementById('gl-hab-rev-mes')?.value || '';
+  const fechaHab    = document.getElementById('gl-hab-rev-fecha')?.value || '';
   const mandanteHab = document.getElementById('gl-hab-rev-empresa')?.value || '';
   const rutsHab     = _rutsFiltrados(mandanteHab);
-  const habPer      = haberes_variables.filter(h => h.periodo === mesHab && rutsHab.includes(h.trabajador_rut));
+  let   habPer      = haberes_variables.filter(h => h.periodo === mesHab && rutsHab.includes(h.trabajador_rut));
+  if(fechaHab) habPer = habPer.filter(h => h.fecha === fechaHab);
   const totalHab    = habPer.reduce((s,h) => s + (parseFloat(h.monto)||0), 0);
   const trabHab     = new Set(habPer.map(h => h.trabajador_rut)).size;
   const promHab     = habPer.length ? totalHab / habPer.length : 0;
@@ -229,9 +234,11 @@ function _renderKPIsGL(){
   _setKPI('gl-kpi-des-saldo',        '$'+saldoTotal.toLocaleString('es-CL'), 'saldo pendiente');
 
   const mesJor      = document.getElementById('gl-jor-rev-mes')?.value || '';
+  const fechaJor    = document.getElementById('gl-jor-rev-fecha')?.value || '';
   const mandanteJor = document.getElementById('gl-jor-rev-empresa')?.value || '';
   const rutsJor     = _rutsFiltrados(mandanteJor);
-  const jorPer      = jornada_especial.filter(j => j.periodo === mesJor && rutsJor.includes(j.trabajador_rut));
+  let   jorPer      = jornada_especial.filter(j => j.periodo === mesJor && rutsJor.includes(j.trabajador_rut));
+  if(fechaJor) jorPer = jorPer.filter(j => j.fecha === fechaJor);
   const totalHex    = jorPer.filter(j => j.tipo==='hora_extra').reduce((s,j) => s + (parseFloat(j.horas)||0), 0);
   const trabJor     = new Set(jorPer.map(j => j.trabajador_rut)).size;
   const recargo100  = jorPer.filter(j => j.tipo==='hora_extra' && j.recargo==='100').reduce((s,j) => s + (parseFloat(j.horas)||0), 0);
@@ -542,7 +549,7 @@ function _leerAusenciasAsistencia(periodo, ruts){
 function clasificarAusencia(rut, fecha){
   const t = trabajadores.find(x => x.rut === rut);
   toggleFormNovedad(true); // fuerza apertura + repuebla empresas + resetea buscador
-  const empresaId = findMandante(t)?.id || '';
+  const empresaId = t?.empresa_propia_id || '';
   const selEmpresa = document.getElementById('gl-nov-reg-empresa');
   if(selEmpresa && empresaId) selEmpresa.value = empresaId;
   if(t){
@@ -691,12 +698,14 @@ function _labelNovedad(tipo){
    ════════════════════════════════════════════════════════ */
 function renderHaberes(){
   const periodo    = document.getElementById('gl-hab-rev-mes')?.value || '';
+  const fechaExacta= document.getElementById('gl-hab-rev-fecha')?.value || '';
   const mandante   = document.getElementById('gl-hab-rev-empresa')?.value || '';
   const filtroTrab = document.getElementById('gl-hab-rev-trabajador')?.value || '';
   const filtroTipo = document.getElementById('gl-hab-rev-tipo')?.value || '';
   const ruts       = _rutsFiltrados(mandante);
 
   let lista = haberes_variables.filter(h => h.periodo===periodo && ruts.includes(h.trabajador_rut));
+  if(fechaExacta) lista = lista.filter(h => h.fecha === fechaExacta);
   if(filtroTrab) lista = lista.filter(h => h.trabajador_rut === filtroTrab);
   if(filtroTipo) lista = lista.filter(h => h.tipo === filtroTipo);
 
@@ -743,6 +752,24 @@ function guardarHaber(){
   if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
   if(!rut||!tipo||!monto){ toast('⚠️ Completa trabajador, tipo y monto','error'); return; }
 
+  // ✅ NUEVO — Aviso (no bloqueo) si el trabajador tiene una ausencia,
+  // licencia médica o permiso registrado justo ese día. A diferencia de
+  // Ausencias (que si bloquea contra Asistencia real), acá se avisa nomás
+  // y se puede confirmar igual — hay bonos legítimos que no dependen de
+  // la asistencia puntual de ese día (ej. un bono ya devengado, o una
+  // corrección retroactiva).
+  if(fecha){
+    const novedadEseDia = novedades.find(n =>
+      n.trabajador_rut === rut && n.fecha_inicio <= fecha && n.fecha_fin >= fecha);
+    if(novedadEseDia){
+      const t = trabajadores.find(x => x.rut === rut);
+      const seguro = confirm(
+        `⚠️ ${t?.nombre||'Este trabajador'} tiene "${_labelNovedad(novedadEseDia.tipo)}" registrado el ${_fmtFecha(fecha)}.\n\n¿Confirmas que igual quieres registrar esta bonificación ese día?`
+      );
+      if(!seguro) return;
+    }
+  }
+
   const yaExiste = haberes_variables.some(h =>
     h.trabajador_rut === rut && h.tipo === tipo &&
     h.monto === parseFloat(monto) && h.fecha === (fecha||''));
@@ -774,6 +801,16 @@ function eliminarHaber(id){
   guardarHaberes();
   renderHaberes();
   _renderKPIsGL();
+}
+
+function limpiarFiltroFechaHaber(){
+  const el = document.getElementById('gl-hab-rev-fecha');
+  if(el){ el.value = ''; renderHaberes(); _renderKPIsGL(); }
+}
+
+function limpiarFiltroEmpresaHaber(){
+  const el = document.getElementById('gl-hab-rev-empresa');
+  if(el){ el.value = ''; _buscadoresGL['hab-rev']?.reset(); renderHaberes(); _renderKPIsGL(); }
 }
 
 function _badgeHaber(tipo){
@@ -1000,12 +1037,14 @@ function _badgeDescuento(tipo){
    ════════════════════════════════════════════════════════ */
 function renderJornada(){
   const periodo    = document.getElementById('gl-jor-rev-mes')?.value || '';
+  const fechaExacta= document.getElementById('gl-jor-rev-fecha')?.value || '';
   const mandante   = document.getElementById('gl-jor-rev-empresa')?.value || '';
   const filtroTrab = document.getElementById('gl-jor-rev-trabajador')?.value || '';
   const filtroTipo = document.getElementById('gl-jor-rev-tipo')?.value || '';
   const ruts       = _rutsFiltrados(mandante);
 
   let lista = jornada_especial.filter(j => j.periodo===periodo && ruts.includes(j.trabajador_rut));
+  if(fechaExacta) lista = lista.filter(j => j.fecha === fechaExacta);
   if(filtroTrab) lista = lista.filter(j => j.trabajador_rut === filtroTrab);
   if(filtroTipo) lista = lista.filter(j => j.tipo === filtroTipo);
 
@@ -1046,7 +1085,7 @@ function _montoHoraExtra(j){
   const sueldoInfo = _getSueldoBase(j.trabajador_rut, j.periodo);
   if(!contrato || !sueldoInfo || !sueldoInfo.monto) return null;
   const divisor        = typeof DIVISOR_MES !== 'undefined' ? DIVISOR_MES : 30;
-  const horasSemanales = parseFloat(contrato.horas_semana) || 45;
+  const horasSemanales = parseFloat(contrato.horas_semanales) || 45;
   const valorHoraOrd   = Math.round((sueldoInfo.monto / divisor) / (horasSemanales / 5));
   const recargo        = j.recargo === '100' ? 2.0 : 1.5;
   return Math.round(valorHoraOrd * recargo * (parseFloat(j.horas) || 0));
@@ -1144,6 +1183,16 @@ function eliminarJornada(id){
   guardarJornadaEspecial();
   renderJornada();
   _renderKPIsGL();
+}
+
+function limpiarFiltroFechaJornada(){
+  const el = document.getElementById('gl-jor-rev-fecha');
+  if(el){ el.value = ''; renderJornada(); _renderKPIsGL(); }
+}
+
+function limpiarFiltroEmpresaJornada(){
+  const el = document.getElementById('gl-jor-rev-empresa');
+  if(el){ el.value = ''; _buscadoresGL['jor-rev']?.reset(); renderJornada(); _renderKPIsGL(); }
 }
 
 function _badgeJornada(tipo){
@@ -1263,11 +1312,13 @@ function initBuscadorTrabajador(cfg){
 }
 
 /* ── UTILIDADES INTERNAS ───────────────────────────────── */
-function _rutsFiltrados(mandanteId){
+/* Filtra trabajadores activos por Empresa Propia (la contratista que
+   los emplea) — no por Mandante, que es solo dónde prestan servicio. */
+function _rutsFiltrados(empresaPropiaId){
   return trabajadores
     .filter(t => {
       if(t.estado !== 'activo') return false;
-      if(mandanteId && findMandante(t)?.id !== mandanteId) return false;
+      if(empresaPropiaId && t.empresa_propia_id !== empresaPropiaId) return false;
       return true;
     })
     .map(t => t.rut);
