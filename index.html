@@ -1355,18 +1355,20 @@
           </div>
 
           <div class="card" style="margin-bottom:14px;">
-            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-              <div class="form-group" style="margin:0;">
-                <label>Empresa propia</label>
-                <select id="vac-empresa-selector" onchange="renderVacaciones()" style="padding:7px 10px;font-size:13px;">
-                  <option value="">Todas las empresas</option>
-                </select>
+            <div style="display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;">
+              <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                <div class="form-group" style="margin:0;">
+                  <label>Empresa propia</label>
+                  <select id="vac-empresa-selector" onchange="renderVacaciones()" style="padding:7px 10px;font-size:13px;">
+                    <option value="">Todas las empresas</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label>Buscar</label>
+                  <input type="text" id="vac-buscar" oninput="renderVacaciones()" placeholder="Nombre o RUT" style="padding:7px 10px;font-size:13px;">
+                </div>
               </div>
-              <div class="form-group" style="margin:0;">
-                <label>Buscar</label>
-                <input type="text" id="vac-buscar" oninput="renderVacaciones()" placeholder="Nombre o RUT" style="padding:7px 10px;font-size:13px;">
-              </div>
-              <button class="btn btn-secondary btn-sm" onclick="exportarVacacionesExcel()" style="align-self:flex-end;">
+              <button class="btn btn-primary" onclick="exportarVacacionesExcel()" style="padding:10px 20px;font-size:14px;">
                 <i class="ti ti-table-export"></i> Exportar Excel
               </button>
             </div>
