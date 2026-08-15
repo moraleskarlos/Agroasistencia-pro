@@ -791,7 +791,7 @@
       <div class="g2" id="g2-contrato-cols" style="align-items:start;">
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div class="card" id="bloque-precargados-individual">
-            <div class="card-title"><i class="ti ti-lock"></i> Datos precargados <span style="background:var(--gris-bg);color:var(--texto3);font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">solo lectura</span></div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-lock"></i> Datos precargados <span style="background:var(--gris-bg);color:var(--texto3);font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">solo lectura</span></div>
             <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">Datos del Trabajador</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
               <div class="f-group"><label class="form-label">RUT trabajador</label><input class="f-input" id="cp-rut" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
@@ -831,7 +831,7 @@
             </div>
           </div>
           <div class="card card-formulario">
-            <div class="card-title"><i class="ti ti-edit"></i> Datos del contrato <span style="background:#EAF3DE;color:#27500A;font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">editable</span></div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-edit"></i> Datos del contrato <span style="background:#EAF3DE;color:#27500A;font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">editable</span></div>
             <div class="fila-compacta" style="margin-bottom:12px;">
               <div class="f-group"><label class="form-label">Ciudad de firma</label><input class="f-input" id="c-ciudad" placeholder="Ej: Santiago" oninput="actualizarPrevia()"></div>
               <div class="f-group">
@@ -889,7 +889,7 @@
         </div>
         <div>
           <div class="card" style="position:sticky;top:14px;">
-            <div class="card-title"><i class="ti ti-eye"></i> Vista previa</div>
+            <div class="card-title card-title-oscuro"><i class="ti ti-eye"></i> Vista previa</div>
             <div id="contrato-preview"><div style="text-align:center;padding:20px;color:var(--texto3);font-size:13px;">Selecciona un trabajador para ver la vista previa</div></div>
             <div style="margin-top:12px;" id="btn-ver-doc-individual"><button class="btn btn-primary btn-full" onclick="generarPDFContrato()"><i class="ti ti-file-type-pdf"></i> Ver documento completo</button></div>
           </div>
@@ -900,7 +900,7 @@
       <!-- SUBMÓDULO CONTRATOS MASIVOS -->
       <div id="sub-tab-ct-masivo" style="display:none;">
         <div class="card" style="margin-bottom:14px;">
-          <div class="card-title"><i class="ti ti-users"></i> Contrato Masivo</div>
+          <div class="card-title card-title-oscuro"><i class="ti ti-users"></i> Contrato Masivo</div>
           <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;font-size:13px;color:#1E40AF;line-height:1.6;">
             <i class="ti ti-info-circle"></i> Los trabajadores seleccionados recibirán las mismas condiciones de contrato. Para contratos con condiciones diferentes, usá Contrato Individual.
           </div>
@@ -928,7 +928,7 @@
           </div>
         </div>
         <div class="card">
-          <div class="card-title"><i class="ti ti-table"></i> Contratos Emitidos</div>
+          <div class="card-title card-title-oscuro"><i class="ti ti-table"></i> Contratos Emitidos</div>
           <div class="tabla-wrap">
             <table class="tabla">
               <thead><tr>
@@ -1002,7 +1002,7 @@
 
             <!-- Datos precargados -->
             <div class="card">
-              <div class="card-title" style="justify-content:space-between;">
+              <div class="card-title card-title-oscuro" style="justify-content:space-between;">
                 <span><i class="ti ti-lock"></i> Datos precargados
                 <span style="background:var(--gris-bg);color:var(--texto3);font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">solo lectura</span></span>
                 <div id="anexo-masivo-nav" style="display:none;gap:6px;align-items:center;">
@@ -1028,7 +1028,7 @@
 
             <!-- Datos comunes -->
             <div class="card">
-              <div class="card-title"><i class="ti ti-edit"></i> Datos del anexo</div>
+              <div class="card-title card-title-oscuro"><i class="ti ti-edit"></i> Datos del anexo</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
                 <div class="f-group"><label class="form-label">Fecha de vigencia *</label><input type="date" id="anexo-fecha-vigencia" class="f-input" oninput="actualizarPreviaAnexo()"></div>
                 <div class="f-group"><label class="form-label">Ciudad</label><input type="text" id="anexo-ciudad" placeholder="Ej: Curicó" class="f-input" oninput="actualizarPreviaAnexo()"></div>
@@ -1067,12 +1067,12 @@
           <!-- Columna derecha: vista previa + historial -->
           <div>
             <div class="card" style="position:sticky;top:14px;">
-              <div class="card-title"><i class="ti ti-eye"></i> Vista Previa</div>
+              <div class="card-title card-title-oscuro"><i class="ti ti-eye"></i> Vista Previa</div>
               <div id="anexo-preview"></div>
               <div style="margin-top:12px;" id="anexo-preview-btn-pdf"><button class="btn btn-primary btn-full" onclick="generarPDFAnexo()"><i class="ti ti-file-type-pdf"></i> Ver documento completo</button></div>
             </div>
             <div class="card" style="margin-top:14px;">
-              <div class="card-title"><i class="ti ti-history"></i> Historial de Anexos</div>
+              <div class="card-title card-title-oscuro"><i class="ti ti-history"></i> Historial de Anexos</div>
               <div id="anexo-historial-lista">
                 <div style="text-align:center;padding:20px;color:var(--texto3);font-size:13px;">
                   Selecciona un trabajador para ver su historial
