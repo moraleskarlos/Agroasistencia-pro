@@ -157,7 +157,7 @@
 
         <div id="sub-tab-reg-individual">
         <div class="g2" style="align-items:start;">
-        <div class="card" style="max-width:900px;">
+        <div class="card card-formulario" style="max-width:900px;">
             <div class="card-title"><i class="ti ti-user-plus"></i> Registro individual</div>
             <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;display:flex;gap:8px;align-items:center;justify-content:space-between;">
               <div style="font-size:12px;color:var(--texto2);"><i class="ti ti-info-circle"></i> ¿Vas a editar a alguien? Búscalo en el módulo <strong>Trabajadores</strong> y usa "Editar ficha".</div>
@@ -830,7 +830,7 @@
               <div class="f-group"><label class="form-label">Dirección mandante</label><input class="f-input" id="cp-man-direccion" readonly style="background:var(--gris-bg);color:var(--texto2);"></div>
             </div>
           </div>
-          <div class="card">
+          <div class="card card-formulario">
             <div class="card-title"><i class="ti ti-edit"></i> Datos del contrato <span style="background:#EAF3DE;color:#27500A;font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;margin-left:4px;">editable</span></div>
             <div class="fila-compacta" style="margin-bottom:12px;">
               <div class="f-group"><label class="form-label">Ciudad de firma</label><input class="f-input" id="c-ciudad" placeholder="Ej: Santiago" oninput="actualizarPrevia()"></div>
@@ -1885,7 +1885,7 @@
 
           <!-- Formulario ingreso manual -->
           <div id="ind-form-wrap" style="display:none;">
-            <div class="card" style="margin-bottom:14px;border:2px solid var(--verde);max-width:900px;">
+            <div class="card card-formulario" style="margin-bottom:14px;max-width:900px;">
               <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                 <span><i class="ti ti-pencil"></i> Ingreso de Indicadores Previsionales
                   <span id="ind-form-titulo-periodo" style="font-weight:400;color:var(--texto2);margin-left:8px;"></span>
@@ -1896,7 +1896,7 @@
               </div>
 
               <!-- A — Valores Generales -->
-              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+              <div class="form-section">
                 A — Valores Generales
               </div>
               <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
@@ -1922,7 +1922,7 @@
               </div>
 
               <!-- B — Topes y Rentas -->
-              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+              <div class="form-section">
                 B — Topes y Rentas Imponibles
               </div>
               <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
@@ -1952,7 +1952,7 @@
               </div>
 
               <!-- C — Tasas AFP -->
-              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+              <div class="form-section">
                 C — Tasas de Cotización AFP (%)
               </div>
               <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
@@ -1981,7 +1981,7 @@
               </div>
 
               <!-- D — SIS -->
-              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+              <div class="form-section">
                 D — Seguro Social Previsional (Reforma Previsional)
               </div>
               <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
@@ -2003,7 +2003,7 @@
               </div>
 
               <!-- E — AFC -->
-              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+              <div class="form-section">
                 E — Seguro de Cesantía AFC (%)
               </div>
               <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
@@ -2033,7 +2033,7 @@
               </div>
 
               <!-- F — Asignación Familiar -->
-              <div class="form-section" style="background:#1E293B;color:#fff;padding:8px 12px;border-radius:6px;margin-bottom:12px;">
+              <div class="form-section">
                 F — Asignación Familiar
               </div>
               <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
