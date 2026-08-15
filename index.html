@@ -1313,7 +1313,7 @@
               <div class="form-group"><label>Mes</label>
                 <input type="month" id="gl-nov-rev-mes" class="campo-fecha"></div>
               <div class="form-group"><label>Empresa</label>
-                <select id="gl-nov-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
+                <select id="gl-nov-rev-empresa"><option value="">Todas las Empresas</option></select></div>
               <div class="form-group" style="position:relative;"><label>Trabajador</label>
                 <input type="text" id="gl-nov-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
                 <input type="hidden" id="gl-nov-rev-trabajador">
@@ -1468,11 +1468,21 @@
           <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
             <div class="card-title card-title-oscuro"><i class="ti ti-cash"></i> Bonificaciones del período</div>
-            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
+            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr 1fr;margin-bottom:14px;">
               <div class="form-group"><label>Mes</label>
                 <input type="month" id="gl-hab-rev-mes" class="campo-fecha"></div>
+              <div class="form-group"><label>Fecha exacta</label>
+                <div style="display:flex;gap:4px;">
+                  <input type="date" id="gl-hab-rev-fecha" class="campo-fecha" onchange="renderHaberes()">
+                  <button type="button" class="btn btn-sm" onclick="limpiarFiltroFechaHaber()" title="Limpiar fecha" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+                </div>
+              </div>
               <div class="form-group"><label>Empresa</label>
-                <select id="gl-hab-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
+                <div style="display:flex;gap:4px;">
+                  <select id="gl-hab-rev-empresa" style="flex:1;"><option value="">Todas las Empresas</option></select>
+                  <button type="button" class="btn btn-sm" onclick="limpiarFiltroEmpresaHaber()" title="Limpiar empresa" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+                </div>
+              </div>
               <div class="form-group" style="position:relative;"><label>Trabajador</label>
                 <input type="text" id="gl-hab-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
                 <input type="hidden" id="gl-hab-rev-trabajador">
@@ -1522,9 +1532,6 @@
                     <select id="gl-jor-tipo" onchange="onCambioTipoJornada()">
                       <option value="">— Seleccionar —</option>
                       <option value="hora_extra">⏱️ Horas extra</option>
-                      <option value="hora_compensada">🔄 Horas compensadas</option>
-                      <option value="cambio_turno">🔀 Cambio de turno</option>
-                      <option value="turno_especial">📋 Turno especial</option>
                     </select></div>
                   <div class="form-group"><label>Fecha</label>
                     <input type="date" id="gl-jor-fecha" class="campo-fecha"></div>
@@ -1549,11 +1556,21 @@
           <!-- BLOQUE 2 — Resumen (filtros + tabla, una sola card) -->
           <div class="card">
             <div class="card-title card-title-oscuro"><i class="ti ti-clock-hour-4"></i> Horas Extras del período</div>
-            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr;margin-bottom:14px;">
+            <div class="form-grid" style="grid-template-columns:160px 1fr 1fr 1fr 1fr;margin-bottom:14px;">
               <div class="form-group"><label>Mes</label>
                 <input type="month" id="gl-jor-rev-mes" class="campo-fecha"></div>
+              <div class="form-group"><label>Fecha exacta</label>
+                <div style="display:flex;gap:4px;">
+                  <input type="date" id="gl-jor-rev-fecha" class="campo-fecha" onchange="renderJornada()">
+                  <button type="button" class="btn btn-sm" onclick="limpiarFiltroFechaJornada()" title="Limpiar fecha" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+                </div>
+              </div>
               <div class="form-group"><label>Empresa</label>
-                <select id="gl-jor-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
+                <div style="display:flex;gap:4px;">
+                  <select id="gl-jor-rev-empresa" style="flex:1;"><option value="">Todas las Empresas</option></select>
+                  <button type="button" class="btn btn-sm" onclick="limpiarFiltroEmpresaJornada()" title="Limpiar empresa" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+                </div>
+              </div>
               <div class="form-group" style="position:relative;"><label>Trabajador</label>
                 <input type="text" id="gl-jor-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
                 <input type="hidden" id="gl-jor-rev-trabajador">
@@ -1563,9 +1580,6 @@
                 <select id="gl-jor-rev-tipo">
                   <option value="">Todos los tipos</option>
                   <option value="hora_extra">⏱️ Horas extra</option>
-                  <option value="hora_compensada">🔄 Horas compensadas</option>
-                  <option value="cambio_turno">🔀 Cambio de turno</option>
-                  <option value="turno_especial">📋 Turno especial</option>
                 </select></div>
             </div>
             <div class="tabla-wrap">
@@ -1646,7 +1660,7 @@
               <div class="form-group"><label>Mes</label>
                 <input type="month" id="gl-des-rev-mes" class="campo-fecha"></div>
               <div class="form-group"><label>Empresa</label>
-                <select id="gl-des-rev-empresa"><option value="">Todas las Empresas Mandante</option></select></div>
+                <select id="gl-des-rev-empresa"><option value="">Todas las Empresas</option></select></div>
               <div class="form-group" style="position:relative;"><label>Trabajador</label>
                 <input type="text" id="gl-des-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off">
                 <input type="hidden" id="gl-des-rev-trabajador">
