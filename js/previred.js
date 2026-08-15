@@ -96,7 +96,7 @@ function renderPrevired(){
 
   cont.innerHTML = `
     <div class="card" style="margin-bottom:14px;">
-      <div class="card-title"><i class="ti ti-settings"></i> Configuración de la empresa (Mutual / CCAF)</div>
+      <div class="card-title card-title-oscuro"><i class="ti ti-settings"></i> Configuración de la empresa (Mutual / CCAF)</div>
       <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;">
         Estos códigos son por empresa y se piden una sola vez. Si no tienes Mutual o CCAF, deja "Sin Mutual" / "Sin CCAF".
       </div>

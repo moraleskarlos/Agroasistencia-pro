@@ -414,7 +414,7 @@ function renderDetalleIndicador(periodo){
     </div>
 
     <div class="card" style="margin-bottom:14px;">
-      <div class="card-title"><i class="ti ti-building-bank"></i> C — Tasas AFP</div>
+      <div class="card-title card-title-oscuro"><i class="ti ti-building-bank"></i> C — Tasas AFP</div>
       <div class="tabla-wrap">
         <table class="tabla" style="min-width:450px;">
           <thead><tr><th>AFP</th><th style="text-align:center;">Trabajador</th><th style="text-align:center;">Empleador</th><th style="text-align:center;">Total</th></tr></thead>
@@ -432,7 +432,7 @@ function renderDetalleIndicador(periodo){
 
     <div class="g2" style="margin-bottom:14px;">
       <div class="card">
-        <div class="card-title"><i class="ti ti-briefcase"></i> E — Seguro de Cesantía (AFC)</div>
+        <div class="card-title card-title-oscuro"><i class="ti ti-briefcase"></i> E — Seguro de Cesantía (AFC)</div>
         <div style="font-size:13px;line-height:2;">
           <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--borde);padding-bottom:4px;"><span>Plazo Indefinido</span><strong>${fmtP(ind.afc?.indefinido?.empleador)} emp · ${fmtP(ind.afc?.indefinido?.trabajador)} trab</strong></div>
           <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--borde);padding-bottom:4px;"><span>Plazo Fijo</span><strong>${fmtP(ind.afc?.fijo?.empleador)} emp</strong></div>
@@ -441,7 +441,7 @@ function renderDetalleIndicador(periodo){
         </div>
       </div>
       <div class="card">
-        <div class="card-title"><i class="ti ti-users"></i> F — Asignación Familiar</div>
+        <div class="card-title card-title-oscuro"><i class="ti ti-users"></i> F — Asignación Familiar</div>
         <div style="font-size:13px;line-height:2;">
           ${(ind.asignacion_familiar||[]).map(a=>`
             <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--borde);padding-bottom:4px;">

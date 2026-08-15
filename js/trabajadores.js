@@ -440,7 +440,7 @@ function _renderDatosPersonalesPerfil(t, contenedorId){
   if(esNacionalidadExtranjera(t.nacionalidad)){
     const semaforo = _calcularSemaforo(t.fecha_venc_migratorio);
     migratorioHTML = `
-      <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+      <div class="form-section" style="margin:18px 0 8px;">
         <i class="ti ti-id"></i> Situación migratoria
       </div>
       ${fila('Tipo de documento', t.tipo_doc_migratorio)}
@@ -450,7 +450,7 @@ function _renderDatosPersonalesPerfil(t, contenedorId){
   }
 
   cont.innerHTML = `
-    <div class="card-title" style="font-size:13px;margin-bottom:4px;">
+    <div class="form-section" style="margin-bottom:4px;">
       <i class="ti ti-user"></i> Datos personales
     </div>
     ${fila('Nacionalidad', t.nacionalidad)}
@@ -459,13 +459,13 @@ function _renderDatosPersonalesPerfil(t, contenedorId){
     ${fila('Domicilio', t.domicilio)}
     ${fila('Correo', t.correo_electronico)}
 
-    <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+    <div class="form-section" style="margin:18px 0 8px;">
       <i class="ti ti-heart-plus"></i> Previsión
     </div>
     ${fila('AFP', t.afiliacion_afp)}
     ${fila('Sistema de salud', t.sistema_salud)}
 
-    <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+    <div class="form-section" style="margin:18px 0 8px;">
       <i class="ti ti-building"></i> Relación laboral
     </div>
     ${fila('Empresa contratista', empEmpleadora?.razon_social || empEmpleadora?.nombre)}
@@ -475,13 +475,13 @@ function _renderDatosPersonalesPerfil(t, contenedorId){
 
     ${migratorioHTML}
 
-    <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+    <div class="form-section" style="margin:18px 0 8px;">
       <i class="ti ti-shield-check"></i> EPP entregados
     </div>
     ${fila('Elementos entregados', (t.epp_entregados&&t.epp_entregados.length) ? t.epp_entregados.join(', ') + (t.epp_entregados.includes('Otro')&&t.epp_otro?` (${t.epp_otro})`:'') : null)}
     ${fila('Fecha de entrega', t.epp_fecha_entrega ? fmtFecha(t.epp_fecha_entrega) : null)}
 
-    <div class="card-title" style="margin:18px 0 8px;font-size:13px;">
+    <div class="form-section" style="margin:18px 0 8px;">
       <i class="ti ti-notebook"></i> RIOHS / IRL
     </div>
     ${fila('Fecha de inducción', t.irl_fecha_induccion ? fmtFecha(t.irl_fecha_induccion) : null)}

@@ -204,7 +204,7 @@ function _abrirEdicionPlanCuentas(){
   wrap.style.display = 'block';
   wrap.innerHTML = `
     <div class="card" style="margin-top:14px;">
-      <div class="card-title"><i class="ti ti-list-details"></i> Nombres de cuentas contables</div>
+      <div class="card-title card-title-oscuro"><i class="ti ti-list-details"></i> Nombres de cuentas contables</div>
       <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;">
         Ajusta los nombres para que calcen con tu plan de cuentas real. Se guardan localmente y se reutilizan en todos los períodos.
       </div>

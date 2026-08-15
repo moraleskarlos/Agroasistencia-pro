@@ -291,7 +291,7 @@ function _renderResumenContador(lista, periodo){
 
     <!-- AFP por institución -->
     <div class="card">
-      <div class="card-title"><i class="ti ti-building-bank"></i> AFP — Por institución</div>
+      <div class="card-title card-title-oscuro"><i class="ti ti-building-bank"></i> AFP — Por institución</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr style="background:var(--gris-bg);">
           <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--texto3);text-transform:uppercase;">AFP</th>
@@ -321,7 +321,7 @@ function _renderResumenContador(lista, periodo){
 
     <!-- Salud por institución -->
     <div class="card">
-      <div class="card-title"><i class="ti ti-heart-rate-monitor"></i> Salud — Por institución</div>
+      <div class="card-title card-title-oscuro"><i class="ti ti-heart-rate-monitor"></i> Salud — Por institución</div>
       <table style="width:100%;border-collapse:collapse;font-size:12px;">
         <thead><tr style="background:var(--gris-bg);">
           <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--texto3);text-transform:uppercase;">Institución</th>
@@ -345,7 +345,7 @@ function _renderResumenContador(lista, periodo){
 
     <!-- AFC -->
     <div class="card">
-      <div class="card-title"><i class="ti ti-briefcase"></i> AFC — Seguro de Cesantía</div>
+      <div class="card-title card-title-oscuro"><i class="ti ti-briefcase"></i> AFC — Seguro de Cesantía</div>
       <div style="font-size:13px;line-height:2.2;">
         <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--borde);padding:4px 0;">
           <span>Plazo Indefinido — Trabajador</span><strong>${fmtM(afc.indef_trab)}</strong>
@@ -364,7 +364,7 @@ function _renderResumenContador(lista, periodo){
 
     <!-- Resumen global -->
     <div class="card">
-      <div class="card-title"><i class="ti ti-calculator"></i> Resumen global del período</div>
+      <div class="card-title card-title-oscuro"><i class="ti ti-calculator"></i> Resumen global del período</div>
       <div style="font-size:13px;line-height:2.2;">
         <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--borde);padding:4px 0;">
           <span>Total haberes brutos</span><strong>${fmtM(total_haberes)}</strong>
