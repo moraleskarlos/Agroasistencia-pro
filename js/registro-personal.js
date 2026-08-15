@@ -490,7 +490,7 @@ function procesarExcel(event){
 
       const fmtFecha = v => {
         if(!v) return null;
-        if(v instanceof Date) return v.toISOString().split('T')[0];
+        if(v instanceof Date) return fechaDesdeDate(v);
         return v.toString().trim() || null;
       };
 

@@ -194,6 +194,18 @@ function fechaLocal(fechaISO){
   return new Date(fechaISO + 'T12:00:00');
 }
 
+/* Convierte un objeto Date YA EXISTENTE (ej. una celda de fecha leída
+   de un Excel importado vía SheetJS con cellDates:true) a 'YYYY-MM-DD'
+   usando sus componentes LOCALES — nunca v.toISOString(), porque eso
+   depende de que el huso horario del navegador esté detrás de UTC
+   (cierto en Chile, pero no es una garantía real: si alguien abre el
+   sistema con el huso mal configurado o desde otro país, la fecha se
+   correría un día — verificado con SheetJS 0.18.5 real en Asia/Tokyo
+   y Pacific/Kiritimati). */
+function fechaDesdeDate(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 /* Presentes hoy: cuenta trabajadores activos con marcación de entrada
    registrada en el día de hoy. Mismo criterio ('hora_entrada' presente)
    que ya usa variables.js (_leerAsistenciaMes) para no tener dos
