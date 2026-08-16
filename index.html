@@ -192,7 +192,7 @@
        placeholder="12.345.678-9"
        required
        maxlength="12"
-       oninput="formatearRUT(this)">
+       oninput="formatearRUT(this); detectarReingreso(this.value);">
 
     </div>
 
@@ -201,6 +201,8 @@
       <input type="text" id="m-nombre" placeholder="Juan Pérez González" required>
     </div>
   </div>
+
+  <div id="banner-reingreso" style="display:none;"></div>
 
   <div class="fila-compacta" style="margin-bottom:12px;">
     <div class="form-group">
