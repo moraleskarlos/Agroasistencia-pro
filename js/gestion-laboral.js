@@ -925,6 +925,13 @@ function guardarDescuento(){
   // El campo del formulario ("Monto total") es la deuda completa, no la
   // cuota. La cuota mensual se calcula aquí.
   const nCuotas    = parseInt(cuotas) || 1;
+
+  // ✅ NUEVO — Antes, un valor negativo (ej. "-3") pasaba silenciosamente:
+  // el bucle de más abajo con nCuotas negativo no corre ninguna vez, no
+  // guarda nada, pero el toast decía "✅ Descuento registrado" igual — el
+  // peor tipo de bug, porque no avisa que falló.
+  if(nCuotas < 1){ toast('⚠️ El número de cuotas debe ser 1 o más','error'); return; }
+
   const totalNum   = parseFloat(montoTotal);
   const montoCuota = Math.round(totalNum / nCuotas);
 
@@ -994,6 +1001,11 @@ function limpiarFiltroTrabajadorDescuento(){
   _buscadoresGL['des-rev']?.reset();
   renderDescuentos();
   _renderKPIsGL();
+}
+
+function limpiarFiltroEmpresaDescuento(){
+  const el = document.getElementById('gl-des-rev-empresa');
+  if(el){ el.value = ''; renderDescuentos(); _renderKPIsGL(); }
 }
 
 /* Elimina de una sola vez todas las cuotas PENDIENTES (mes actual en

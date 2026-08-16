@@ -409,7 +409,7 @@ function renderDetalleIndicador(periodo){
     <div class="g4" style="margin-bottom:16px;">
       <div class="kpi azul"><div class="kpi-label">Valor UF</div><div class="kpi-value" style="font-size:20px;">${fmt(ind.uf)}</div><div class="kpi-sub">${getNombreMes(periodo)}</div></div>
       <div class="kpi verde"><div class="kpi-label">UTM</div><div class="kpi-value" style="font-size:20px;">${fmt(ind.utm)}</div><div class="kpi-sub">valor mensual</div></div>
-      <div class="kpi amarillo"><div class="kpi-label">Tope AFP</div><div class="kpi-value" style="font-size:20px;">${fmt(ind.tope_imponible_afp)}</div><div class="kpi-sub">87,8 UF</div></div>
+      <div class="kpi amarillo"><div class="kpi-label">Tope AFP</div><div class="kpi-value" style="font-size:20px;">${fmt(ind.tope_imponible_afp)}</div><div class="kpi-sub">90 UF</div></div>
       <div class="kpi rojo"><div class="kpi-label">Tasa SIS</div><div class="kpi-value" style="font-size:20px;">${fmtP(ind.sis)}</div><div class="kpi-sub">seg. invalidez</div></div>
     </div>
 

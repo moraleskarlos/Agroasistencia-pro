@@ -37,7 +37,7 @@ function calcularLiquidacion(vars, periodo){
   const tasaAFP  = ind.afp?.[afpKey];
   if(!tasaAFP) return { error: `AFP "${vars.afp}" no encontrada en indicadores de ${periodo}` };
 
-  // ── Tope imponible AFP (87,8 UF) ────────────────────
+  // ── Tope imponible AFP (90 UF desde ago-2026, Ley 21.735) ───
   const tope_afp = ind.tope_imponible_afp || 0;
   const tope_afc = ind.tope_imponible_afc || 0;
   const base_afp = Math.min(vars.total_imponible, tope_afp);
