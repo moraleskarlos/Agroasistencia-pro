@@ -168,8 +168,13 @@ function _getSueldoBase(rut, periodo){
 
 /* ── Contrato vigente para el período ──────────────────── */
 function _getContratoVigente(rut, periodo){
+  // ✅ Blindado — antes, si tanto el contrato como el trabajador no
+  // tenían id (undefined === undefined), la comparación por
+  // trabajador_id daba "true" por accidente y mezclaba el contrato de
+  // OTRO trabajador. Ahora solo compara por id si el contrato
+  // realmente tiene uno.
   const lista = (contratos || []).filter(c =>
-    (c.trabajador_rut === rut || c.trabajador_id === (trabajadores.find(t=>t.rut===rut)?.id))
+    c.trabajador_rut === rut || (c.trabajador_id && c.trabajador_id === trabajadores.find(t=>t.rut===rut)?.id)
   );
   if(!lista.length) return null;
 
@@ -183,8 +188,8 @@ function _getContratoVigente(rut, periodo){
 
   // Buscar contrato cuya fecha de inicio ≤ período y sin término o término ≥ período
   const vigente = ordenados.find(c => {
-    const inicio = c.fecha_inicio ? new Date(c.fecha_inicio) : null;
-    const fin    = c.fecha_termino ? new Date(c.fecha_termino) : null;
+    const inicio = c.fecha_inicio ? fechaLocal(c.fecha_inicio) : null;
+    const fin    = c.fecha_termino ? fechaLocal(c.fecha_termino) : null;
     const inicia = !inicio || inicio <= fechaPeriodo;
     const termina= !fin || fin >= fechaPeriodo;
     return inicia && termina;
@@ -219,28 +224,21 @@ function _normalizarTipoContrato(tipo){
 /* ── Antigüedad en años (para AFC 11+ años) ─────────────── */
 function _calcularAntiguedad(fechaInicio, periodo){
   if(!fechaInicio) return 0;
-  const inicio = new Date(fechaInicio);
+  const inicio = fechaLocal(fechaInicio);
   const [anio, mes] = periodo.split('-').map(Number);
-  const fin = new Date(anio, mes, 0); // último día del mes
+  const fin = new Date(anio, mes, 0); // último día del mes (constructor numérico, seguro)
   const anios = (fin - inicio) / (1000 * 60 * 60 * 24 * 365.25);
   return Math.max(0, anios);
 }
 
 /* ── Leer asistencia del mes desde localStorage ─────────── */
 function _leerAsistenciaMes(rut, periodo){
-  const [anio, mes] = periodo.split('-').map(Number);
-  const diasMes = new Date(anio, mes, 0).getDate();
-  let dias_trabajados = 0;
-
-  for(let d = 1; d <= diasMes; d++){
-    const fecha = `${anio}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const clave = 'asistencia_' + fecha;
-    const data  = JSON.parse(localStorage.getItem(clave) || '[]');
-    const reg   = data.find(x => x.rut === rut);
-    if(reg && reg.hora_entrada) dias_trabajados++;
-  }
-
-  return { dias_trabajados };
+  // ✅ Limpieza — antes recorría día por día todo el mes en localStorage
+  // para calcular dias_trabajados, un valor que nunca se mostraba en
+  // ningún lado (liquidaciones.js, libro.js). Se saca el cálculo — si
+  // en el futuro hace falta mostrarlo, se puede reintroducir apuntando
+  // a dónde se va a usar.
+  return {};
 }
 
 /* ── Contar días de un tipo de novedad ──────────────────── */
@@ -317,37 +315,13 @@ function _calcularTotalImponible(sueldo_prop, haberes_imp, total_hex_imp){
    FUNCIONES DE ACCESO PARA OTROS MÓDULOS
    ════════════════════════════════════════════════════════ */
 
-/* Construye variables para TODOS los trabajadores activos del período */
-function construirVariablesPeriodo(periodo){
-  const mandante = null; // sin filtro por mandante
-  return trabajadores
-    .filter(t => t.estado === 'activo')
-    .map(t => construirVariablesRemuneracion(t.rut, periodo))
-    .filter(v => !v.error);
-}
+/* ✅ Limpieza — se sacaron construirVariablesPeriodo() y
+   construirVariablesMandante(): solo las llamaba generarLiquidacionesMasivas()
+   en liquidaciones.js, que también se sacó (reemplazada por la tabla-reporte
+   con checkboxes de la pestaña "Generar Liquidaciones", que recorre
+   trabajadores.filter() directamente en liquidaciones.js). */
 
-/* Construye variables para trabajadores de un mandante específico */
-function construirVariablesMandante(periodo, mandanteId){
-  return trabajadores
-    .filter(t => {
-      if(t.estado !== 'activo') return false;
-      const m = findMandante(t);
-      return (m?.id || m?.rut) === mandanteId;
-    })
-    .map(t => construirVariablesRemuneracion(t.rut, periodo))
-    .filter(v => !v.error);
-}
-
-/* Resumen rápido para UI — sin calcular cotizaciones */
-function resumenVariablesPeriodo(periodo){
-  const vars = construirVariablesPeriodo(periodo);
-  return {
-    total_trabajadores: vars.length,
-    total_sueldo_base:  vars.reduce((s,v) => s + v.sueldo_base, 0),
-    total_imponible:    vars.reduce((s,v) => s + v.total_imponible, 0),
-    total_haberes:      vars.reduce((s,v) => s + v.total_haberes, 0),
-    con_descuento:      vars.filter(v => v.dias_a_descontar > 0).length,
-    con_horas_extra:    vars.filter(v => v.total_horas_extra_imponible > 0).length,
-    variables:          vars,
-  };
-}
+/* ✅ Limpieza — se sacó resumenVariablesPeriodo(), nunca llamada desde
+   ningún lado (misma limpieza que las 3 funciones análogas en
+   calculo.js). construirVariablesPeriodo() sigue existiendo — sí se usa,
+   desde liquidaciones.js. */

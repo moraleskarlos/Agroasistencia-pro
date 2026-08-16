@@ -263,31 +263,11 @@ function _normalizarAfpKey(afp){
   return a;
 }
 
-/* ════════════════════════════════════════════════════════
-   FUNCIÓN MASIVA — calcula todas las liquidaciones del período
-   ════════════════════════════════════════════════════════ */
-function calcularLiquidacionesPeriodo(periodo){
-  const vars = construirVariablesPeriodo(periodo);
-  return vars.map(v => calcularLiquidacion(v, periodo));
-}
-
-function calcularLiquidacionesMandante(periodo, mandanteId){
-  const vars = construirVariablesMandante(periodo, mandanteId);
-  return vars.map(v => calcularLiquidacion(v, periodo));
-}
-
-/* ── Resumen del período para UI ────────────────────────── */
-function resumenLiquidacionesPeriodo(periodo){
-  const liqs = calcularLiquidacionesPeriodo(periodo).filter(l => !l.error);
-  return {
-    total_trabajadores:  liqs.length,
-    total_haberes:       liqs.reduce((s,l) => s + l.total_haberes, 0),
-    total_desc_prev:     liqs.reduce((s,l) => s + l.total_prev_trab, 0),
-    total_iusc:          liqs.reduce((s,l) => s + l.iusc, 0),
-    total_liquido:       liqs.reduce((s,l) => s + l.liquido, 0),
-    total_cargo_emp:     liqs.reduce((s,l) => s + l.total_cargo_emp, 0),
-    total_costo_empresa: liqs.reduce((s,l) => s + l.costo_empresa, 0),
-    liquidaciones:       liqs,
-  };
-}
+/* ✅ Limpieza — se sacaron calcularLiquidacionesPeriodo(),
+   calcularLiquidacionesMandante() y resumenLiquidacionesPeriodo(): una
+   capa de resumen/preview que se armó pero nunca se conectó a la UI —
+   liquidaciones.js usa su propio flujo (calcularYGuardarLiquidacion por
+   trabajador) en paralelo, sin pasar por estas funciones. Si en el
+   futuro hace falta un resumen de solo-lectura sin guardar, se puede
+   reintroducir apuntando a dónde se va a usar. */
 

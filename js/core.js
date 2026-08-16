@@ -591,16 +591,9 @@ function poblarSelects(){
   const bMan=document.getElementById('badge-mandantes-tab'); if(bMan) bMan.textContent=empresas.length;
   const bMis=document.getElementById('badge-mis-empresas'); if(bMis) bMis.textContent=empresas_propias.length;
   poblarSelectsEmpresaPropia();
-
-  // Selector trabajador en liquidaciones
-  const selLiqTrab = document.getElementById('liq-sel-trabajador');
-  if(selLiqTrab){
-    const val = selLiqTrab.value;
-    selLiqTrab.innerHTML = '<option value="">— Seleccionar —</option>'
-      + trabajadores.filter(t=>t.estado==='activo')
-        .map(t=>`<option value="${t.rut}">${t.nombre} · ${t.rut}</option>`).join('');
-    if(val) selLiqTrab.value = val;
-  }
+  // ✅ Se sacó el llenado de 'liq-sel-trabajador' — ese selector ya no
+  // existe, reemplazado por la tabla-reporte con checkboxes de la
+  // pestaña "Generar Liquidaciones" (ver liquidaciones.js).
 }
 
 function actualizarUI(){

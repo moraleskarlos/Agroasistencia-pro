@@ -19,6 +19,21 @@ function guardarLiquidaciones(){
 }
 
 /* ── INIT ───────────────────────────────────────────────── */
+function switchTabRemuneraciones(tab){
+  const tabs = { generar:'sub-tab-rem-generar', emitidas:'sub-tab-rem-emitidas' };
+  Object.entries(tabs).forEach(([key, id]) => {
+    const panel = document.getElementById(id);
+    const btn   = document.getElementById('tab-rem-' + key);
+    if(panel) panel.style.display = key === tab ? '' : 'none';
+    if(btn){
+      btn.style.borderBottomColor = key === tab ? 'var(--azul)' : 'transparent';
+      btn.style.color = key === tab ? 'var(--azul)' : 'var(--texto2)';
+    }
+  });
+  if(tab === 'generar') renderReporteLiquidaciones();
+  else renderListaLiquidaciones();
+}
+
 function initLiquidaciones(){
   cargarLiquidaciones();
   cargarIndicadores();
@@ -27,11 +42,165 @@ function initLiquidaciones(){
   const mesAnt= new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
   const periodoDefault = `${mesAnt.getFullYear()}-${String(mesAnt.getMonth()+1).padStart(2,'0')}`;
 
-  const sel = document.getElementById('liq-periodo-selector');
-  if(sel && !sel.value) sel.value = periodoDefault;
+  const selGen = document.getElementById('rep-liq-periodo');
+  if(selGen && !selGen.value) selGen.value = periodoDefault;
+  const selEmit = document.getElementById('liq-periodo-selector');
+  if(selEmit && !selEmit.value) selEmit.value = periodoDefault;
 
   _poblarSelectsLiquidacion();
-  renderListaLiquidaciones();
+  switchTabRemuneraciones('generar');
+}
+
+function limpiarFiltroEmpresaLiq(){
+  const el = document.getElementById('liq-filtro-mandante');
+  if(el){ el.value = ''; renderListaLiquidaciones(); }
+}
+
+function limpiarFiltroTrabajadorLiq(){
+  const el = document.getElementById('liq-filtro-trabajador');
+  if(el){ el.value = ''; renderListaLiquidaciones(); }
+}
+
+/* ════════════════════════════════════════════════════════
+   PESTAÑA "GENERAR LIQUIDACIONES" — reporte en vivo
+   ════════════════════════════════════════════════════════ */
+let _seleccionadosRepLiq = new Set();
+
+function _mesAdyacente(periodo, delta){
+  const [anio, mes] = periodo.split('-').map(Number);
+  const d = new Date(anio, (mes-1)+delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+/* ¿Este trabajador tiene bonos, horas extra o descuentos fechados en el
+   mes anterior o siguiente al que se está viendo? No es un error — solo
+   un aviso, para que un dato mal fechado por accidente no pase
+   desapercibido como "no tiene nada" (el caso real que encontramos). */
+function _tieneDatosFueraDePeriodo(rut, periodo){
+  const antes   = _mesAdyacente(periodo, -1);
+  const despues = _mesAdyacente(periodo, 1);
+  const cerca   = p => p === antes || p === despues;
+  const enHaberes  = haberes_variables.filter(h => h.trabajador_rut===rut && cerca(h.periodo)).length;
+  const enJornada  = jornada_especial.filter(j => j.trabajador_rut===rut && cerca(j.periodo)).length;
+  const enDescuentos = descuentos.filter(d => d.trabajador_rut===rut && cerca(d.periodo)).length;
+  return enHaberes + enJornada + enDescuentos;
+}
+
+function renderReporteLiquidaciones(){
+  const periodo  = document.getElementById('rep-liq-periodo')?.value;
+  const empresa  = document.getElementById('rep-liq-empresa')?.value;
+  const tbody    = document.getElementById('tbody-reporte-liquidaciones');
+  if(!tbody) return;
+
+  _seleccionadosRepLiq.clear();
+  _actualizarBotonGenerarSeleccionadas();
+
+  if(!periodo || !empresa){
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--texto3);">Selecciona un período y una empresa</td></tr>';
+    return;
+  }
+
+  const lista = trabajadores.filter(t => t.estado==='activo' && t.empresa_propia_id===empresa);
+  if(!lista.length){
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--texto3);">No hay trabajadores activos en esta empresa</td></tr>';
+    return;
+  }
+
+  const ind = getIndicadoresPorPeriodo(periodo);
+  if(!ind){
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--texto3);">⚠️ No hay indicadores previsionales para ${getNombreMes(periodo)} — regístralos primero en Previsión</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = lista.map(t => {
+    const vars = construirVariablesRemuneracion(t.rut, periodo);
+    if(vars.error){
+      return `<tr>
+        <td></td><td>${t.nombre}</td>
+        <td colspan="6" style="color:var(--texto3);font-size:12px;">⚠️ ${vars.error}</td>
+        <td></td>
+      </tr>`;
+    }
+    const liq = calcularLiquidacion(vars, periodo);
+    const bonos       = [...vars.haberes_imponibles, ...vars.haberes_no_imponibles]
+      .reduce((s,h) => s + (parseFloat(h.monto)||0), 0);
+    const horasExtra  = vars.total_horas_extra_imponible;
+    const descuentos_ = liq.total_descuentos;
+    const fueraDePeriodo = _tieneDatosFueraDePeriodo(t.rut, periodo);
+
+    return `<tr>
+      <td><input type="checkbox" class="chk-rep-liq" data-rut="${t.rut}" onchange="toggleCheckRepLiq('${t.rut}', this.checked)" style="accent-color:var(--verde);width:16px;height:16px;"></td>
+      <td style="font-weight:500;">${t.nombre}<div style="font-size:11px;color:var(--texto3);">${t.rut}</div></td>
+      <td style="text-align:right;">$${liq.sueldo_base.toLocaleString('es-CL')}</td>
+      <td style="text-align:right;">${bonos>0 ? '$'+bonos.toLocaleString('es-CL') : '—'}</td>
+      <td style="text-align:right;">${horasExtra>0 ? '$'+horasExtra.toLocaleString('es-CL') : '—'}</td>
+      <td style="text-align:right;color:var(--rojo);">${descuentos_>0 ? '-$'+descuentos_.toLocaleString('es-CL') : '—'}</td>
+      <td style="text-align:right;font-weight:600;">$${liq.liquido.toLocaleString('es-CL')}</td>
+      <td>${fueraDePeriodo ? `<span class="badge badge-amarillo" title="${fueraDePeriodo} registro(s) en el mes anterior o siguiente — revisa que no esté mal fechado">⚠️ ${fueraDePeriodo}</span>` : ''}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="previsualizarLiquidacion('${t.rut}')" title="Vista previa"><i class="ti ti-eye"></i></button>
+        <button class="btn btn-secondary btn-sm" onclick="generarLiquidacionIndividualFila('${t.rut}')" title="Generar solo esta"><i class="ti ti-file-invoice"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleCheckRepLiq(rut, checked){
+  if(checked) _seleccionadosRepLiq.add(rut);
+  else _seleccionadosRepLiq.delete(rut);
+  _actualizarBotonGenerarSeleccionadas();
+}
+
+function toggleSeleccionarTodosRepLiq(checked){
+  document.querySelectorAll('.chk-rep-liq').forEach(el => {
+    el.checked = checked;
+    if(checked) _seleccionadosRepLiq.add(el.dataset.rut);
+    else _seleccionadosRepLiq.delete(el.dataset.rut);
+  });
+  _actualizarBotonGenerarSeleccionadas();
+}
+
+function _actualizarBotonGenerarSeleccionadas(){
+  const btn = document.getElementById('btn-generar-seleccionadas');
+  const txt = document.getElementById('txt-generar-seleccionadas');
+  const n = _seleccionadosRepLiq.size;
+  if(btn) btn.disabled = n === 0;
+  if(txt) txt.textContent = n === 0 ? 'Generar liquidaciones seleccionadas'
+    : n === 1 ? 'Generar liquidación seleccionada (1)'
+    : `Generar liquidaciones seleccionadas (${n})`;
+}
+
+function generarLiquidacionIndividualFila(rut){
+  const periodo = document.getElementById('rep-liq-periodo')?.value;
+  if(!periodo || !_verificarPreCondiciones(periodo)) return;
+  const liq = calcularYGuardarLiquidacion(rut, periodo);
+  if(liq.error){ toast(`❌ ${liq.error}`, 'error'); return; }
+  toast(`✅ Liquidación generada — ${liq.nombre}`, 'exito');
+  _actualizarBadgeLiquidacionesEmitidas();
+}
+
+function generarLiquidacionesSeleccionadas(){
+  const periodo = document.getElementById('rep-liq-periodo')?.value;
+  if(!periodo || !_verificarPreCondiciones(periodo)) return;
+  if(!_seleccionadosRepLiq.size){ toast('⚠️ Selecciona al menos un trabajador','error'); return; }
+
+  let ok = 0, errores = 0;
+  _seleccionadosRepLiq.forEach(rut => {
+    const liq = calcularYGuardarLiquidacion(rut, periodo);
+    if(liq.error) errores++; else ok++;
+  });
+
+  toast(`✅ ${ok} liquidación${ok===1?'':'es'} generada${ok===1?'':'s'}${errores?` — ${errores} con error`:''}`, errores ? 'error' : 'exito');
+  _actualizarBadgeLiquidacionesEmitidas();
+  const selEmit = document.getElementById('liq-periodo-selector');
+  if(selEmit) selEmit.value = periodo;
+  switchTabRemuneraciones('emitidas');
+}
+
+function _actualizarBadgeLiquidacionesEmitidas(){
+  const periodo = document.getElementById('rep-liq-periodo')?.value || document.getElementById('liq-periodo-selector')?.value;
+  const badge = document.getElementById('badge-tab-liq-emitidas');
+  if(badge) badge.textContent = liquidaciones_guardadas.filter(l => l.periodo===periodo).length;
 }
 
 function _poblarSelectsLiquidacion(){
@@ -41,6 +210,18 @@ function _poblarSelectsLiquidacion(){
     selEmpresa.innerHTML = '<option value="">Todas las empresas</option>'
       + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
     if(val) selEmpresa.value = val;
+  }
+  const selRep = document.getElementById('rep-liq-empresa');
+  if(selRep){
+    const val = selRep.value;
+    if((empresas_propias||[]).length === 1){
+      selRep.innerHTML = `<option value="${empresas_propias[0].id}">${empresas_propias[0].nombre||empresas_propias[0].razon_social}</option>`;
+      selRep.value = empresas_propias[0].id;
+    } else {
+      selRep.innerHTML = '<option value="">— Selecciona una empresa —</option>'
+        + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
+      if(val) selRep.value = val;
+    }
   }
 }
 
@@ -61,7 +242,7 @@ function _verificarPreCondiciones(periodo){
 
 /* ── CALCULAR PREVIEW (sin guardar) ─────────────────────── */
 function previsualizarLiquidacion(rut){
-  const periodo = document.getElementById('liq-periodo-selector')?.value;
+  const periodo = document.getElementById('rep-liq-periodo')?.value || document.getElementById('liq-periodo-selector')?.value;
   if(!periodo){ toast('⚠️ Selecciona el período primero', 'error'); return; }
   if(!_verificarPreCondiciones(periodo)) return;
 
@@ -75,11 +256,8 @@ function previsualizarLiquidacion(rut){
   _mostrarModalLiquidacion(liq, false);
 }
 
-function previsualizarLiquidacionSeleccionada(){
-  const rut = document.getElementById('liq-sel-trabajador')?.value;
-  if(!rut){ toast('⚠️ Selecciona un trabajador', 'error'); return; }
-  previsualizarLiquidacion(rut);
-}
+/* previsualizarLiquidacionSeleccionada() se sacó junto con el resto —
+   ver nota más abajo. */
 
 /* ── CALCULAR Y GUARDAR ─────────────────────────────────── */
 function calcularYGuardarLiquidacion(rut, periodo){
@@ -88,12 +266,17 @@ function calcularYGuardarLiquidacion(rut, periodo){
   const liq  = calcularLiquidacion(vars, periodo);
   if(liq.error) return { error: liq.error };
 
-  liq.folio          = _generarFolio(periodo);
+  // ✅ Corregido — antes se generaba un folio NUEVO cada vez que se
+  // recalculaba una liquidación ya existente (ej. para corregir un
+  // error), dejando folios huérfanos y pudiendo repetir el mismo folio
+  // en otro trabajador distinto. Ahora: si ya existía para este rut+
+  // período, se reusa su folio — es la misma liquidación, corregida,
+  // no un documento nuevo.
+  const idx = liquidaciones_guardadas.findIndex(l => l.rut === rut && l.periodo === periodo);
+  liq.folio          = idx >= 0 ? liquidaciones_guardadas[idx].folio : _generarFolio(periodo);
   liq.fecha_emision  = hoyISO();
   liq.estado         = 'generada';
 
-  // Reemplazar si ya existe para este período y rut
-  const idx = liquidaciones_guardadas.findIndex(l => l.rut === rut && l.periodo === periodo);
   if(idx >= 0) liquidaciones_guardadas[idx] = liq;
   else liquidaciones_guardadas.push(liq);
 
@@ -112,50 +295,12 @@ function calcularYGuardarLiquidacion(rut, periodo){
   return liq;
 }
 
-function generarLiquidacionIndividual(){
-  const rut    = document.getElementById('liq-sel-trabajador')?.value;
-  const periodo= document.getElementById('liq-periodo-selector')?.value;
-  if(!rut)   { toast('⚠️ Selecciona un trabajador', 'error'); return; }
-  if(!periodo){ toast('⚠️ Selecciona el período', 'error'); return; }
-  if(!_verificarPreCondiciones(periodo)) return;
-
-  const liq = calcularYGuardarLiquidacion(rut, periodo);
-  if(liq.error){ toast(`❌ ${liq.error}`, 'error'); return; }
-
-  toast(`✅ Liquidación generada — Folio ${liq.folio}`, 'exito');
-  renderListaLiquidaciones();
-  _mostrarModalLiquidacion(liq, true);
-}
-
-function generarLiquidacionesMasivas(){
-  const periodo  = document.getElementById('liq-periodo-selector')?.value;
-  const mandante = document.getElementById('liq-filtro-mandante')?.value;
-  if(!periodo){ toast('⚠️ Selecciona el período', 'error'); return; }
-  if(!_verificarPreCondiciones(periodo)) return;
-
-  const lista = mandante
-    ? construirVariablesMandante(periodo, mandante)
-    : construirVariablesPeriodo(periodo);
-
-  if(!lista.length){ toast('⚠️ Sin trabajadores para calcular', 'error'); return; }
-
-  let ok = 0, errores = [];
-  lista.forEach(vars => {
-    const liq = calcularYGuardarLiquidacion(vars.rut, periodo);
-    if(liq.error) errores.push(`${vars.nombre}: ${liq.error}`);
-    else ok++;
-  });
-
-  guardarLiquidaciones();
-  renderListaLiquidaciones();
-
-  if(errores.length){
-    toast(`⚠️ ${ok} generadas · ${errores.length} con error — revisa la consola`, 'error');
-    console.warn('Errores en generación masiva:', errores);
-  } else {
-    toast(`✅ ${ok} liquidación${ok>1?'es':''} generada${ok>1?'s':''}`, 'exito');
-  }
-}
+/* ✅ generarLiquidacionIndividual(), generarLiquidacionesMasivas() y
+   previsualizarLiquidacionSeleccionada() se sacaron — reemplazadas por
+   generarLiquidacionIndividualFila()/generarLiquidacionesSeleccionadas()
+   de la pestaña "Generar Liquidaciones" (tabla-reporte + checkboxes).
+   previsualizarLiquidacion(rut) se mantiene — la sigue usando el botón
+   de vista previa (👁) de cada fila de esa misma tabla. */
 
 /* ── FOLIO CORRELATIVO ──────────────────────────────────── */
 function _generarFolio(periodo){
@@ -167,9 +312,10 @@ function _generarFolio(periodo){
 
 /* ── LISTA DE LIQUIDACIONES ─────────────────────────────── */
 function renderListaLiquidaciones(){
-  const periodo  = document.getElementById('liq-periodo-selector')?.value || '';
-  const mandante = document.getElementById('liq-filtro-mandante')?.value  || '';
-  const tbody    = document.getElementById('tbody-liquidaciones');
+  const periodo    = document.getElementById('liq-periodo-selector')?.value || '';
+  const mandante   = document.getElementById('liq-filtro-mandante')?.value  || '';
+  const busqueda   = (document.getElementById('liq-filtro-trabajador')?.value || '').trim().toLowerCase();
+  const tbody      = document.getElementById('tbody-liquidaciones');
   if(!tbody) return;
 
   let lista = liquidaciones_guardadas.filter(l => !periodo || l.periodo === periodo);
@@ -182,16 +328,25 @@ function renderListaLiquidaciones(){
       .map(t => t.rut);
     lista = lista.filter(l => ruts.includes(l.rut));
   }
+  if(busqueda){
+    lista = lista.filter(l =>
+      (l.nombre||'').toLowerCase().includes(busqueda) ||
+      (l.rut||'').toLowerCase().includes(busqueda));
+  }
+
+  const badge = document.getElementById('badge-tab-liq-emitidas');
+  if(badge) badge.textContent = liquidaciones_guardadas.filter(l => !periodo || l.periodo === periodo).length;
 
   if(!lista.length){
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:28px;color:var(--texto3);">
-      Sin liquidaciones para este período — genera las liquidaciones con el botón superior</td></tr>`;
+      Sin liquidaciones para este período — genera las liquidaciones desde la pestaña "Generar Liquidaciones"</td></tr>`;
     _renderResumenPeriodo([]);
     return;
   }
 
   lista.sort((a,b) => a.nombre?.localeCompare(b.nombre));
-  tbody.innerHTML = lista.map(l => `<tr>
+  _listaLiqActual = lista;
+  tbody.innerHTML = lista.map((l, i) => `<tr>
     <td style="font-size:13px;font-weight:500;">${l.nombre}</td>
     <td class="rut-mono">${l.rut}</td>
     <td style="font-size:12px;text-align:right;">$${l.total_haberes?.toLocaleString('es-CL')||'—'}</td>
@@ -215,20 +370,36 @@ function renderListaLiquidaciones(){
 
 function _renderResumenPeriodo(lista){
   const setKPI = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
-  const total_hab  = lista.reduce((s,l) => s + (l.total_haberes||0), 0);
-  const total_desc = lista.reduce((s,l) => s + (l.total_descuentos||0), 0);
-  const total_liq  = lista.reduce((s,l) => s + (l.liquido||0), 0);
+  const total_sueldos   = lista.reduce((s,l) => s + (l.sueldo_base||0), 0);
+  const total_variables = lista.reduce((s,l) => s + ((l.total_haberes||0) - (l.sueldo_proporcional||0)), 0);
+  const total_desc_leg  = lista.reduce((s,l) => s + (l.total_prev_trab||0) + (l.iusc||0), 0);
+  const total_desc_emp  = lista.reduce((s,l) => s + (l.total_desc_adicionales||0), 0);
+  const total_liq       = lista.reduce((s,l) => s + (l.liquido||0), 0);
+  const fmt = n => lista.length ? '$'+n.toLocaleString('es-CL') : '—';
+
   setKPI('liq-kpi-trabajadores', lista.length);
-  setKPI('liq-kpi-haberes',      lista.length ? '$'+total_hab.toLocaleString('es-CL')  : '—');
-  setKPI('liq-kpi-descuentos',   lista.length ? '$'+total_desc.toLocaleString('es-CL') : '—');
-  setKPI('liq-kpi-liquido',      lista.length ? '$'+total_liq.toLocaleString('es-CL')  : '—');
+  setKPI('liq-kpi-sueldos',      fmt(total_sueldos));
+  setKPI('liq-kpi-variables',    fmt(total_variables));
+  setKPI('liq-kpi-desc-legales', fmt(total_desc_leg));
+  setKPI('liq-kpi-desc-empresa', fmt(total_desc_emp));
+  setKPI('liq-kpi-liquido',      fmt(total_liq));
 }
 
 /* ── VER LIQUIDACIÓN GUARDADA ───────────────────────────── */
+let _listaLiqActual = [];
+let _indiceLiqActual = -1;
+
 function verLiquidacion(rut, periodo){
   const liq = liquidaciones_guardadas.find(l => l.rut === rut && l.periodo === periodo);
   if(!liq){ toast('⚠️ Liquidación no encontrada', 'error'); return; }
+  _indiceLiqActual = _listaLiqActual.findIndex(l => l.rut === rut && l.periodo === periodo);
   _mostrarModalLiquidacion(liq, true);
+}
+
+function _navModalLiquidacion(delta){
+  if(_indiceLiqActual < 0 || !_listaLiqActual.length) return;
+  _indiceLiqActual = (_indiceLiqActual + delta + _listaLiqActual.length) % _listaLiqActual.length;
+  _mostrarModalLiquidacion(_listaLiqActual[_indiceLiqActual], true);
 }
 
 /* ── MODAL CON LA LIQUIDACIÓN ───────────────────────────── */
@@ -240,19 +411,29 @@ function _mostrarModalLiquidacion(liq, guardada){
   cont.innerHTML = _generarHTMLLiquidacion(liq, guardada);
   overlay.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+
+  // Navegación ◀▶ — solo si venimos de la lista (guardada) y hay más de una
+  const nav = document.getElementById('liq-modal-nav');
+  const mostrarNav = guardada && _indiceLiqActual >= 0 && _listaLiqActual.length > 1;
+  if(nav) nav.style.display = mostrarNav ? 'flex' : 'none';
+  if(mostrarNav){
+    const contador = document.getElementById('liq-modal-nav-contador');
+    if(contador) contador.textContent = `${_indiceLiqActual+1} / ${_listaLiqActual.length}`;
+  }
 }
 
 function cerrarModalLiquidacion(){
   const overlay = document.getElementById('liq-modal-overlay');
   if(overlay) overlay.style.display = 'none';
   document.body.style.overflow = '';
+  _indiceLiqActual = -1;
 }
 
 /* ── GENERAR HTML DE LIQUIDACIÓN ─────────────────────────── */
 function _generarHTMLLiquidacion(liq, guardada){
   const ind     = getIndicadoresPorPeriodo(liq.periodo);
   const t       = trabajadores.find(x => x.rut === liq.rut);
-  const cont    = contratos.find(c => c.trabajador_rut === liq.rut || c.trabajador_id === t?.id);
+  const cont    = contratos.find(c => c.trabajador_rut === liq.rut || (c.trabajador_id && c.trabajador_id === t?.id));
   const mandante= t ? findMandante(t) : null;
   const ep      = getEmpresaEmpleadora(cont?.empresa_propia_id);
 
@@ -262,7 +443,10 @@ function _generarHTMLLiquidacion(liq, guardada){
   const fmtFecha = v => v ? new Date(v+'T12:00:00').toLocaleDateString('es-CL') : '—';
   const fmtM     = v => v != null ? '$'+Math.round(v).toLocaleString('es-CL') : '—';
   const badgeTipo = tipo => {
-    const map = { indefinido:'Indefinido', fijo:'Plazo Fijo', temporada:'Temporada' };
+    // ✅ Corregido — el mapa usaba 'fijo' pero el valor real que guarda
+    // el contrato es 'plazo_fijo'. Se mantiene 'fijo' como alias por si
+    // en algún punto se pasa el valor ya normalizado para AFC.
+    const map = { indefinido:'Indefinido', plazo_fijo:'Plazo Fijo', fijo:'Plazo Fijo', temporada:'Temporada' };
     return `<span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:500;padding:2px 8px;border-radius:99px;">${map[tipo]||tipo}</span>`;
   };
 
@@ -386,7 +570,7 @@ function _generarHTMLLiquidacion(liq, guardada){
           <div class="ld-row"><span class="ld-row-label">Nombre</span><span class="ld-row-val">${liq.nombre}</span></div>
           <div class="ld-row"><span class="ld-row-label">RUT</span><span class="ld-row-val">${liq.rut}</span></div>
           ${t?.funcion_cargo ? `<div class="ld-row"><span class="ld-row-label">Cargo</span><span class="ld-row-val">${t.funcion_cargo}</span></div>` : ''}
-          <div class="ld-row"><span class="ld-row-label">Contrato</span><span class="ld-row-val">${badgeTipo(liq.tipo_contrato)}</span></div>
+          <div class="ld-row"><span class="ld-row-label">Contrato</span><span class="ld-row-val">${badgeTipo(cont?.tipo || cont?.tipo_contrato || liq.tipo_contrato)}</span></div>
           <div class="ld-row"><span class="ld-row-label">Inicio contrato</span><span class="ld-row-val">${fmtFecha(liq.fecha_inicio_contrato)}</span></div>
           <div class="ld-row"><span class="ld-row-label">Días mes / trabajados</span><span class="ld-row-val">30 / ${30 - (liq.dias_a_descontar||0)}</span></div>
           <div class="ld-row"><span class="ld-row-label">AFP</span><span class="ld-row-val">${_capitalizar(liq.afp||'—')} (${liq.pct_afp_trab||'—'}%)</span></div>
