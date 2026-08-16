@@ -1669,7 +1669,11 @@
               <div class="form-group"><label>Mes</label>
                 <input type="month" id="gl-des-rev-mes" class="campo-fecha"></div>
               <div class="form-group"><label>Empresa</label>
-                <select id="gl-des-rev-empresa"><option value="">Todas las Empresas</option></select></div>
+                <div style="display:flex;gap:4px;">
+                  <select id="gl-des-rev-empresa" style="flex:1;"><option value="">Todas las Empresas</option></select>
+                  <button type="button" class="btn btn-sm" onclick="limpiarFiltroEmpresaDescuento()" title="Limpiar empresa" style="background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;">✕</button>
+                </div>
+              </div>
               <div class="form-group" style="position:relative;"><label>Trabajador</label>
                 <div style="display:flex;gap:4px;">
                   <input type="text" id="gl-des-rev-trabajador-input" placeholder="Buscar por nombre o RUT (todos por defecto)" autocomplete="off" style="flex:1;">
@@ -1929,15 +1933,15 @@
               <div class="form-grid" style="margin-bottom:16px;">
                 <div class="form-group">
                   <label>Valor UF ($)</label>
-                  <input type="text" id="ind-f-uf" placeholder="39.485,65" oninput="formatearUF(this)">
+                  <input type="text" id="ind-f-uf" placeholder="40.873,77" oninput="formatearUF(this)">
                 </div>
                 <div class="form-group">
                   <label>UTM ($)</label>
-                  <input type="text" id="ind-f-utm" placeholder="69.265" oninput="formatearMiles(this)">
+                  <input type="text" id="ind-f-utm" placeholder="71.649" oninput="formatearMiles(this)">
                 </div>
                 <div class="form-group">
                   <label>UTA ($)</label>
-                  <input type="text" id="ind-f-uta" placeholder="831.180" oninput="formatearMiles(this)">
+                  <input type="text" id="ind-f-uta" placeholder="859.788" oninput="formatearMiles(this)">
                 </div>
                 <div class="form-group">
                   <label>Período (AAAA-MM)</label>
@@ -1954,24 +1958,24 @@
               </div>
               <div class="form-grid" style="margin-bottom:16px;">
                 <div class="form-group">
-                  <label>Tope imponible AFP — 87,8 UF ($)</label>
-                  <input type="text" id="ind-f-tope-afp" placeholder="3.466.840" oninput="formatearMiles(this)">
+                  <label>Tope imponible AFP — 90 UF ($)</label>
+                  <input type="text" id="ind-f-tope-afp" placeholder="3.678.639" oninput="formatearMiles(this)">
                 </div>
                 <div class="form-group">
-                  <label>Tope imponible AFC — 131,9 UF ($)</label>
-                  <input type="text" id="ind-f-tope-afc" placeholder="5.208.157" oninput="formatearMiles(this)">
+                  <label>Tope imponible AFC — 135,2 UF ($)</label>
+                  <input type="text" id="ind-f-tope-afc" placeholder="5.526.134" oninput="formatearMiles(this)">
                 </div>
                 <div class="form-group">
                   <label>Renta mínima — Dependientes ($)</label>
-                  <input type="text" id="ind-f-renta-min" placeholder="529.000" oninput="formatearMiles(this)">
+                  <input type="text" id="ind-f-renta-min" placeholder="553.553" oninput="formatearMiles(this)">
                 </div>
                 <div class="form-group">
                   <label>Renta mínima — Menores 18 / Mayores 65 ($)</label>
-                  <input type="text" id="ind-f-renta-menor18" placeholder="394.622" oninput="formatearMiles(this)">
+                  <input type="text" id="ind-f-renta-menor18" placeholder="412.938" oninput="formatearMiles(this)">
                 </div>
                 <div class="form-group">
                   <label>Renta mínima — Casa Particular ($)</label>
-                  <input type="text" id="ind-f-renta-casa" placeholder="529.000" oninput="formatearMiles(this)">
+                  <input type="text" id="ind-f-renta-casa" placeholder="553.553" oninput="formatearMiles(this)">
                 </div>
               </div>
 
