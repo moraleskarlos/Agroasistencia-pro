@@ -141,16 +141,16 @@ function _getSueldoBase(rut, periodo){
 
   // Buscar último anexo de cambio_remuneracion vigente para el período
   const [anio, mes] = periodo.split('-').map(Number);
-  const fechaPeriodo = new Date(anio, mes-1, 1);
+  const fechaPeriodo = new Date(anio, mes-1, 1, 12); // mismo ancla de mediodía que el resto
 
   const anexoRem = (anexos || [])
     .filter(a =>
       (a.trabajador_rut === rut) &&
       a.tipo === 'cambio_remuneracion' &&
       a.nuevo_sueldo > 0 &&
-      new Date(a.fecha_vigencia) <= fechaPeriodo
+      fechaLocal(a.fecha_vigencia) <= fechaPeriodo
     )
-    .sort((a,b) => new Date(b.fecha_vigencia) - new Date(a.fecha_vigencia))[0];
+    .sort((a,b) => fechaLocal(b.fecha_vigencia) - fechaLocal(a.fecha_vigencia))[0];
 
   // El anexo más reciente vigente prevalece sobre el contrato
   if(anexoRem?.nuevo_sueldo){
@@ -184,7 +184,14 @@ function _getContratoVigente(rut, periodo){
   );
 
   const [anio, mes] = periodo.split('-').map(Number);
-  const fechaPeriodo = new Date(anio, mes-1, 1);
+  // ✅ Corregido — antes fechaPeriodo se anclaba a medianoche mientras
+  // fechaLocal() (usada abajo para inicio/fin) ancla a mediodía. Ese
+  // desfase de 12 horas podía hacer fallar la comparación justo cuando
+  // un contrato empezaba el día 1 exacto del período — y como el
+  // fallback de más abajo devuelve "el más reciente" en silencio, el
+  // error quedaba escondido en vez de notarse. Ahora ambas fechas usan
+  // el mismo ancla de mediodía.
+  const fechaPeriodo = new Date(anio, mes-1, 1, 12);
 
   // Buscar contrato cuya fecha de inicio ≤ período y sin término o término ≥ período
   const vigente = ordenados.find(c => {

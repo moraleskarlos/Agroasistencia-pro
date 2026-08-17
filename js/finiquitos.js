@@ -206,6 +206,13 @@ function marcarFiniquitoRatificado(folio){
   f.estado = 'ratificado';
   f.fecha_ratificacion = hoyISO();
   guardarFiniquitos();
+
+  // ✅ NUEVO — hasta ahora nada marcaba al trabajador como inactivo al
+  // ratificar su finiquito, quedaba 'activo' para siempre en el
+  // sistema. Esto es lo que permite detectar un reingreso más adelante.
+  const t = trabajadores.find(x => x.rut === f.rut);
+  if(t){ t.estado = 'inactivo'; guardarLocal(); }
+
   renderListaFiniquitos();
   toast('✅ Finiquito marcado como ratificado', 'exito');
 }

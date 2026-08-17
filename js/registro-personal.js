@@ -118,6 +118,9 @@ function validarFormularioTrabajador(datos, idOriginal){
   // RP-001/002: RUT duplicado — solo se permite si estamos editando ESE mismo trabajador
   const existente = trabajadores.find(t => t.rut === datos.rut);
   if(existente && existente.id !== idOriginal){
+    if(existente.estado === 'inactivo'){
+      return { ok:false, mensaje:`${existente.nombre} ya existe en el sistema (finiquitado) — usa el aviso de reingreso que aparece arriba del RUT para reactivarlo, en vez de completar este formulario.` };
+    }
     return { ok:false, mensaje:`Ya existe un trabajador registrado con el RUT ${datos.rut} (${existente.nombre}). Ve al módulo "Trabajadores" y usa "Editar ficha" en vez de crear uno nuevo.` };
   }
 
@@ -374,6 +377,86 @@ function _leerDatosFormularioRegistro(){
     num_doc_migratorio:    document.getElementById('m-num-doc-mig')?.value.trim() || null,
     fecha_venc_migratorio: document.getElementById('m-fecha-venc-mig')?.value || null,
   };
+}
+
+/* Se dispara al escribir el RUT en Registro Individual. Si ese RUT ya
+   existe en el sistema y está inactivo (finiquitado), muestra un aviso
+   para reactivarlo en vez de dejar que el usuario intente crear una
+   ficha duplicada — el bloqueo de más abajo (validarFormularioTrabajador)
+   ya no deja completar el formulario en ese caso de todos modos. */
+function detectarReingreso(rutValue){
+  const banner = document.getElementById('banner-reingreso');
+  if(!banner) return;
+
+  if(!validarRUT(rutValue)){
+    banner.style.display = 'none';
+    banner.innerHTML = '';
+    return;
+  }
+
+  const idOriginal = document.getElementById('m-rut-original')?.value || '';
+  const existente = trabajadores.find(t => t.rut === rutValue && t.id !== idOriginal);
+  if(!existente || existente.estado !== 'inactivo'){
+    banner.style.display = 'none';
+    banner.innerHTML = '';
+    return;
+  }
+
+  // Último contrato y último finiquito, para mostrar en qué empresa
+  // trabajó y cuándo se finiquitó — sin necesidad de abrir su ficha.
+  const ultimoContrato = (contratos||[])
+    .filter(c => c.trabajador_rut === rutValue)
+    .sort((a,b) => (b.fecha_inicio||'').localeCompare(a.fecha_inicio||''))[0];
+  const empresaAnterior = (empresas_propias||[]).find(e => e.id === ultimoContrato?.empresa_propia_id);
+  const ultimoFiniquito = (finiquitos_guardados||[])
+    .filter(f => f.rut === rutValue)
+    .sort((a,b) => (b.fecha_ratificacion||b.fecha_emision||'').localeCompare(a.fecha_ratificacion||a.fecha_emision||''))[0];
+
+  const opcionesEmpresa = (empresas_propias||[])
+    .map(e => `<option value="${e.id}" ${e.id===ultimoContrato?.empresa_propia_id?'selected':''}>${e.nombre||e.razon_social}</option>`)
+    .join('');
+
+  banner.style.display = 'block';
+  banner.innerHTML = `
+    <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px 14px;margin-bottom:12px;">
+      <div style="font-size:13px;color:#1E40AF;margin-bottom:10px;">
+        <i class="ti ti-info-circle"></i> <strong>${existente.nombre}</strong> ya existe en el sistema — finiquitado${ultimoFiniquito?.fecha_ratificacion ? ' el '+_fmtFecha(ultimoFiniquito.fecha_ratificacion) : ''}${empresaAnterior ? ' en '+(empresaAnterior.nombre||empresaAnterior.razon_social) : ''}.
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:11px;">Reingresa con la empresa</label>
+          <select id="reingreso-empresa-nueva" style="padding:6px 10px;font-size:13px;">${opcionesEmpresa}</select>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="reactivarTrabajadorReingreso('${existente.id}')">
+          <i class="ti ti-refresh"></i> Reactivar con sus datos
+        </button>
+      </div>
+    </div>`;
+}
+
+/* Reactiva a un trabajador ya existente conservando TODOS sus datos —
+   no crea una ficha nueva. Actualiza empresa_propia_id a la elegida en
+   el banner (puede ser la misma de antes, o una nueva) — sin esto, el
+   trabajador quedaba reactivado pero invisible en la lista de
+   "pendientes de contrato" de Contratos, porque ese filtro exige que
+   empresa_propia_id ya coincida con la empresa elegida ahí. El
+   contrato en sí se sigue generando aparte, en Contratos. */
+function reactivarTrabajadorReingreso(id){
+  const t = trabajadores.find(x => x.id === id);
+  if(!t) return;
+  const empresaNueva = document.getElementById('reingreso-empresa-nueva')?.value || t.empresa_propia_id;
+  const nombreEmpresa = (empresas_propias||[]).find(e => e.id === empresaNueva)?.nombre || '—';
+  if(!confirm(`¿Reactivar a ${t.nombre} con ${nombreEmpresa}? Se van a conservar todos sus datos personales — después andá a Contratos para generarle el contrato nuevo.`)) return;
+
+  t.estado = 'activo';
+  t.empresa_propia_id = empresaNueva;
+  guardarLocal();
+
+  const banner = document.getElementById('banner-reingreso');
+  if(banner){ banner.style.display = 'none'; banner.innerHTML = ''; }
+  limpiarFormulario();
+
+  toast(`✅ ${t.nombre} reactivado — ahora andá a Contratos para generarle el contrato nuevo`, 'exito');
 }
 
 async function guardarTrabajador(e){

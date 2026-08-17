@@ -33,13 +33,13 @@ function _poblarFiltroMandanteLibro(){
 function _getLiquidacionesPeriodo(periodo, empresaId){
   let lista = liquidaciones_guardadas.filter(l => l.periodo === periodo);
   if(empresaId){
-    const ruts = trabajadores
-      .filter(t => {
-        const c = contratos.find(x => x.trabajador_rut === t.rut);
-        return c?.empresa_propia_id === empresaId;
-      })
-      .map(t => t.rut);
-    lista = lista.filter(l => ruts.includes(l.rut));
+    // ✅ Mismo arreglo que en liquidaciones.js — contrato vigente del
+    // período específico de cada liquidación, no "el primero que
+    // encuentra" (importante con Carpeta Empresa / reingresos).
+    lista = lista.filter(l => {
+      const c = _getContratoVigente(l.rut, l.periodo);
+      return c?.empresa_propia_id === empresaId;
+    });
   }
   return lista.sort((a,b) => (a.nombre||'').localeCompare(b.nombre||''));
 }

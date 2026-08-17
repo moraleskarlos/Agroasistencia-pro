@@ -320,13 +320,16 @@ function renderListaLiquidaciones(){
 
   let lista = liquidaciones_guardadas.filter(l => !periodo || l.periodo === periodo);
   if(mandante){
-    const ruts = trabajadores
-      .filter(t => {
-        const c = contratos.find(x => x.trabajador_rut === t.rut);
-        return c?.empresa_propia_id === mandante;
-      })
-      .map(t => t.rut);
-    lista = lista.filter(l => ruts.includes(l.rut));
+    // ✅ Corregido — antes tomaba "el primer contrato que encuentra" del
+    // trabajador, sin importar el período. Con Carpeta Empresa (un
+    // trabajador puede tener contratos con más de una empresa a lo
+    // largo del tiempo), eso podía mostrar la empresa equivocada en
+    // liquidaciones de meses viejos. Ahora usa el contrato vigente
+    // específico de CADA liquidación, según su propio período.
+    lista = lista.filter(l => {
+      const c = _getContratoVigente(l.rut, l.periodo);
+      return c?.empresa_propia_id === mandante;
+    });
   }
   if(busqueda){
     lista = lista.filter(l =>
