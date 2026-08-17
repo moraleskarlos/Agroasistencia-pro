@@ -41,12 +41,22 @@
 
 /* Dentro de una barra de color (títulos de card oscuro/ciruela), la
    caja gris se ve pesada — más simple: transparente, el texto se
-   difumina directo sobre el color de fondo que ya tiene detrás. */
+   difumina directo sobre el color de fondo que ya tiene detrás. Cada
+   tipo conserva un resto de su color original (verde apagado para la
+   acción principal, blanco apagado para la secundaria) para que se
+   note la diferencia incluso deshabilitados. */
 .card-title-oscuro .btn:disabled,
 .card-title-oscuro .btn[disabled] {
   background: transparent;
-  color: rgba(255,255,255,0.55);
   border: none;
+}
+.card-title-oscuro .btn-primary:disabled,
+.card-title-oscuro .btn-primary[disabled] {
+  color: rgba(52, 211, 153, 0.65); /* verde apagado */
+}
+.card-title-oscuro .btn-secondary:disabled,
+.card-title-oscuro .btn-secondary[disabled] {
+  color: rgba(255, 255, 255, 0.55); /* blanco apagado */
 }
 
 .btn-secondary {
