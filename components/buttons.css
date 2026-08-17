@@ -30,15 +30,23 @@
 }
 
 /* Antes no había ningún estilo explícito para :disabled — el navegador
-   aplicaba su propio estilo por defecto, que quedaba casi invisible
-   sobre fondos oscuros (ej. el botón "Generar liquidaciones
-   seleccionadas" dentro del título de card ciruela). Gris opaco, sin
-   transparencia, para que se lea igual de bien en cualquier fondo. */
+   aplicaba su propio estilo por defecto, casi invisible en algunos
+   contextos. Gris opaco, legible en fondos claros (formularios, etc). */
 .btn:disabled, .btn[disabled] {
   background: #9CA3AF;
   color: #F9FAFB;
   cursor: not-allowed;
   opacity: 1;
+}
+
+/* Dentro de una barra de color (títulos de card oscuro/ciruela), la
+   caja gris se ve pesada — más simple: transparente, el texto se
+   difumina directo sobre el color de fondo que ya tiene detrás. */
+.card-title-oscuro .btn:disabled,
+.card-title-oscuro .btn[disabled] {
+  background: transparent;
+  color: rgba(255,255,255,0.55);
+  border: none;
 }
 
 .btn-secondary {
