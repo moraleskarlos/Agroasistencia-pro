@@ -39,24 +39,22 @@
   opacity: 1;
 }
 
-/* Dentro de una barra de color (títulos de card oscuro/ciruela), la
-   caja gris se ve pesada — más simple: transparente, el texto se
-   difumina directo sobre el color de fondo que ya tiene detrás. Cada
-   tipo conserva un resto de su color original (verde apagado para la
-   acción principal, blanco apagado para la secundaria) para que se
-   note la diferencia incluso deshabilitados. */
-.card-title-oscuro .btn:disabled,
-.card-title-oscuro .btn[disabled] {
-  background: transparent;
-  border: none;
-}
+/* Dentro de una barra de color (títulos de card oscuro/ciruela): el
+   botón se ve exactamente igual, habilitado o no — mismo color sólido
+   de siempre, puesto encima del fondo. Solo cambia el cursor; el click
+   sigue bloqueado de verdad por el atributo disabled real. */
 .card-title-oscuro .btn-primary:disabled,
 .card-title-oscuro .btn-primary[disabled] {
-  color: rgba(52, 211, 153, 0.65); /* verde apagado */
+  background: var(--color-exito);
+  color: var(--texto-principal-oscuro);
+  cursor: not-allowed;
 }
 .card-title-oscuro .btn-secondary:disabled,
 .card-title-oscuro .btn-secondary[disabled] {
-  color: rgba(255, 255, 255, 0.55); /* blanco apagado */
+  background: var(--blanco);
+  color: var(--texto-principal);
+  border: 1px solid var(--borde-estructural);
+  cursor: not-allowed;
 }
 
 .btn-secondary {
