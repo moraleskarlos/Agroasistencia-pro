@@ -163,11 +163,36 @@ function toggleSeleccionarTodosRepLiq(checked){
 function _actualizarBotonGenerarSeleccionadas(){
   const btn = document.getElementById('btn-generar-seleccionadas');
   const txt = document.getElementById('txt-generar-seleccionadas');
+  const btnVer = document.getElementById('btn-ver-seleccionadas');
+  const txtVer = document.getElementById('txt-ver-seleccionadas');
   const n = _seleccionadosRepLiq.size;
   if(btn) btn.disabled = n === 0;
   if(txt) txt.textContent = n === 0 ? 'Generar liquidaciones seleccionadas'
     : n === 1 ? 'Generar liquidación seleccionada (1)'
     : `Generar liquidaciones seleccionadas (${n})`;
+  if(btnVer) btnVer.disabled = n === 0;
+  if(txtVer) txtVer.textContent = n <= 1 ? 'Ver seleccionadas' : `Ver seleccionadas (${n})`;
+}
+
+/* Vista previa masiva — recorre con ◀▶ las liquidaciones de los
+   trabajadores tildados, calculadas al vuelo, SIN guardar nada.
+   Para revisar antes de confirmar "Generar liquidaciones seleccionadas". */
+function verSeleccionadas(){
+  const periodo = document.getElementById('rep-liq-periodo')?.value;
+  if(!periodo || !_seleccionadosRepLiq.size) return;
+  if(!_verificarPreCondiciones(periodo)) return;
+
+  const lista = [..._seleccionadosRepLiq].map(rut => {
+    const vars = construirVariablesRemuneracion(rut, periodo);
+    return vars.error ? null : calcularLiquidacion(vars, periodo);
+  }).filter(Boolean);
+
+  if(!lista.length){ toast('⚠️ No se pudo calcular ninguna de las seleccionadas', 'error'); return; }
+
+  lista.sort((a,b) => a.nombre?.localeCompare(b.nombre));
+  _listaLiqActual = lista;
+  _indiceLiqActual = 0;
+  _mostrarModalLiquidacion(lista[0], true); // guardada:true solo para activar la navegación ◀▶ — el HTML igual muestra "vista previa, no guardada" porque estas liq no están en liquidaciones_guardadas
 }
 
 function generarLiquidacionIndividualFila(rut){
@@ -436,7 +461,7 @@ function cerrarModalLiquidacion(){
 function _generarHTMLLiquidacion(liq, guardada){
   const ind     = getIndicadoresPorPeriodo(liq.periodo);
   const t       = trabajadores.find(x => x.rut === liq.rut);
-  const cont    = contratos.find(c => c.trabajador_rut === liq.rut || (c.trabajador_id && c.trabajador_id === t?.id));
+  const cont    = _getContratoVigente(liq.rut, liq.periodo);
   const mandante= t ? findMandante(t) : null;
   const ep      = getEmpresaEmpleadora(cont?.empresa_propia_id);
 
