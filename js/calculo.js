@@ -126,6 +126,7 @@ function calcularLiquidacion(vars, periodo){
     rut:             vars.rut,
     nombre:          vars.nombre,
     periodo,
+    fecha_inicio_contrato:    vars.fecha_inicio_contrato,
 
     // Haberes
     sueldo_base:              vars.sueldo_base,
