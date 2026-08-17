@@ -29,6 +29,18 @@
   background: var(--color-exito-hover);
 }
 
+/* Antes no había ningún estilo explícito para :disabled — el navegador
+   aplicaba su propio estilo por defecto, que quedaba casi invisible
+   sobre fondos oscuros (ej. el botón "Generar liquidaciones
+   seleccionadas" dentro del título de card ciruela). Gris opaco, sin
+   transparencia, para que se lea igual de bien en cualquier fondo. */
+.btn:disabled, .btn[disabled] {
+  background: #9CA3AF;
+  color: #F9FAFB;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .btn-secondary {
   background: var(--blanco);
   color: var(--texto-principal);
