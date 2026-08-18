@@ -164,24 +164,24 @@ function _renderLibroDT(lista, periodo){
       <table class="tabla" id="tabla-libro-dt" style="min-width:1400px;font-size:11px;">
         <thead>
           <tr style="background:#0f2942;color:#fff;">
-            <th style="color:#fff;padding:8px 6px;">#</th>
-            <th style="color:#fff;padding:8px 6px;">RUT</th>
-            <th style="color:#fff;padding:8px 6px;">Nombre</th>
-            <th style="color:#fff;padding:8px 6px;text-align:center;">Contrato</th>
-            <th style="color:#fff;padding:8px 6px;text-align:center;">Días</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">Sueldo base</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">Hab. imponibles</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">No imponibles</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">Total haberes</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">Base AFP</th>
-            <th style="color:#fff;padding:8px 6px;text-align:center;">AFP</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">Cot. AFP</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">Cot. Salud</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">AFC</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">IUSC</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">Otros desc.</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">Total desc.</th>
-            <th style="color:#fff;padding:8px 6px;text-align:right;">Líquido</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;">#</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;">RUT</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;">Nombre</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:center;">Contrato</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:center;">Días</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Sueldo base</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Hab. imponibles</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">No imponibles</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Total haberes</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Base AFP</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:center;">AFP</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Cot. AFP</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Cot. Salud</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">AFC</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">IUSC</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Otros desc.</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Total desc.</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Líquido</th>
           </tr>
         </thead>
         <tbody>${filas}</tbody>
