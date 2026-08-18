@@ -202,7 +202,33 @@ function _getContratoVigente(rut, periodo){
     return inicia && termina;
   });
 
-  return vigente || ordenados[0]; // fallback al más reciente
+  if(vigente) return vigente;
+
+  // ✅ BL-067 — antes, si ningún contrato calzaba con el período (`vigente`
+  // vacío), el fallback devolvía sin más "el contrato más reciente" —
+  // que es exactamente el peligro que ya reconocía el comentario de
+  // arriba. Esto se vuelve un problema real con el reingreso (BL-062):
+  // `contratos[]` solo guarda el contrato VIGENTE, así que al iniciar un
+  // ciclo nuevo se pisa el ciclo anterior — si después alguien recalcula
+  // una liquidación (u otro cálculo) de un período que pertenece a ese
+  // ciclo anterior YA FINIQUITADO, el fallback devolvía por error los
+  // datos del ciclo nuevo (otro sueldo, otra faena), sin ningún aviso.
+  //
+  // Blindaje: el fallback "el más reciente" solo tiene sentido si el
+  // período pedido es POSTERIOR al inicio de ese contrato (ej. quedó sin
+  // fecha_termino y el período cae después, caso normal). Si el período
+  // es ANTERIOR al inicio del contrato más reciente, es señal clara de
+  // que pertenece a un ciclo anterior ya reemplazado — no hay datos
+  // confiables para ese período, así que hay que devolver null (cada
+  // llamador ya maneja este caso con su propio mensaje de error) en vez
+  // de adivinar con datos de otro ciclo.
+  const masReciente = ordenados[0];
+  const inicioMasReciente = masReciente.fecha_inicio ? fechaLocal(masReciente.fecha_inicio) : null;
+  if(inicioMasReciente && fechaPeriodo < inicioMasReciente){
+    return null;
+  }
+
+  return masReciente;
 }
 
 /* ✅ Helper compartido (Hallazgo Grande #13) — reemplaza a leer
