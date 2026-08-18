@@ -517,7 +517,7 @@ function _construirContextoAnexoParaId(id, tipo, valores, fechaVig, ciudad, obs)
   const t    = trabajadores.find(x => x.id === id);
   const epId = document.getElementById('anexo-empresa-propia')?.value || t?.empresa_propia_id || '';
   const emp  = getEmpresaEmpleadora(epId);
-  const cont = contratos.find(c => c.trabajador_id === id || c.trabajador_rut === t?.rut);
+  const cont = contratos.find(c => _mismoTrabajador(c.trabajador_id, id) || c.trabajador_rut === t?.rut);
   return { t, emp, cont, tipo, valores, fechaVig, ciudad, obs };
 }
 
@@ -733,7 +733,7 @@ function generarPDFAnexoPorId(id){
   const t    = trabajadores.find(x => x.rut === a.trabajador_rut);
   const epId = t?.empresa_propia_id || '';
   const emp  = getEmpresaEmpleadora(epId);
-  const cont = contratos.find(c => c.trabajador_id === t?.id || c.trabajador_rut === t?.rut);
+  const cont = contratos.find(c => _mismoTrabajador(c.trabajador_id, t?.id) || c.trabajador_rut === t?.rut);
 
   const ctx = {
     t, emp, cont,
@@ -1085,7 +1085,7 @@ function _setDatosPrecargadosAnexo(t){
   const epId = document.getElementById('anexo-empresa-propia')?.value || t?.empresa_propia_id || '';
   const emp  = getEmpresaEmpleadora(epId);
   const man  = findMandante(t);
-  const cont = contratos.find(c => c.trabajador_id === t?.id || c.trabajador_rut === t?.rut);
+  const cont = contratos.find(c => _mismoTrabajador(c.trabajador_id, t?.id) || c.trabajador_rut === t?.rut);
 
   const set = (elId, val) => { const el=document.getElementById(elId); if(el) el.textContent = val||'—'; };
   set('anexo-pre-nombre',        t?.nombre);

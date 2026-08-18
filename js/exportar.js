@@ -13,7 +13,7 @@ function exportarTrabajadoresExcel(){
   const data = trabajadores.map(t => {
     const mandante = findMandante(t);
     const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
-    const cont     = contratos.find(c => c.trabajador_id === t.id || c.trabajador_rut === t.rut);
+    const cont     = contratos.find(c => _mismoTrabajador(c.trabajador_id, t.id) || c.trabajador_rut === t.rut);
     const fmt      = v => v ? new Date(v).toLocaleDateString('es-CL') : '';
 
     return {

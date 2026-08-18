@@ -152,7 +152,7 @@ function poblarSelectTrabajadoresContrato(){
 
   sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>' +
     trabajadores.map(t => {
-      const yaTiene = contratos.some(c => c.trabajador_id === t.id);
+      const yaTiene = contratos.some(c => _mismoTrabajador(c.trabajador_id, t.id));
       return `<option value="${t.id}">${yaTiene ? '✓ ' : ''}${t.nombre} — ${t.rut}</option>`;
     }).join('');
 
@@ -180,7 +180,7 @@ function _renderListaVisualTrabajadorContrato(){
   // existente se hace exclusivamente desde "Contratos Emitidos" — así
   // quedó definido en una sesión anterior, para no arriesgar
   // sobrescrituras accidentales desde la pantalla de creación.
-  lista = lista.filter(t => !contratos.some(c => c.trabajador_id === t.id));
+  lista = lista.filter(t => !contratos.some(c => _mismoTrabajador(c.trabajador_id, t.id)));
 
   if(buscar){
     lista = lista.filter(t => t.nombre?.toLowerCase().includes(buscar) || t.rut?.toLowerCase().includes(buscar));
@@ -257,7 +257,7 @@ function irAContratoEpp(rut){
 function _actualizarContadorContratos(){
   const el = document.getElementById('contratos-contador');
   if(!el) return;
-  const conContrato = trabajadores.filter(t => contratos.some(c => c.trabajador_id === t.id)).length;
+  const conContrato = trabajadores.filter(t => contratos.some(c => _mismoTrabajador(c.trabajador_id, t.id))).length;
   const sinContrato = trabajadores.length - conContrato;
   el.innerHTML = `
     <span style="cursor:pointer;color:#065f46;font-weight:600;" onclick="switchTabContratos('ct-emitidos')">${conContrato} con contrato</span>
@@ -282,7 +282,7 @@ function precargarContrato(){
       : '— (sin fecha de ingreso registrada)';
   }
 
-  if(contratos.some(c => c.trabajador_id === t.id)){
+  if(contratos.some(c => _mismoTrabajador(c.trabajador_id, t.id))){
     toast(`⚠️ ${t.nombre} ya tiene contrato — se sobrescribirá al guardar. Para un cambio puntual usa "Rectificar" en Contratos Emitidos, o un Anexo si es una condición laboral nueva`, 'error');
   }
 
@@ -306,7 +306,7 @@ function precargarContrato(){
   document.getElementById('cp-salud').value         = t.sistema_salud || '';
 
   // Auto-seleccionar la empresa empleadora del trabajador (o la ya guardada en su contrato existente)
-  const contratoPrevio = (typeof contratos !== 'undefined' ? contratos : []).find(c => c.trabajador_id === t.id);
+  const contratoPrevio = (typeof contratos !== 'undefined' ? contratos : []).find(c => _mismoTrabajador(c.trabajador_id, t.id));
   const epIdTrabajador = contratoPrevio?.empresa_propia_id || t.empresa_propia_id || '';
   const selEmpresaPropia = document.getElementById('c-empresa-propia');
   if(selEmpresaPropia && epIdTrabajador) selEmpresaPropia.value = epIdTrabajador;
@@ -339,7 +339,7 @@ function precargarContrato(){
   // Precargar fecha inicio desde fecha_ingreso del trabajador
   const fechaInicio = t.fecha_ingreso || '';
   // Si ya tiene contrato, cargar sus datos
-  const contratoExistente = contratos.find(c => c.trabajador_id === id);
+  const contratoExistente = contratos.find(c => _mismoTrabajador(c.trabajador_id, id));
   if(contratoExistente) cargarContratoEnFormulario(contratoExistente);
 
   actualizarPrevia();
@@ -538,7 +538,7 @@ function guardarContrato(){
     const idx = contratos.findIndex(c => c.id === contratoEditandoId);
     if(idx >= 0) contratos[idx] = {...contratos[idx], ...datos};
   } else {
-    const existe = contratos.findIndex(c => c.trabajador_id === id);
+    const existe = contratos.findIndex(c => _mismoTrabajador(c.trabajador_id, id));
     if(existe >= 0){
       contratos[existe] = {...contratos[existe], ...datos};
     } else {
@@ -1403,10 +1403,10 @@ function _estadoTagsContrato(c, t){
   if(c.tipo === 'indefinido' || !c.fecha_termino || c.fecha_termino >= hoy) tags.push({txt:'Vigente', bg:'#D1FAE5', fg:'#065F46'});
   else tags.push({txt:'Vencido', bg:'#FEE2E2', fg:'#991B1B'});
 
-  const yaRectificado = (carpeta||[]).some(d => d.trabajador_id === c.trabajador_id && d.tipo === 'rectificacion_contrato');
+  const yaRectificado = (carpeta||[]).some(d => _mismoTrabajador(d.trabajador_id, c.trabajador_id) && d.tipo === 'rectificacion_contrato');
   if(yaRectificado) tags.push({txt:'Rectificado', bg:'#FEF3C7', fg:'#92400E'});
 
-  const tieneAnexo = (anexos||[]).some(a => a.contrato_id === c.id || a.trabajador_id === c.trabajador_id);
+  const tieneAnexo = (anexos||[]).some(a => a.contrato_id === c.id || _mismoTrabajador(a.trabajador_id, c.trabajador_id));
   if(tieneAnexo) tags.push({txt:'Con Anexo', bg:'#DBEAFE', fg:'#1D4ED8'});
 
   return tags;
@@ -1422,7 +1422,7 @@ function renderContratosEmitidos(){
   const fTermino  = document.getElementById('ce-f-termino')?.value || '';
 
   let lista = (contratos||[]).map(c => {
-    const t = trabajadores.find(x => x.id === c.trabajador_id || x.rut === c.trabajador_rut);
+    const t = trabajadores.find(x => _mismoTrabajador(x.id, c.trabajador_id) || x.rut === c.trabajador_rut);
     const mandante = _mandanteDeContrato(c);
     return { c, t, mandante, tags: _estadoTagsContrato(c, t||{}) };
   });
@@ -1490,7 +1490,7 @@ const RECT_CAMPOS_TXT = {
 function abrirRectificacion(contratoId){
   const c = contratos.find(x => x.id === contratoId);
   if(!c){ toast('⚠️ Contrato no encontrado', 'error'); return; }
-  const t = trabajadores.find(x => x.id === c.trabajador_id);
+  const t = trabajadores.find(x => _mismoTrabajador(x.id, c.trabajador_id));
 
   _rectContratoId = contratoId;
   document.getElementById('rect-trabajador-nombre').textContent = `${t?.nombre||'—'} · ${t?.rut||c.trabajador_rut}`;
@@ -1538,7 +1538,7 @@ function guardarRectificacion(){
   contratos[idx][campo] = (campo === 'sueldo_monto') ? (parseInt(valorNuevo.replace(/\D/g,'')) || 0) : valorNuevo;
   guardarContratos();
 
-  const t = trabajadores.find(x => x.id === c.trabajador_id);
+  const t = trabajadores.find(x => _mismoTrabajador(x.id, c.trabajador_id));
   registrarDocumentoCarpeta({
     trabajador_id:  c.trabajador_id,
     trabajador_rut: c.trabajador_rut,
@@ -2112,7 +2112,7 @@ function confirmarYGenerarContratosMasivo(){
     const emp = getEmpresaEmpleadora(t.empresa_propia_id);
     const datos = _construirDatosContratoMasivo(g, cfgCompleto, t, mandanteObj);
 
-    const existe = contratos.findIndex(c => c.trabajador_id === t.id);
+    const existe = contratos.findIndex(c => _mismoTrabajador(c.trabajador_id, t.id));
     if(existe >= 0) contratos[existe] = {...contratos[existe], ...datos};
     else contratos.push({id: Date.now().toString() + '_' + t.id, numero_contrato: _siguienteNumeroContrato(datos.empresa_propia_id), ...datos});
 

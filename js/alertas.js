@@ -138,7 +138,7 @@ function calcularAlertas(){
 
   // Contrato: sin contrato / vencido / por vencer
   activos.forEach(t => {
-    const contrato = (typeof contratos !== 'undefined' ? contratos : []).find(c => c.trabajador_id === t.id);
+    const contrato = (typeof contratos !== 'undefined' ? contratos : []).find(c => _mismoTrabajador(c.trabajador_id, t.id));
     if(!contrato){
       alertas.push(_alerta('critico','Contratos',`sin_contrato_${t.rut}`,
         'Sin contrato registrado', `${t.nombre} no tiene contrato registrado en el sistema`,

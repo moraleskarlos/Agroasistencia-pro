@@ -430,6 +430,18 @@ function esNacionalidadExtranjera(nacionalidad){
   return !!nacionalidad && nacionalidad !== 'Chileno' && nacionalidad !== 'Chilena';
 }
 
+/* ✅ BL-065 — blindaje central del mismo patrón ya corregido en
+   _getContratoVigente() (variables.js): comparar dos ids directo
+   (`a.trabajador_id === t.id`) es riesgoso si a ALGUNO de los dos le
+   falta el dato — undefined === undefined da true por accidente y
+   mezcla el registro de otro trabajador. Este helper exige que ambos
+   valores existan antes de comparar. Reemplaza el mismo patrón repetido
+   en 18 lugares de contratos.js, anexos.js, alertas.js y exportar.js —
+   un solo lugar para blindarlo, en vez de 18 variantes escritas a mano. */
+function _mismoTrabajador(idA, idB){
+  return !!idA && !!idB && idA === idB;
+}
+
 function findMandante(t){
   if(!t) return null;
   // ✅ Hallazgo #5 — consolidado a un solo campo. Antes: t.mandante_id ||
