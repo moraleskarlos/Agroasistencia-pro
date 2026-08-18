@@ -654,6 +654,7 @@ function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
   guardarNovedades();
   registrarDocumentoCarpeta({
     trabajador_rut: rut,
+    empresa_propia_id: trabajadores.find(x => x.rut === rut)?.empresa_propia_id || '',
     tipo: 'novedad',
     subtipo: tipo,
     descripcion: `${_labelNovedad(tipo)} — ${_fmtFecha(inicio)}${fin&&fin!==inicio?' al '+_fmtFecha(fin):''}`,

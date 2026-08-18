@@ -500,7 +500,7 @@ function _bloqueNavegacionMasivo(total){
 function guardarLocal(){localStorage.setItem(LOCAL_T,JSON.stringify(trabajadores));localStorage.setItem(LOCAL_E,JSON.stringify(empresas));localStorage.setItem(LOCAL_EP,JSON.stringify(empresas_propias));}
 function guardarCarpeta(){ localStorage.setItem(LOCAL_CARPETA, JSON.stringify(carpeta)); }
 
-function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, tipo, subtipo, folio, fecha_firma, descripcion }){
+function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, empresa_propia_id, tipo, subtipo, folio, fecha_firma, descripcion }){
   // Evita duplicar el mismo documento (ej. reabrir "Ver documento" o cargar el kit dos veces)
   const yaExiste = carpeta.find(d =>
     d.trabajador_rut === trabajador_rut && d.tipo === tipo &&
@@ -511,6 +511,13 @@ function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, tipo, subtip
     id:              Date.now().toString(),
     trabajador_id,
     trabajador_rut,
+    // ✅ BL-062 punto 2 — empresa con la que se generó este documento.
+    // Es lo que permite agrupar la Carpeta Laboral por Carpeta Empresa
+    // → Ciclo N° (ver _renderCarpetaTrabajador en trabajadores.js). Cada
+    // call site pasa la empresa más precisa disponible en su contexto
+    // (la del contrato específico cuando aplica, no siempre "la actual
+    // del trabajador" — importante si después cambia de empresa).
+    empresa_propia_id: empresa_propia_id || '',
     tipo,            // 'contrato' | 'anexo' | 'epp_riohs_irl' | 'liquidacion' | 'finiquito' | 'carta' | 'otro'
     subtipo:         subtipo || '',
     folio:           folio   || '',
@@ -522,6 +529,25 @@ function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, tipo, subtip
   carpeta.push(doc);
   guardarCarpeta();
   return doc;
+}
+
+/* ✅ BL-062 punto 2 — migración retroactiva: documentos de Carpeta Laboral
+   guardados ANTES de que existiera el campo empresa_propia_id quedan sin
+   etiqueta. Se les asigna la empresa ACTUAL del trabajador como mejor
+   aproximación disponible (si cambió de empresa después de esos
+   documentos, quedará etiquetado con la empresa nueva, no la de aquel
+   momento — no hay forma de recuperar el dato real). Idempotente: solo
+   toca documentos que todavía no tienen el campo, así que es seguro
+   llamarla siempre al cargar (mismo patrón que _migrarNumerosContratoRetroactivo). */
+function _migrarEmpresaCarpetaRetroactivo(){
+  const pendientes = carpeta.filter(d => !d.empresa_propia_id);
+  if(!pendientes.length) return;
+  let cambios = false;
+  pendientes.forEach(d => {
+    const t = trabajadores.find(x => x.rut === d.trabajador_rut || (d.trabajador_id && x.id === d.trabajador_id));
+    if(t?.empresa_propia_id){ d.empresa_propia_id = t.empresa_propia_id; cambios = true; }
+  });
+  if(cambios) guardarCarpeta();
 }
 
 function cargarLocal(){

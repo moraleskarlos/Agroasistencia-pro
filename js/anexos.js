@@ -699,6 +699,7 @@ ${docHTML}
   registrarDocumentoCarpeta({
     trabajador_id:  contexto.t?.id || '',
     trabajador_rut: contexto.t?.rut || '',
+    empresa_propia_id: contexto.emp?.id || contexto.t?.empresa_propia_id || '',
     tipo:           'anexo',
     subtipo:        contexto.tipo,
     folio:          contexto.folio,
@@ -897,6 +898,7 @@ function generarAnexosMasivo(){
     registrarDocumentoCarpeta({
       trabajador_id:  t.id,
       trabajador_rut: t.rut,
+      empresa_propia_id: t.empresa_propia_id || '',
       tipo:           'anexo',
       subtipo:        tipo,
       folio:          _folioAnexo(t),

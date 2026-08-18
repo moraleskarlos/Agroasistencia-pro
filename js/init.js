@@ -6,6 +6,7 @@ try {
   cargarIndicadores();
   cargarLiquidaciones();
   migrarIDs();
+  _migrarEmpresaCarpetaRetroactivo();
   iniciarSupabase();
   poblarSelects();
   actualizarUI();

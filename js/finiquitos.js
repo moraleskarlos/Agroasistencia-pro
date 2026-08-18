@@ -186,6 +186,7 @@ function generarFiniquito(){
 
   registrarDocumentoCarpeta({
     trabajador_rut: rut,
+    empresa_propia_id: trabajadores.find(x => x.rut === rut)?.empresa_propia_id || '',
     tipo: 'finiquito',
     subtipo: causal,
     folio: fin.folio,

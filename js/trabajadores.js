@@ -488,35 +488,138 @@ function _renderDatosPersonalesPerfil(t, contenedorId){
     <div style="padding:8px 0;">${t.irl_declarado ? '<span class="badge badge-verde">✅ Declarado recibido</span>' : '<span class="badge badge-gris">Pendiente</span>'}</div>`;
 }
 
-function _renderCarpetaTrabajador(rut){
-  const tbody = document.getElementById('tbody-carpeta');
-  if(!tbody) return;
+/* ════════════════════════════════════════════════════════
+   BL-062 punto 3 — Carpeta Laboral → Carpeta Empresa → Ciclo N°
+   Cada empresa distinta con la que el trabajador tuvo relación laboral
+   es una "Carpeta Empresa" (nunca se mezclan entre sí — ver diseño
+   BL-062). Dentro de cada una, cada contrato/faena es un "Ciclo N°",
+   numerado al mostrarse por orden cronológico (no guardado como folio
+   fijo, mismo criterio anti-duplicados que los folios de liquidación).
+   ════════════════════════════════════════════════════════ */
 
-  const docs = (carpeta || [])
-    .filter(d => d.trabajador_rut === rut)
-    .sort((a,b) => new Date(b.fecha_generacion) - new Date(a.fecha_generacion));
+function _filaDocCarpeta(d, idx){
+  const tipoInfo = _TIPO_DOC_CARPETA[d.tipo] || _TIPO_DOC_CARPETA.otro;
+  const verSePuede = ['contrato','correccion_contrato','anexo','liquidacion','finiquito'].includes(d.tipo);
+  return `<tr>
+    <td style="font-size:13px;white-space:nowrap;">${tipoInfo.icono} ${tipoInfo.label}</td>
+    <td style="font-size:12px;color:var(--texto2);">${d.descripcion || '—'}</td>
+    <td style="font-size:12px;font-family:monospace;">${d.folio || '—'}</td>
+    <td style="font-size:12px;">${d.fecha_firma ? fmtFecha(d.fecha_firma) : '—'}</td>
+    <td style="font-size:12px;color:var(--texto3);">${fmtFecha(d.fecha_generacion)}</td>
+    <td style="font-size:12px;color:var(--texto3);">${d.generado_por || '—'}</td>
+    <td>${verSePuede ? `<button class="btn btn-secondary btn-sm" onclick='_verDocumentoCarpeta(${idx})'><i class="ti ti-eye"></i> Ver</button>` : ''}</td>
+  </tr>`;
+}
+
+function _tablaDocsCarpeta(docs, idxBase){
+  const filas = docs.map((d, i) => _filaDocCarpeta(d, idxBase + i)).join('');
+  return `<div style="overflow-x:auto;">
+    <table class="tabla">
+      <thead><tr>
+        <th>Tipo</th><th>Descripción</th><th>Folio</th><th>Fecha firma</th><th>Generado</th><th>Por</th><th></th>
+      </tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+  </div>`;
+}
+
+function _fechaOrdenDoc(d){
+  return new Date(d.fecha_firma || d.fecha_generacion || 0).getTime();
+}
+
+function _renderCarpetaTrabajador(rut){
+  const cont = document.getElementById('carpeta-laboral-contenedor');
+  if(!cont) return;
+
+  const docs = (carpeta || []).filter(d => d.trabajador_rut === rut);
 
   if(!docs.length){
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--texto3);">
-      Sin documentos registrados</td></tr>`;
+    cont.innerHTML = `<div style="text-align:center;padding:24px;color:var(--texto3);">Sin documentos registrados</div>`;
+    _docsCarpetaActual = [];
     return;
   }
 
-  tbody.innerHTML = docs.map((d, i) => {
-    const tipoInfo = _TIPO_DOC_CARPETA[d.tipo] || _TIPO_DOC_CARPETA.otro;
-    const verSePuede = ['contrato','correccion_contrato','anexo','liquidacion','finiquito'].includes(d.tipo);
-    return `<tr>
-      <td style="font-size:13px;white-space:nowrap;">${tipoInfo.icono} ${tipoInfo.label}</td>
-      <td style="font-size:12px;color:var(--texto2);">${d.descripcion || '—'}</td>
-      <td style="font-size:12px;font-family:monospace;">${d.folio || '—'}</td>
-      <td style="font-size:12px;">${d.fecha_firma ? fmtFecha(d.fecha_firma) : '—'}</td>
-      <td style="font-size:12px;color:var(--texto3);">${fmtFecha(d.fecha_generacion)}</td>
-      <td style="font-size:12px;color:var(--texto3);">${d.generado_por || '—'}</td>
-      <td>${verSePuede ? `<button class="btn btn-secondary btn-sm" onclick='_verDocumentoCarpeta(${i})'><i class="ti ti-eye"></i> Ver</button>` : ''}</td>
-    </tr>`;
+  // Agrupar por empresa (Carpeta Empresa). '' agrupa documentos legacy
+  // sin etiquetar que la migración retroactiva no pudo resolver.
+  const empresaIds = [...new Set(docs.map(d => d.empresa_propia_id || ''))];
+
+  // Ordenar las Carpetas Empresa: la más reciente actividad primero
+  empresaIds.sort((a, b) => {
+    const masRecienteA = Math.max(...docs.filter(d => (d.empresa_propia_id||'') === a).map(_fechaOrdenDoc));
+    const masRecienteB = Math.max(...docs.filter(d => (d.empresa_propia_id||'') === b).map(_fechaOrdenDoc));
+    return masRecienteB - masRecienteA;
+  });
+
+  let idxCorriendo = 0;
+  const docsOrdenParaVer = []; // flat array en el mismo orden en que se renderizan los botones "Ver"
+
+  const bloquesEmpresa = empresaIds.map(epId => {
+    const docsEmpresa = docs.filter(d => (d.empresa_propia_id||'') === epId);
+    const emp = epId ? getEmpresaEmpleadora(epId) : null;
+    const nombreEmpresa = emp?.razon_social || emp?.nombre || 'Empresa sin identificar (documentos antiguos)';
+
+    // Ciclos: cada documento tipo 'contrato' abre un ciclo nuevo.
+    const contratoDocs = docsEmpresa
+      .filter(d => d.tipo === 'contrato')
+      .sort((a, b) => _fechaOrdenDoc(a) - _fechaOrdenDoc(b)); // cronológico ascendente → Ciclo 1 es el más antiguo
+
+    const otros = []; // documentos sin ciclo (anteriores al primer contrato, o sin ningún contrato registrado)
+    const ciclos = contratoDocs.map(cd => ({ inicio: _fechaOrdenDoc(cd), docs: [cd] }));
+
+    docsEmpresa.forEach(d => {
+      if(d.tipo === 'contrato') return; // ya está en su ciclo
+      const fecha = _fechaOrdenDoc(d);
+      // El ciclo al que pertenece: el último contrato cuya fecha sea <= la del documento
+      let ciclo = null;
+      for(let i = ciclos.length - 1; i >= 0; i--){
+        if(ciclos[i].inicio <= fecha){ ciclo = ciclos[i]; break; }
+      }
+      if(ciclo) ciclo.docs.push(d);
+      else otros.push(d);
+    });
+
+    // Mostrar el ciclo más reciente primero; dentro de cada ciclo, documento más reciente primero
+    const bloquesCiclo = ciclos.slice().reverse().map((ciclo, i) => {
+      const numeroCiclo = ciclos.length - i; // Ciclo N° cronológico real (1 = primero)
+      const docsCiclo = ciclo.docs.slice().sort((a,b) => _fechaOrdenDoc(b) - _fechaOrdenDoc(a));
+      docsOrdenParaVer.push(...docsCiclo);
+      const tabla = _tablaDocsCarpeta(docsCiclo, idxCorriendo);
+      idxCorriendo += docsCiclo.length;
+      const contratoDelCiclo = docsCiclo.find(d => d.tipo === 'contrato');
+      return `<div style="margin:10px 0;border:1px solid var(--borde);border-radius:8px;overflow:hidden;">
+        <div style="background:var(--gris-fondo,#f7f8fa);padding:8px 14px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center;">
+          <span><i class="ti ti-briefcase"></i> Ciclo N° ${numeroCiclo}${contratoDelCiclo?.descripcion ? ' — ' + contratoDelCiclo.descripcion : ''}</span>
+          <span style="font-size:11px;color:var(--texto3);font-weight:400;">${docsCiclo.length} documento${docsCiclo.length!==1?'s':''}</span>
+        </div>
+        ${tabla}
+      </div>`;
+    }).join('');
+
+    let bloqueOtros = '';
+    if(otros.length){
+      const docsOtrosOrdenados = otros.slice().sort((a,b) => _fechaOrdenDoc(b) - _fechaOrdenDoc(a));
+      docsOrdenParaVer.push(...docsOtrosOrdenados);
+      const tabla = _tablaDocsCarpeta(docsOtrosOrdenados, idxCorriendo);
+      idxCorriendo += docsOtrosOrdenados.length;
+      bloqueOtros = `<div style="margin:10px 0;border:1px solid var(--borde);border-radius:8px;overflow:hidden;">
+        <div style="background:var(--gris-fondo,#f7f8fa);padding:8px 14px;font-size:13px;font-weight:600;">
+          <i class="ti ti-file"></i> Otros documentos (sin contrato asociado)
+        </div>
+        ${tabla}
+      </div>`;
+    }
+
+    return `<div class="card" style="margin-bottom:16px;">
+      <div class="card-title card-title-oscuro">
+        <i class="ti ti-building"></i> Carpeta Empresa — ${nombreEmpresa}
+      </div>
+      ${bloquesCiclo}
+      ${bloqueOtros}
+    </div>`;
   }).join('');
 
-  _docsCarpetaActual = docs; // guarda referencia para _verDocumentoCarpeta
+  cont.innerHTML = bloquesEmpresa;
+  _docsCarpetaActual = docsOrdenParaVer; // guarda referencia para _verDocumentoCarpeta, mismo orden que los botones "Ver"
 }
 
 let _docsCarpetaActual = [];

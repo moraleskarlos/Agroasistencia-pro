@@ -307,9 +307,16 @@ function calcularYGuardarLiquidacion(rut, periodo){
 
   guardarLiquidaciones();
 
-  // Registrar en Carpeta Laboral
+  // Registrar en Carpeta Laboral — empresa del contrato VIGENTE en ESE
+  // período (no la actual del trabajador), mismo criterio período-aware
+  // que el filtro de Empresa en Liquidaciones Emitidas y Libro de
+  // Remuneraciones (BL-061 punto 7) — así la liquidación de un ciclo
+  // anterior queda etiquetada con la empresa correcta de ese ciclo,
+  // aunque el trabajador haya cambiado de empresa después.
+  const empresaDelPeriodo = _getContratoVigente(rut, periodo)?.empresa_propia_id || '';
   registrarDocumentoCarpeta({
     trabajador_rut: rut,
+    empresa_propia_id: empresaDelPeriodo,
     tipo:        'liquidacion',
     subtipo:     periodo,
     folio:       liq.folio,

@@ -498,6 +498,39 @@ function guardarContrato(){
   const formaRem = document.getElementById('c-tipo-rem').value;
   if(!formaRem){ toast('⚠️ Selecciona la forma de remuneración (Mensual o Diaria)','error'); return; }
 
+  // ✅ BL-062 punto 4 — aviso del 3er contrato a Plazo Fijo genérico
+  // (Art. 159 N°4 CT, distinto de Temporada — no aplica a esta última,
+  // que sí puede repetirse faena tras faena indefinidamente). Se avisa
+  // solo al crear un contrato NUEVO (no al editar uno existente vía
+  // contratoEditandoId), usando la Carpeta Laboral como fuente del
+  // historial real — es la que preserva los ciclos, no la tabla
+  // operativa `contratos` que solo guarda el vigente.
+  const tipoSel = document.getElementById('c-tipo').value;
+  if(!contratoEditandoId && tipoSel === 'plazo_fijo'){
+    const tChequeo  = trabajadores.find(x => x.rut === id || x.id === id);
+    const epChequeo = document.getElementById('c-empresa-propia')?.value || tChequeo?.empresa_propia_id || '';
+    const previos = (carpeta || [])
+      .filter(d => d.tipo === 'contrato' && d.subtipo === 'plazo_fijo' &&
+                   d.trabajador_rut === tChequeo?.rut && (d.empresa_propia_id||'') === epChequeo)
+      .sort((a,b) => _fechaOrdenDoc(a) - _fechaOrdenDoc(b));
+
+    if(previos.length >= 2){
+      const fechaPrimero = new Date(_fechaOrdenDoc(previos[0]));
+      const fechaFirmaNueva = document.getElementById('c-fecha-firma')?.value;
+      const fechaNueva = fechaFirmaNueva ? new Date(fechaFirmaNueva+'T12:00:00') : new Date();
+      const mesesDesdePrimero = (fechaNueva - fechaPrimero) / (1000*60*60*24*30.44);
+
+      if(mesesDesdePrimero <= 15){
+        const continuar = confirm(
+          `⚠️ Este sería el 3er contrato a Plazo Fijo de ${tChequeo?.nombre||'este trabajador'} con la misma empresa, dentro de una ventana de 15 meses desde el primero (Art. 159 N°4 del Código del Trabajo).\n\n` +
+          `Por ley, la 2ª renovación de un contrato a Plazo Fijo genérico transforma la relación laboral en INDEFINIDA — no aplica a contratos de Temporada (Art. 93-96 CT), que sí pueden repetirse.\n\n` +
+          `¿Continuar y guardar igual como Plazo Fijo?`
+        );
+        if(!continuar) return;
+      }
+    }
+  }
+
   const datos = obtenerDatosFormulario();
   cargarContratos();
 
@@ -1275,6 +1308,7 @@ function generarPDFContrato(soloContenido){
   registrarDocumentoCarpeta({
     trabajador_id:  id,
     trabajador_rut: t?.rut || '',
+    empresa_propia_id: epId,
     tipo:           'contrato',
     subtipo:        tipo,
     folio:          folioDoc,
@@ -1508,6 +1542,7 @@ function guardarRectificacion(){
   registrarDocumentoCarpeta({
     trabajador_id:  c.trabajador_id,
     trabajador_rut: c.trabajador_rut,
+    empresa_propia_id: c.empresa_propia_id || '',
     tipo:           'rectificacion_contrato',
     subtipo:        campo,
     fecha_firma:    hoyISO(),
@@ -2099,6 +2134,7 @@ function confirmarYGenerarContratosMasivo(){
     registrarDocumentoCarpeta({
       trabajador_id:  t.id,
       trabajador_rut: t.rut,
+      empresa_propia_id: datos.empresa_propia_id || '',
       tipo:           'contrato',
       subtipo:        cfgCompleto.tipo_contrato,
       fecha_firma:    cfgCompleto.fecha_firma,
