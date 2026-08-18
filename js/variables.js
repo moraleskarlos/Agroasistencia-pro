@@ -222,10 +222,22 @@ function _getContratoVigente(rut, periodo){
   // confiables para ese período, así que hay que devolver null (cada
   // llamador ya maneja este caso con su propio mensaje de error) en vez
   // de adivinar con datos de otro ciclo.
+  //
+  // 🐛 CORRECCIÓN — la primera versión de este blindaje comparaba contra
+  // el DÍA exacto de inicio del contrato, no contra el mes. Un contrato
+  // que arranca, por ejemplo, el 2 de julio quedaba "después" del 1° de
+  // julio (ancla del período) y el sistema decía por error "sin contrato"
+  // para julio — el mes correcto del propio contrato. La comparación
+  // debe ser por MES: si el contrato empezó en ese mismo mes (cualquier
+  // día) o antes, es válido; solo si empezó en un mes POSTERIOR al del
+  // período pedido corresponde devolver null.
   const masReciente = ordenados[0];
-  const inicioMasReciente = masReciente.fecha_inicio ? fechaLocal(masReciente.fecha_inicio) : null;
-  if(inicioMasReciente && fechaPeriodo < inicioMasReciente){
-    return null;
+  if(masReciente.fecha_inicio){
+    const inicioMasReciente = fechaLocal(masReciente.fecha_inicio);
+    const inicioMesContrato = new Date(inicioMasReciente.getFullYear(), inicioMasReciente.getMonth(), 1, 12);
+    if(fechaPeriodo < inicioMesContrato){
+      return null;
+    }
   }
 
   return masReciente;
