@@ -187,19 +187,19 @@ function _renderLibroDT(lista, periodo){
         <tbody>${filas}</tbody>
         <tfoot>
           <tr style="background:#1e293b;color:#fff;font-weight:600;">
-            <td colspan="5" style="padding:9px 8px;font-size:12px;">TOTALES</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.sueldo_base)}</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.hab_imp)}</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.hab_no_imp)}</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.total_haberes)}</td>
-            <td style="text-align:right;padding:9px 6px;">—</td>
-            <td style="text-align:center;padding:9px 6px;">—</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.afp)}</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.salud)}</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.afc_trab)}</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.iusc)}</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.otros_desc)}</td>
-            <td style="text-align:right;padding:9px 6px;">${fmtM(tot.total_desc)}</td>
+            <td colspan="5" style="color:#fff;padding:9px 8px;font-size:12px;">TOTALES</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.sueldo_base)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.hab_imp)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.hab_no_imp)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.total_haberes)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">—</td>
+            <td style="color:#fff;text-align:center;padding:9px 6px;">—</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.afp)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.salud)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.afc_trab)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.iusc)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.otros_desc)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.total_desc)}</td>
             <td style="text-align:right;padding:9px 6px;color:#10b981;">${fmtM(tot.liquido)}</td>
           </tr>
         </tfoot>
