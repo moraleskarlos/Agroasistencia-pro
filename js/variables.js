@@ -300,6 +300,18 @@ function _leerAsistenciaMes(rut, periodo){
   const diasMes = new Date(anio, mes, 0).getDate();
   const novedadesRut = (typeof getNovedadesPorRut === 'function') ? getNovedadesPorRut(rut, periodo) : [];
 
+  // 🐛 Corregido — no se puede contar como "falta" un día en el que el
+  // trabajador todavía no tenía contrato vigente (antes de fecha_inicio)
+  // o ya había terminado (después de fecha_termino). Sin este límite, un
+  // trabajador contratado a mitad de mes aparecía con "faltas" en los
+  // días previos a su propia contratación, solo porque OTRO trabajador
+  // de la misma empresa sí marcó asistencia esos días.
+  const contrato = (typeof _getContratoVigente === 'function') ? _getContratoVigente(rut, periodo) : null;
+  const primerDiaPeriodo = `${anio}-${String(mes).padStart(2,'0')}-01`;
+  const ultimoDiaPeriodo = `${anio}-${String(mes).padStart(2,'0')}-${String(diasMes).padStart(2,'0')}`;
+  const inicioContrato = (contrato?.fecha_inicio && contrato.fecha_inicio > primerDiaPeriodo) ? contrato.fecha_inicio : primerDiaPeriodo;
+  const finContrato    = (contrato?.fecha_termino && contrato.fecha_termino < ultimoDiaPeriodo) ? contrato.fecha_termino : ultimoDiaPeriodo;
+
   const cubiertoPorNovedad = (fecha) => novedadesRut.some(n => {
     const ini = n.fecha_inicio, fin = n.fecha_fin || n.fecha_inicio;
     return ini && fecha >= ini && fecha <= fin;
@@ -310,6 +322,8 @@ function _leerAsistenciaMes(rut, periodo){
 
   for(let d = 1; d <= diasMes; d++){
     const fecha = `${anio}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(fecha < inicioContrato || fecha > finContrato) continue; // fuera del rango real del contrato
+
     const diaSemana = new Date(fecha+'T12:00:00').getDay();
     if(diaSemana === 0 || diaSemana === 6) continue; // sábado/domingo — el mes comercial ya los cubre
 

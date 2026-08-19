@@ -522,6 +522,22 @@ function _leerAusenciasAsistencia(periodo, ruts){
   const diasMes     = new Date(anio, mes, 0).getDate();
   const ausencias   = [];
 
+  // 🐛 Corregido — mismo arreglo aplicado a _leerAsistenciaMes
+  // (variables.js): acotar al rango real de contrato de cada
+  // trabajador. Sin esto, un trabajador contratado a mitad de mes
+  // aparecía con "faltas" en los días previos a su propia contratación,
+  // solo porque OTRO trabajador de la misma empresa sí marcó asistencia
+  // esos días (lo que hacía que el día "existiera" para el módulo).
+  const primerDiaPeriodo = `${anio}-${String(mes).padStart(2,'0')}-01`;
+  const ultimoDiaPeriodo = `${anio}-${String(mes).padStart(2,'0')}-${String(diasMes).padStart(2,'0')}`;
+  const rangoPorRut = {};
+  ruts.forEach(rut => {
+    const contrato = (typeof _getContratoVigente === 'function') ? _getContratoVigente(rut, periodo) : null;
+    const inicio = (contrato?.fecha_inicio && contrato.fecha_inicio > primerDiaPeriodo) ? contrato.fecha_inicio : primerDiaPeriodo;
+    const fin    = (contrato?.fecha_termino && contrato.fecha_termino < ultimoDiaPeriodo) ? contrato.fecha_termino : ultimoDiaPeriodo;
+    rangoPorRut[rut] = { inicio, fin };
+  });
+
   for(let d = 1; d <= diasMes; d++){
     const fecha = `${anio}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const clave = 'asistencia_' + fecha;
@@ -534,6 +550,8 @@ function _leerAusenciasAsistencia(periodo, ruts){
     // "23 sin clasificar" sin que existiera ninguna inasistencia real.
     if(!data.length) continue;
     ruts.forEach(rut => {
+      const rango = rangoPorRut[rut];
+      if(fecha < rango.inicio || fecha > rango.fin) return; // fuera del rango real del contrato
       const marcacion = data.find(x => x.rut === rut);
       if(!marcacion){
         const diaSemana = new Date(fecha+'T12:00:00').getDay();
