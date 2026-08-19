@@ -86,6 +86,50 @@ function _tieneDatosFueraDePeriodo(rut, periodo){
   return enHaberes + enJornada + enDescuentos;
 }
 
+/* ✅ El aviso "⚠️ N" de datos fuera de período era solo un contador con
+   tooltip, sin llevar a ningún lado — el usuario tenía que adivinar en
+   cuál de los 3 posibles orígenes (Bonificaciones, Horas Extra o
+   Descuentos) estaba el o los registros mal fechados. Este click lleva
+   directo al primero que encuentre con datos, con el mes y el
+   trabajador ya filtrados — mismo patrón que ya usa el aviso de "sin
+   clasificar" (irA + setTimeout + rellenar filtros). */
+function verDatosFueraDePeriodo(rut, periodo){
+  const antes   = _mesAdyacente(periodo, -1);
+  const despues = _mesAdyacente(periodo, 1);
+  const cerca   = p => p === antes || p === despues;
+
+  const enHaberes    = haberes_variables.filter(h => h.trabajador_rut===rut && cerca(h.periodo));
+  const enJornada    = jornada_especial.filter(j => j.trabajador_rut===rut && cerca(j.periodo));
+  const enDescuentos = descuentos.filter(d => d.trabajador_rut===rut && cerca(d.periodo));
+
+  // Prioridad: el primer origen que efectivamente tenga registros — así
+  // el click siempre lleva a algo concreto, nunca a una pantalla vacía.
+  let destino = null;
+  if(enHaberes.length)         destino = { pagina:'bonos', tab:'gl-haberes', prefix:'hab', periodo: enHaberes[0].periodo, render: (typeof renderHaberes==='function') ? renderHaberes : null };
+  else if(enJornada.length)    destino = { pagina:'bonos', tab:'gl-jornada',  prefix:'jor', periodo: enJornada[0].periodo, render: (typeof renderJornada==='function') ? renderJornada : null };
+  else if(enDescuentos.length) destino = { pagina:'descuentos', tab:null,     prefix:'des', periodo: enDescuentos[0].periodo, render: (typeof renderDescuentos==='function') ? renderDescuentos : null };
+  if(!destino) return;
+
+  const t = trabajadores.find(x => x.rut === rut);
+
+  irA(destino.pagina);
+  setTimeout(() => {
+    if(destino.tab && typeof switchTabBonos === 'function') switchTabBonos(destino.tab);
+
+    const mesSel = document.getElementById(`gl-${destino.prefix}-rev-mes`);
+    if(mesSel) mesSel.value = destino.periodo;
+
+    // Mismo efecto que elegir al trabajador en el buscador con autocompletado
+    const hidden = document.getElementById(`gl-${destino.prefix}-rev-trabajador`);
+    const input  = document.getElementById(`gl-${destino.prefix}-rev-trabajador-input`);
+    if(hidden) hidden.value = rut;
+    if(input)  input.value  = t ? `${t.nombre} · ${t.rut}` : rut;
+
+    if(destino.render) destino.render();
+    if(typeof _renderKPIsGL === 'function') _renderKPIsGL();
+  }, 150);
+}
+
 function renderReporteLiquidaciones(){
   const periodo  = document.getElementById('rep-liq-periodo')?.value;
   const empresa  = document.getElementById('rep-liq-empresa')?.value;
@@ -160,7 +204,7 @@ function renderReporteLiquidaciones(){
       <td style="text-align:right;">${horasExtra>0 ? '$'+horasExtra.toLocaleString('es-CL') : '—'}</td>
       <td style="text-align:right;color:var(--rojo);">${descuentos_>0 ? '-$'+descuentos_.toLocaleString('es-CL') : '—'}</td>
       <td style="text-align:right;font-weight:600;">$${liq.liquido.toLocaleString('es-CL')}</td>
-      <td>${fueraDePeriodo ? `<span class="badge badge-amarillo" title="${fueraDePeriodo} registro(s) en el mes anterior o siguiente — revisa que no esté mal fechado">⚠️ ${fueraDePeriodo}</span>` : ''}${avisoSinClasificar}</td>
+      <td>${fueraDePeriodo ? `<span class="badge badge-amarillo" style="cursor:pointer;" title="${fueraDePeriodo} registro(s) en el mes anterior o siguiente — revisa que no esté mal fechado. Click para ir a revisarlo." onclick="verDatosFueraDePeriodo('${t.rut}','${periodo}')">⚠️ ${fueraDePeriodo}</span>` : ''}${avisoSinClasificar}</td>
       <td>
         <button class="btn btn-secondary btn-sm" onclick="previsualizarLiquidacion('${t.rut}')" title="Vista previa"><i class="ti ti-eye"></i></button>
         ${botonAccion}
