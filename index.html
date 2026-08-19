@@ -2655,6 +2655,35 @@
 <!-- Modal "Asignar Mandante y Faena" eliminado — confirmado código
      muerto, nunca se llamaba desde ningún botón (Hallazgo Grande #13). -->
 
+<!-- MODAL CORRECCIÓN (AJUSTE A MES CERRADO) -->
+<div id="modal-correccion" class="modal-overlay">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;box-shadow:var(--shadow-md);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-size:16px;font-weight:700;"><i class="ti ti-tool" style="margin-right:8px;color:var(--azul);"></i>Corrección de emergencia</div>
+      <button class="btn btn-secondary btn-sm" onclick="cerrarModalCorreccion()"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="font-size:12px;color:var(--texto3);margin-bottom:14px;">
+      El mes cerrado <strong id="cor-periodo-nombre"></strong> no se modifica. Este ajuste se va a aplicar como una línea aparte en la próxima liquidación abierta del trabajador (<strong id="cor-periodo-aplicado"></strong>).
+    </div>
+    <div class="form-group">
+      <label>Trabajador</label>
+      <select id="cor-trabajador"><option value="">— Seleccionar trabajador —</option></select>
+    </div>
+    <div class="form-group">
+      <label>Monto del ajuste</label>
+      <input type="number" id="cor-monto" placeholder="Ej: 15000 (a favor) o -15000 (en contra)">
+    </div>
+    <div class="form-group">
+      <label>Motivo (obligatorio)</label>
+      <textarea id="cor-motivo" rows="2" placeholder="Ej: Se cargó una marcación manual después del cierre, faltó descontar/agregar en julio"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="cerrarModalCorreccion()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="guardarAjuste()"><i class="ti ti-device-floppy"></i> Guardar ajuste</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL FAENA -->
 <!-- MODAL EMPRESA -->
 <!-- MODAL EDITAR TRABAJADOR (TR-005) — reutiliza el mismo #form-trabajador, sin duplicar campos -->
