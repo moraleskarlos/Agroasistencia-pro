@@ -131,9 +131,12 @@ function renderReporteLiquidaciones(){
     // ✅ Aviso de días sin clasificar (sin marca de Asistencia y sin
     // novedad) — se están descontando por defecto en este cálculo, así
     // que hay que verlo ANTES de generar, no como sorpresa después.
+    // Clickeable — mismo patrón que ya usa Alertas para este caso
+    // (irA + clasificarAusencia con la primera fecha pendiente).
     const sinClasificar = vars.dias_sin_clasificar || 0;
+    const primeraFechaSinClasificar = (vars.fechas_sin_clasificar||[])[0] || '';
     const avisoSinClasificar = sinClasificar > 0
-      ? `<span class="badge badge-amarillo" title="Sin marca de asistencia ni novedad: ${(vars.fechas_sin_clasificar||[]).map(fmtFecha).join(', ')} — se están descontando como falta injustificada por defecto. Cárgalos en Asistencia (manual) o Gestión Laboral (novedad) para reclasificarlos." style="margin-left:4px;">⚠️ ${sinClasificar} sin clasificar</span>`
+      ? `<span class="badge badge-amarillo" style="margin-left:4px;cursor:pointer;" title="Sin marca de asistencia ni novedad: ${(vars.fechas_sin_clasificar||[]).map(fmtFecha).join(', ')} — se están descontando como falta injustificada por defecto. Click para ir a clasificar el primer día pendiente." onclick="irA('ausencias'); setTimeout(() => { if(typeof clasificarAusencia==='function') clasificarAusencia('${t.rut}','${primeraFechaSinClasificar}'); }, 150);">⚠️ ${sinClasificar} sin clasificar</span>`
       : '';
 
     // ✅ Semáforo — ¿ya existe una liquidación GUARDADA para este
