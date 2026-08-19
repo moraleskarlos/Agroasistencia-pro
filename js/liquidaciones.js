@@ -128,18 +128,39 @@ function renderReporteLiquidaciones(){
     const descuentos_ = liq.total_descuentos;
     const fueraDePeriodo = _tieneDatosFueraDePeriodo(t.rut, periodo);
 
+    // ✅ Aviso de días sin clasificar (sin marca de Asistencia y sin
+    // novedad) — se están descontando por defecto en este cálculo, así
+    // que hay que verlo ANTES de generar, no como sorpresa después.
+    const sinClasificar = vars.dias_sin_clasificar || 0;
+    const avisoSinClasificar = sinClasificar > 0
+      ? `<span class="badge badge-amarillo" title="Sin marca de asistencia ni novedad: ${(vars.fechas_sin_clasificar||[]).map(fmtFecha).join(', ')} — se están descontando como falta injustificada por defecto. Cárgalos en Asistencia (manual) o Gestión Laboral (novedad) para reclasificarlos." style="margin-left:4px;">⚠️ ${sinClasificar} sin clasificar</span>`
+      : '';
+
+    // ✅ Semáforo — ¿ya existe una liquidación GUARDADA para este
+    // trabajador+período? (liquidaciones_guardadas es la fuente real,
+    // no lo que se está calculando en vivo acá arriba). Si ya existe,
+    // el botón "Generar" se reemplaza por "Recalcular" (con
+    // confirmación) para no volver a pisarla en silencio.
+    const yaGenerada = (liquidaciones_guardadas||[]).some(l => l.rut === t.rut && l.periodo === periodo);
+    const semaforo = yaGenerada
+      ? `<span class="badge badge-verde" title="Ya generada — folio ${(liquidaciones_guardadas.find(l=>l.rut===t.rut&&l.periodo===periodo)||{}).folio||''}" style="margin-left:6px;">🟢 Generada</span>`
+      : `<span class="badge badge-gris" title="Todavía no se generó la liquidación de este período" style="margin-left:6px;">🔴 Pendiente</span>`;
+    const botonAccion = yaGenerada
+      ? `<button class="btn btn-secondary btn-sm" onclick="recalcularLiquidacion('${t.rut}','${periodo}')" title="Recalcular (reemplaza la ya generada)"><i class="ti ti-refresh"></i></button>`
+      : `<button class="btn btn-secondary btn-sm" onclick="generarLiquidacionIndividualFila('${t.rut}')" title="Generar solo esta"><i class="ti ti-file-invoice"></i></button>`;
+
     return `<tr>
       <td><input type="checkbox" class="chk-rep-liq" data-rut="${t.rut}" onchange="toggleCheckRepLiq('${t.rut}', this.checked)" style="accent-color:var(--verde);width:16px;height:16px;"></td>
-      <td style="font-weight:500;">${t.nombre}<div style="font-size:11px;color:var(--texto3);">${t.rut}</div></td>
+      <td style="font-weight:500;">${t.nombre}${semaforo}<div style="font-size:11px;color:var(--texto3);">${t.rut}</div></td>
       <td style="text-align:right;">$${liq.sueldo_base.toLocaleString('es-CL')}</td>
       <td style="text-align:right;">${bonos>0 ? '$'+bonos.toLocaleString('es-CL') : '—'}</td>
       <td style="text-align:right;">${horasExtra>0 ? '$'+horasExtra.toLocaleString('es-CL') : '—'}</td>
       <td style="text-align:right;color:var(--rojo);">${descuentos_>0 ? '-$'+descuentos_.toLocaleString('es-CL') : '—'}</td>
       <td style="text-align:right;font-weight:600;">$${liq.liquido.toLocaleString('es-CL')}</td>
-      <td>${fueraDePeriodo ? `<span class="badge badge-amarillo" title="${fueraDePeriodo} registro(s) en el mes anterior o siguiente — revisa que no esté mal fechado">⚠️ ${fueraDePeriodo}</span>` : ''}</td>
+      <td>${fueraDePeriodo ? `<span class="badge badge-amarillo" title="${fueraDePeriodo} registro(s) en el mes anterior o siguiente — revisa que no esté mal fechado">⚠️ ${fueraDePeriodo}</span>` : ''}${avisoSinClasificar}</td>
       <td>
         <button class="btn btn-secondary btn-sm" onclick="previsualizarLiquidacion('${t.rut}')" title="Vista previa"><i class="ti ti-eye"></i></button>
-        <button class="btn btn-secondary btn-sm" onclick="generarLiquidacionIndividualFila('${t.rut}')" title="Generar solo esta"><i class="ti ti-file-invoice"></i></button>
+        ${botonAccion}
       </td>
     </tr>`;
   }).join('');
@@ -202,6 +223,28 @@ function generarLiquidacionIndividualFila(rut){
   if(liq.error){ toast(`❌ ${liq.error}`, 'error'); return; }
   toast(`✅ Liquidación generada — ${liq.nombre}`, 'exito');
   _actualizarBadgeLiquidacionesEmitidas();
+  renderReporteLiquidaciones(); // ✅ refresca el semáforo de esta fila (🔴→🟢)
+}
+
+/* ✅ Recalcular — para cuando YA existe una liquidación guardada y hay
+   que corregirla (ej. se agregó un bono que faltaba, se corrigió una
+   ausencia). A diferencia de "Generar" (que no pregunta nada), acá se
+   pide confirmación explícita porque se va a REEMPLAZAR la liquidación
+   ya generada — mismo motor de cálculo de siempre
+   (calcularYGuardarLiquidacion ya reusa el folio original, ver BL-061),
+   solo que ahora el usuario sabe conscientemente que está pisando algo
+   que ya existía, en vez de que pase en silencio. */
+function recalcularLiquidacion(rut, periodo){
+  const t = trabajadores.find(x => x.rut === rut);
+  const nombre = t?.nombre || rut;
+  if(!confirm(`⚠️ ${nombre} ya tiene una liquidación generada para este período — esto la va a reemplazar con los datos actuales (folio y monto pueden cambiar). ¿Continuar?`)) return;
+
+  if(!_verificarPreCondiciones(periodo)) return;
+  const liq = calcularYGuardarLiquidacion(rut, periodo);
+  if(liq.error){ toast(`❌ ${liq.error}`, 'error'); return; }
+  toast(`✅ Liquidación recalculada — ${liq.nombre}`, 'exito');
+  _actualizarBadgeLiquidacionesEmitidas();
+  renderReporteLiquidaciones();
 }
 
 function generarLiquidacionesSeleccionadas(){

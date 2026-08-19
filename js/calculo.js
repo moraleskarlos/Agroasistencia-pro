@@ -138,6 +138,8 @@ function calcularLiquidacion(vars, periodo){
     dias_a_descontar:         vars.dias_a_descontar,
     dias_permiso_sin_goce:    vars.dias_permiso_sin_goce,
     dias_trabajados:          vars.dias_trabajados,
+    dias_sin_clasificar:      vars.dias_sin_clasificar || 0,
+    fechas_sin_clasificar:    vars.fechas_sin_clasificar || [],
     dias_licencia_medica,
     pensionado_invalidez_parcial: esPensionadoInvalidezParcial,
     sistema_salud:            vars.sistema_salud,

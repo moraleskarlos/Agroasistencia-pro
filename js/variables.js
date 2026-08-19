@@ -38,6 +38,7 @@ function construirVariablesRemuneracion(rut, periodo){
 
   // ── 4. Días trabajados y ausencias desde Asistencia ──
   const asistencia = _leerAsistenciaMes(rut, periodo);
+  const dias_sin_clasificar = asistencia.dias_sin_clasificar || 0;
 
   // ── 5. Novedades del período desde Gestión Laboral ───
   const novedades_periodo = getNovedadesPorRut(rut, periodo);
@@ -49,11 +50,14 @@ function construirVariablesRemuneracion(rut, periodo){
   const dias_ausencia_injust     = _contarDiasNovedad(novedades_periodo, 'ausencia_injustificada');
   const dias_vacaciones          = _contarDiasNovedad(novedades_periodo, 'vacaciones');
 
-  // Días que descuentan del sueldo base (sin goce + injustificadas)
-  // Licencia médica NO descuenta — la paga Fonasa/Isapre vía subsidio
-  // Vacaciones NO descuentan — se pagan con remuneración íntegra (Art. 71 CT)
-  // Permiso con goce NO descuenta — es de cargo del empleador
-  const dias_a_descontar = dias_permiso_sin_goce + dias_ausencia_injust;
+  // Días que descuentan del sueldo base (sin goce + injustificadas +
+  // sin clasificar). Licencia médica NO descuenta — la paga
+  // Fonasa/Isapre vía subsidio. Vacaciones NO descuentan — se pagan con
+  // remuneración íntegra (Art. 71 CT). Permiso con goce NO descuenta —
+  // es de cargo del empleador. Los "sin clasificar" (sin marca de
+  // Asistencia y sin novedad) se tratan igual que una falta
+  // injustificada por defecto — ver _leerAsistenciaMes() más abajo.
+  const dias_a_descontar = dias_permiso_sin_goce + dias_ausencia_injust + dias_sin_clasificar;
 
   // ── 6. Sueldo proporcional ───────────────────────────
   // Si el mes fue completo o las ausencias son con goce → sueldo íntegro
@@ -100,6 +104,8 @@ function construirVariablesRemuneracion(rut, periodo){
 
     // Asistencia
     dias_trabajados:        asistencia.dias_trabajados,
+    dias_sin_clasificar,     // ✅ nuevo — sin marca de Asistencia y sin novedad (se descuenta por defecto)
+    fechas_sin_clasificar:  asistencia.fechas_sin_clasificar || [],
     dias_licencia_medica,
     dias_permiso_con_goce,
     dias_permiso_sin_goce,
@@ -277,13 +283,50 @@ function _calcularAntiguedad(fechaInicio, periodo){
 }
 
 /* ── Leer asistencia del mes desde localStorage ─────────── */
+/* ✅ Reactivada — cuenta, para este trabajador+período, los días
+   hábiles SIN marcación de asistencia (QR o manual) Y sin ninguna
+   novedad que los cubra. Estos días se tratan como falta injustificada
+   por defecto (acordado con el usuario, sesión 18-08-2026) — antes, un
+   día sin ninguna acción humana se pagaba completo en silencio.
+   Mismo resguardo que _leerAusenciasAsistencia (gestion-laboral.js):
+   solo cuenta un día si el módulo de Asistencia tuvo actividad real
+   ese día (alguien marcó algo, de cualquier trabajador) — así un mes
+   futuro, o una empresa que no usa Asistencia, no generan faltas
+   fantasma. Los caminos manuales de siempre (marcar asistencia a mano,
+   cargar una novedad) resuelven el día exactamente igual que antes —
+   esto solo cambia qué pasa cuando NADIE hizo ninguna de las dos cosas. */
 function _leerAsistenciaMes(rut, periodo){
-  // ✅ Limpieza — antes recorría día por día todo el mes en localStorage
-  // para calcular dias_trabajados, un valor que nunca se mostraba en
-  // ningún lado (liquidaciones.js, libro.js). Se saca el cálculo — si
-  // en el futuro hace falta mostrarlo, se puede reintroducir apuntando
-  // a dónde se va a usar.
-  return {};
+  const [anio, mes] = periodo.split('-').map(Number);
+  const diasMes = new Date(anio, mes, 0).getDate();
+  const novedadesRut = (typeof getNovedadesPorRut === 'function') ? getNovedadesPorRut(rut, periodo) : [];
+
+  const cubiertoPorNovedad = (fecha) => novedadesRut.some(n => {
+    const ini = n.fecha_inicio, fin = n.fecha_fin || n.fecha_inicio;
+    return ini && fecha >= ini && fecha <= fin;
+  });
+
+  let dias_sin_clasificar = 0;
+  const fechas_sin_clasificar = [];
+
+  for(let d = 1; d <= diasMes; d++){
+    const fecha = `${anio}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const diaSemana = new Date(fecha+'T12:00:00').getDay();
+    if(diaSemana === 0 || diaSemana === 6) continue; // sábado/domingo — el mes comercial ya los cubre
+
+    let data = [];
+    try{ data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]'); }catch{ data = []; }
+    if(!data.length) continue; // el módulo no tuvo actividad ese día — no se asume nada
+
+    const marcacion = data.find(x => x.rut === rut);
+    if(marcacion) continue; // sí tiene marca (QR o manual)
+
+    if(cubiertoPorNovedad(fecha)) continue; // ya está clasificado (permiso, licencia, etc.)
+
+    dias_sin_clasificar++;
+    fechas_sin_clasificar.push(fecha);
+  }
+
+  return { dias_sin_clasificar, fechas_sin_clasificar };
 }
 
 /* ── Contar días de un tipo de novedad ──────────────────── */
