@@ -82,6 +82,15 @@ function construirVariablesRemuneracion(rut, periodo){
   const total_no_imponible = haberes_clasificados.no_imponibles_total;
   const total_haberes = total_imponible + total_no_imponible;
 
+  // ── 10. Ajustes de meses cerrados ("Corrección de emergencia") ──
+  // No cotizan (no son remuneración imponible nueva, son la corrección
+  // de un cálculo ya cerrado) — se aplican directo al líquido final,
+  // como una línea aparte y visible, sin mezclarse en el cálculo
+  // normal de haberes/descuentos legales.
+  const ajustesPeriodo = (typeof ajustes !== 'undefined' ? ajustes : [])
+    .filter(a => a.trabajador_rut === rut && a.periodo_aplicado === periodo);
+  const total_ajustes = ajustesPeriodo.reduce((s,a) => s + (parseFloat(a.monto)||0), 0);
+
   return {
     // Identificación
     rut,
@@ -131,6 +140,10 @@ function construirVariablesRemuneracion(rut, periodo){
     total_imponible,       // base AFP + salud + AFC + SIS
     total_no_imponible,    // colación + movilización (no cotizan)
     total_haberes,         // total bruto antes de descuentos legales
+
+    // Ajustes de meses cerrados (Corrección de emergencia)
+    total_ajustes,
+    detalle_ajustes: ajustesPeriodo,
   };
 }
 

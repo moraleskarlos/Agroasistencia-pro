@@ -88,6 +88,29 @@ function _renderKPIsLibro(lista){
    FORMATO 1 — LIBRO DT (Art. 62 CT)
    Columnas obligatorias según Resolución Exenta N°961 DT
    ════════════════════════════════════════════════════════ */
+/* ✅ Botón "Cerrar mes" / "Corrección" — solo tiene sentido con UNA
+   empresa específica seleccionada (el cierre es por empresa+período,
+   no global). Si ya está cerrado, muestra el candado + el botón de
+   Corrección (que no reabre nada, aplica un ajuste al mes siguiente). */
+function _botonCierreMes(periodo){
+  const empresa = document.getElementById('libro-filtro-empresa')?.value;
+  if(!empresa) return '';
+
+  if(typeof esMesCerrado === 'function' && esMesCerrado(periodo, empresa)){
+    return `
+      <span class="badge badge-gris" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;">
+        <i class="ti ti-lock"></i> Mes cerrado
+      </span>
+      <button class="btn btn-secondary btn-sm" onclick="abrirModalCorreccion('${periodo}','${empresa}')" title="Corrección de emergencia — no reabre el mes, aplica un ajuste en el siguiente">
+        <i class="ti ti-tool"></i> Corrección
+      </button>`;
+  }
+
+  return `<button class="btn btn-secondary btn-sm" onclick="cerrarMes()" title="Bloquea generar o recalcular liquidaciones de este período para esta empresa">
+    <i class="ti ti-lock"></i> Cerrar mes
+  </button>`;
+}
+
 function _renderLibroDT(lista, periodo){
   const [anio, mes] = periodo.split('-');
   const nombreMes   = new Date(anio, mes-1, 1)
@@ -157,6 +180,7 @@ function _renderLibroDT(lista, periodo){
         <button class="btn btn-primary btn-sm" onclick="exportarLibroExcel()">
           <i class="ti ti-table-export"></i> Exportar Excel
         </button>
+        ${_botonCierreMes(periodo)}
       </div>
     </div>
 
@@ -286,6 +310,7 @@ function _renderResumenContador(lista, periodo){
         <button class="btn btn-primary btn-sm" onclick="exportarResumenExcel()">
           <i class="ti ti-table-export"></i> Exportar Excel
         </button>
+        ${_botonCierreMes(periodo)}
       </div>
     </div>
 

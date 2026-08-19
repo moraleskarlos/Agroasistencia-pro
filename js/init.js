@@ -5,6 +5,8 @@ try {
   cargarGestionLaboral();
   cargarIndicadores();
   cargarLiquidaciones();
+  cargarMesesCerrados();
+  cargarAjustes();
   migrarIDs();
   _migrarEmpresaCarpetaRetroactivo();
   iniciarSupabase();

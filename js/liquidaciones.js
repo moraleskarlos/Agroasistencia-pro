@@ -8,6 +8,157 @@ const LOCAL_LIQUIDACIONES = 'agro_liquidaciones';
 let liquidaciones_guardadas = [];
 let _liquidacionPreview = null;
 
+/* ✅ Cierre de mes — "meses_cerrados" es por EMPRESA + PERÍODO (no un
+   cierre global), porque cada empresa puede cerrar en momentos
+   distintos. Un mes cerrado bloquea generar/recalcular liquidaciones
+   de esa empresa+período — las correcciones posteriores se hacen vía
+   "ajustes" (ver más abajo), nunca reabriendo el mes. */
+const LOCAL_MESES_CERRADOS = 'agro_meses_cerrados';
+let meses_cerrados = [];
+
+function cargarMesesCerrados(){
+  try{ meses_cerrados = JSON.parse(localStorage.getItem(LOCAL_MESES_CERRADOS)) || []; }
+  catch{ meses_cerrados = []; }
+}
+function guardarMesesCerrados(){
+  localStorage.setItem(LOCAL_MESES_CERRADOS, JSON.stringify(meses_cerrados));
+}
+
+/* ✅ Ajustes — la forma de corregir un mes YA CERRADO: nunca se reabre
+   el mes viejo (queda intacto para siempre, como corresponde
+   contablemente), el ajuste se aplica como una línea aparte, visible,
+   en la PRÓXIMA liquidación abierta de esa persona (periodo_aplicado =
+   el mes calendario siguiente al corregido). */
+const LOCAL_AJUSTES = 'agro_ajustes';
+let ajustes = [];
+
+function cargarAjustes(){
+  try{ ajustes = JSON.parse(localStorage.getItem(LOCAL_AJUSTES)) || []; }
+  catch{ ajustes = []; }
+}
+function guardarAjustes(){
+  localStorage.setItem(LOCAL_AJUSTES, JSON.stringify(ajustes));
+}
+
+function esMesCerrado(periodo, empresaId){
+  return meses_cerrados.some(m => m.periodo === periodo && m.empresa_propia_id === empresaId);
+}
+
+/* ✅ Corrección de emergencia — NO reabre el mes cerrado. Registra un
+   ajuste (monto + motivo) que se va a sumar como línea aparte en la
+   próxima liquidación abierta del trabajador (periodo_aplicado = mes
+   siguiente al corregido). El mes cerrado queda intacto para siempre. */
+let _corPeriodoCorregido = null;
+
+function abrirModalCorreccion(periodo, empresaId){
+  _corPeriodoCorregido = periodo;
+  const periodoAplicado = _mesSiguiente(periodo);
+
+  const sel = document.getElementById('cor-trabajador');
+  const activos = trabajadores.filter(t => t.estado === 'activo' && t.empresa_propia_id === empresaId);
+  sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>'
+    + activos.map(t => `<option value="${t.rut}">${t.nombre} · ${t.rut}</option>`).join('');
+
+  document.getElementById('cor-periodo-nombre').textContent   = getNombreMes(periodo);
+  document.getElementById('cor-periodo-aplicado').textContent = getNombreMes(periodoAplicado);
+  document.getElementById('cor-monto').value  = '';
+  document.getElementById('cor-motivo').value = '';
+  document.getElementById('modal-correccion').style.display = 'flex';
+}
+
+function cerrarModalCorreccion(){
+  document.getElementById('modal-correccion').style.display = 'none';
+  _corPeriodoCorregido = null;
+}
+
+function guardarAjuste(){
+  const rut    = document.getElementById('cor-trabajador')?.value;
+  const monto  = parseFloat(document.getElementById('cor-monto')?.value);
+  const motivo = document.getElementById('cor-motivo')?.value?.trim();
+
+  if(!rut){ toast('⚠️ Selecciona el trabajador','error'); return; }
+  if(!monto || isNaN(monto)){ toast('⚠️ Ingresa un monto distinto de cero','error'); return; }
+  if(!motivo){ toast('⚠️ El motivo es obligatorio','error'); return; }
+  if(!_corPeriodoCorregido){ toast('⚠️ Error interno — vuelve a abrir el formulario','error'); return; }
+
+  const periodoAplicado = _mesSiguiente(_corPeriodoCorregido);
+  const t = trabajadores.find(x => x.rut === rut);
+
+  ajustes.push({
+    id: Date.now().toString(),
+    trabajador_rut:   rut,
+    periodo_corregido: _corPeriodoCorregido,
+    periodo_aplicado:  periodoAplicado,
+    monto,
+    motivo,
+    creado_en: hoyISO(),
+    creado_por: sesionActiva?.usuario || 'admin',
+  });
+  guardarAjustes();
+
+  toast(`✅ Ajuste registrado — se va a aplicar en la liquidación de ${getNombreMes(periodoAplicado)} de ${t?.nombre||rut}`, 'exito');
+  cerrarModalCorreccion();
+}
+
+/* Mes calendario siguiente, en formato 'YYYY-MM' (mismo criterio de
+   siempre — string ISO, sin pasar por Date salvo para el cálculo). */
+function _mesSiguiente(periodo){
+  const [anio, mes] = periodo.split('-').map(Number);
+  const d = new Date(anio, mes, 1); // mes (0-index) ya es "el siguiente"
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+/* ✅ Cerrar mes — valida ANTES de dejar cerrar (no se puede cerrar a
+   ciegas). Bloquea si hay trabajadores activos sin liquidación
+   generada, o con días de asistencia sin clasificar pendientes. El
+   aviso de "datos fuera de período" es informativo, no bloquea (podría
+   ser un dato legítimo cerca del borde del mes). Un mes cerrado nunca
+   se reabre — las correcciones posteriores se hacen vía "Corrección"
+   (ver guardarAjuste), que aplica el ajuste al mes siguiente, ya
+   abierto, sin tocar el que se acaba de cerrar. */
+function cerrarMes(){
+  const periodo  = document.getElementById('libro-periodo-selector')?.value;
+  const empresa  = document.getElementById('libro-filtro-empresa')?.value;
+
+  if(!periodo){ toast('⚠️ Selecciona un período','error'); return; }
+  if(!empresa){ toast('⚠️ Selecciona una empresa específica para cerrar su mes (no "Todas las empresas")','error'); return; }
+
+  if(esMesCerrado(periodo, empresa)){ toast('Este mes ya está cerrado para esta empresa','error'); return; }
+
+  const activos = trabajadores.filter(t => t.estado === 'activo' && t.empresa_propia_id === empresa);
+  const problemas = [];
+
+  activos.forEach(t => {
+    const tieneLiq = liquidaciones_guardadas.some(l => l.rut === t.rut && l.periodo === periodo);
+    if(!tieneLiq){
+      problemas.push(`${t.nombre} — sin liquidación generada`);
+      return; // si no tiene liquidación, no tiene sentido chequear asistencia todavía
+    }
+    const asist = (typeof _leerAsistenciaMes === 'function') ? _leerAsistenciaMes(t.rut, periodo) : { dias_sin_clasificar: 0 };
+    if(asist.dias_sin_clasificar > 0){
+      problemas.push(`${t.nombre} — ${asist.dias_sin_clasificar} día(s) de asistencia sin clasificar`);
+    }
+  });
+
+  if(problemas.length){
+    alert(`⚠️ No se puede cerrar el mes todavía. Faltan resolver ${problemas.length} caso(s):\n\n${problemas.join('\n')}\n\nRevisá "Generar Liquidaciones" para verlos con el semáforo y los avisos.`);
+    return;
+  }
+
+  const nombreEmp = getEmpresaEmpleadora(empresa)?.razon_social || getEmpresaEmpleadora(empresa)?.nombre || empresa;
+  if(!confirm(`¿Cerrar ${getNombreMes(periodo)} para ${nombreEmp}?\n\nUna vez cerrado, no se van a poder generar ni recalcular liquidaciones de este período para esta empresa. Cualquier corrección posterior se aplica como ajuste en el mes siguiente.`)) return;
+
+  meses_cerrados.push({
+    id: Date.now().toString(),
+    periodo, empresa_propia_id: empresa,
+    cerrado_en: hoyISO(),
+    cerrado_por: sesionActiva?.usuario || 'admin',
+  });
+  guardarMesesCerrados();
+  toast(`🔒 ${getNombreMes(periodo)} cerrado para ${nombreEmp}`, 'exito');
+  if(typeof renderLibro === 'function') renderLibro();
+}
+
 /* ── CARGA / GUARDADO ──────────────────────────────────── */
 function cargarLiquidaciones(){
   try{ liquidaciones_guardadas = JSON.parse(localStorage.getItem(LOCAL_LIQUIDACIONES)) || []; }
@@ -189,10 +340,17 @@ function renderReporteLiquidaciones(){
     // el botón "Generar" se reemplaza por "Recalcular" (con
     // confirmación) para no volver a pisarla en silencio.
     const yaGenerada = (liquidaciones_guardadas||[]).some(l => l.rut === t.rut && l.periodo === periodo);
-    const semaforo = yaGenerada
+    // ✅ Cierre de mes — si esta empresa+período ya está cerrada, nada
+    // de generar/recalcular acá — se reemplaza por un candado.
+    const mesCerrado = (typeof esMesCerrado === 'function') && esMesCerrado(periodo, empresa);
+    const semaforo = mesCerrado
+      ? `<span class="badge badge-gris" title="Mes cerrado — usa el botón Corrección en Libro de Remuneraciones para ajustar" style="margin-left:6px;">🔒 Cerrado</span>`
+      : yaGenerada
       ? `<span class="badge badge-verde" title="Ya generada — folio ${(liquidaciones_guardadas.find(l=>l.rut===t.rut&&l.periodo===periodo)||{}).folio||''}" style="margin-left:6px;">🟢 Generada</span>`
       : `<span class="badge badge-gris" title="Todavía no se generó la liquidación de este período" style="margin-left:6px;">🔴 Pendiente</span>`;
-    const botonAccion = yaGenerada
+    const botonAccion = mesCerrado
+      ? `<span class="badge badge-gris" title="Mes cerrado — no se puede generar ni recalcular"><i class="ti ti-lock"></i></span>`
+      : yaGenerada
       ? `<button class="btn btn-secondary btn-sm" onclick="recalcularLiquidacion('${t.rut}','${periodo}')" title="Recalcular (reemplaza la ya generada)"><i class="ti ti-refresh"></i></button>`
       : `<button class="btn btn-secondary btn-sm" onclick="generarLiquidacionIndividualFila('${t.rut}')" title="Generar solo esta"><i class="ti ti-file-invoice"></i></button>`;
 
@@ -266,6 +424,10 @@ function verSeleccionadas(){
 function generarLiquidacionIndividualFila(rut){
   const periodo = document.getElementById('rep-liq-periodo')?.value;
   if(!periodo || !_verificarPreCondiciones(periodo)) return;
+  const t = trabajadores.find(x => x.rut === rut);
+  if((typeof esMesCerrado === 'function') && esMesCerrado(periodo, t?.empresa_propia_id)){
+    toast('🔒 Este mes ya está cerrado para esta empresa — usa "Corrección" en Libro de Remuneraciones','error'); return;
+  }
   const liq = calcularYGuardarLiquidacion(rut, periodo);
   if(liq.error){ toast(`❌ ${liq.error}`, 'error'); return; }
   toast(`✅ Liquidación generada — ${liq.nombre}`, 'exito');
@@ -280,10 +442,17 @@ function generarLiquidacionIndividualFila(rut){
    ya generada — mismo motor de cálculo de siempre
    (calcularYGuardarLiquidacion ya reusa el folio original, ver BL-061),
    solo que ahora el usuario sabe conscientemente que está pisando algo
-   que ya existía, en vez de que pase en silencio. */
+   que ya existía, en vez de que pase en silencio. Bloqueado si el mes
+   ya está cerrado — la corrección de un mes cerrado se hace vía
+   "Corrección" (ajuste al mes siguiente), nunca recalculando el viejo. */
 function recalcularLiquidacion(rut, periodo){
   const t = trabajadores.find(x => x.rut === rut);
   const nombre = t?.nombre || rut;
+
+  if((typeof esMesCerrado === 'function') && esMesCerrado(periodo, t?.empresa_propia_id)){
+    toast('🔒 Este mes ya está cerrado — usa "Corrección" en Libro de Remuneraciones para ajustarlo en el mes siguiente','error'); return;
+  }
+
   if(!confirm(`⚠️ ${nombre} ya tiene una liquidación generada para este período — esto la va a reemplazar con los datos actuales (folio y monto pueden cambiar). ¿Continuar?`)) return;
 
   if(!_verificarPreCondiciones(periodo)) return;
@@ -296,8 +465,12 @@ function recalcularLiquidacion(rut, periodo){
 
 function generarLiquidacionesSeleccionadas(){
   const periodo = document.getElementById('rep-liq-periodo')?.value;
+  const empresa = document.getElementById('rep-liq-empresa')?.value;
   if(!periodo || !_verificarPreCondiciones(periodo)) return;
   if(!_seleccionadosRepLiq.size){ toast('⚠️ Selecciona al menos un trabajador','error'); return; }
+  if((typeof esMesCerrado === 'function') && esMesCerrado(periodo, empresa)){
+    toast('🔒 Este mes ya está cerrado para esta empresa — usa "Corrección" en Libro de Remuneraciones','error'); return;
+  }
 
   let ok = 0, errores = 0;
   _seleccionadosRepLiq.forEach(rut => {
@@ -471,13 +644,19 @@ function renderListaLiquidaciones(){
 
   lista.sort((a,b) => a.nombre?.localeCompare(b.nombre));
   _listaLiqActual = lista;
-  tbody.innerHTML = lista.map((l, i) => `<tr>
+  tbody.innerHTML = lista.map((l, i) => {
+    // ✅ Cierre de mes — badge informativo si esta liquidación pertenece
+    // a un período+empresa ya cerrado (la empresa se resuelve vía el
+    // contrato vigente de esa persona en ese período específico).
+    const empresaLiq = _getContratoVigente(l.rut, l.periodo)?.empresa_propia_id;
+    const cerrado = (typeof esMesCerrado === 'function') && esMesCerrado(l.periodo, empresaLiq);
+    return `<tr>
     <td style="font-size:13px;font-weight:500;">${l.nombre}</td>
     <td class="rut-mono">${l.rut}</td>
     <td style="font-size:12px;text-align:right;">$${l.total_haberes?.toLocaleString('es-CL')||'—'}</td>
     <td style="font-size:12px;text-align:right;color:var(--danger);">-$${l.total_descuentos?.toLocaleString('es-CL')||'—'}</td>
     <td style="font-size:13px;font-weight:600;text-align:right;color:var(--verde-dark);">$${l.liquido?.toLocaleString('es-CL')||'—'}</td>
-    <td style="font-size:11px;color:var(--texto2);">${l.folio||'—'}</td>
+    <td style="font-size:11px;color:var(--texto2);">${l.folio||'—'}${cerrado ? ` <span class="badge badge-gris" title="Mes cerrado" style="margin-left:4px;"><i class="ti ti-lock"></i></span>` : ''}</td>
     <td>
       <div style="display:flex;gap:4px;">
         <button class="btn btn-secondary btn-sm" onclick="verLiquidacion('${l.rut}','${l.periodo}')" title="Ver">
@@ -488,7 +667,8 @@ function renderListaLiquidaciones(){
         </button>
       </div>
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 
   _renderResumenPeriodo(lista);
 }
@@ -738,6 +918,8 @@ function _generarHTMLLiquidacion(liq, guardada){
         <div class="ld-totales-inner">
           <div class="ld-tot-row"><span>Total haberes</span><span style="font-weight:600;">${fmtM(liq.total_haberes)}</span></div>
           <div class="ld-tot-row"><span>Total descuentos</span><span style="font-weight:600;color:#dc2626;">-${fmtM(liq.total_descuentos)}</span></div>
+          ${(liq.detalle_ajustes||[]).map(a => `
+          <div class="ld-tot-row" title="${a.motivo}"><span>Ajuste — corrección ${_capitalizar(getNombreMes(a.periodo_corregido))}</span><span style="font-weight:600;color:${a.monto>=0?'#059669':'#dc2626'};">${a.monto>=0?'+':''}${fmtM(a.monto)}</span></div>`).join('')}
           <div class="ld-tot-liquido"><span>Líquido a recibir</span><span>${fmtM(liq.liquido)}</span></div>
         </div>
       </div>

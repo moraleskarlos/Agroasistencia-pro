@@ -74,7 +74,12 @@ function calcularLiquidacion(vars, periodo){
 
   // ── Líquido a pagar ──────────────────────────────────
   const total_descuentos = total_prev_trab + iusc + total_desc_adicionales;
-  const liquido          = Math.max(0, vars.total_haberes - total_descuentos);
+  // ✅ Ajustes de meses cerrados ("Corrección de emergencia") — se suman
+  // directo al líquido, después de todos los descuentos legales. No
+  // cotizan ni afectan ninguna base de cálculo, son la corrección de un
+  // período ya cerrado, no remuneración nueva del mes actual.
+  const total_ajustes    = vars.total_ajustes || 0;
+  const liquido           = Math.max(0, vars.total_haberes - total_descuentos + total_ajustes);
 
   // ── Cargo empleador ──────────────────────────────────
   // RIMA (Renta Imponible Mes Anterior a la Licencia, Campo 92 Previred)
@@ -140,6 +145,8 @@ function calcularLiquidacion(vars, periodo){
     dias_trabajados:          vars.dias_trabajados,
     dias_sin_clasificar:      vars.dias_sin_clasificar || 0,
     fechas_sin_clasificar:    vars.fechas_sin_clasificar || [],
+    total_ajustes:            total_ajustes,
+    detalle_ajustes:          vars.detalle_ajustes || [],
     dias_licencia_medica,
     pensionado_invalidez_parcial: esPensionadoInvalidezParcial,
     sistema_salud:            vars.sistema_salud,
