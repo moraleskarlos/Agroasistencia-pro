@@ -167,16 +167,21 @@ function calcularAlertas(){
       () => irA('prevision')));
   }
 
-  // Liquidación del período vigente
+  // Liquidación del período CERRADO (el mes anterior, no el actual — las
+  // remuneraciones se procesan del mes ya terminado; con periodoActual
+  // acá, esta alerta avisaba TODOS los días del mes que faltaba la
+  // liquidación del mes que todavía está en curso — falsa alarma
+  // constante, ver getPeriodoCerrado() en indicadores.js).
+  const periodoCerrado = typeof getPeriodoCerrado === 'function' ? getPeriodoCerrado() : periodoActual;
   activos.forEach(t => {
     const tieneLiq = (typeof liquidaciones_guardadas !== 'undefined' ? liquidaciones_guardadas : [])
-      .some(l => l.rut === t.rut && l.periodo === periodoActual);
+      .some(l => l.rut === t.rut && l.periodo === periodoCerrado);
     if(!tieneLiq){
-      alertas.push(_alerta('critico','Remuneraciones',`sin_liquidacion_${t.rut}_${periodoActual}`,
-        'Sin liquidación generada', `${t.nombre} no tiene liquidación generada este período`,
+      alertas.push(_alerta('critico','Remuneraciones',`sin_liquidacion_${t.rut}_${periodoCerrado}`,
+        'Sin liquidación generada', `${t.nombre} no tiene liquidación generada del período ${typeof getNombreMes==='function' ? getNombreMes(periodoCerrado) : periodoCerrado}`,
         () => { irA('remuneraciones'); setTimeout(() => {
           const el = document.getElementById('liq-periodo-selector');
-          if(el){ el.value = periodoActual; if(typeof renderListaLiquidaciones==='function') renderListaLiquidaciones(); }
+          if(el){ el.value = periodoCerrado; if(typeof renderListaLiquidaciones==='function') renderListaLiquidaciones(); }
         }, 150); }));
     }
   });

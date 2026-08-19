@@ -52,6 +52,19 @@ function getPeriodoActual(){
   return `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`;
 }
 
+/* ✅ Nuevo — el mes CERRADO (el anterior al actual), no el mes en curso.
+   Las remuneraciones se procesan del mes ya terminado, nunca del mes en
+   marcha (mismo criterio que ya usa initLibro() en libro.js, que por
+   defecto arranca mostrando el mes anterior). Alertas usaba
+   getPeriodoActual() para chequear "sin liquidación generada", lo que
+   avisaba todos los días 1-30 de cada mes que faltaba la liquidación del
+   mes QUE TODAVÍA NO TERMINÓ — falsa alarma constante. */
+function getPeriodoCerrado(){
+  const hoy = new Date();
+  const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
+  return `${mesAnterior.getFullYear()}-${String(mesAnterior.getMonth()+1).padStart(2,'0')}`;
+}
+
 function getNombreMes(periodo){
   if(!periodo) return '';
   const [anio, mes] = periodo.split('-');
