@@ -146,7 +146,12 @@ function calcularAlertas(){
       return;
     }
     if(contrato.tipo !== 'indefinido' && contrato.fecha_termino){
-      const dias = Math.floor((new Date(contrato.fecha_termino) - hoy) / (1000*60*60*24));
+      // ✅ Corregido — usaba new Date(contrato.fecha_termino) directo, sin
+      // el ancla de mediodía que ya usa el resto del sistema desde BL-052
+      // (mismo criterio que _calcularSemaforo en trabajadores.js). Un
+      // contrato que vencía "mañana" podía aparecer como "vencido" a
+      // partir de las 20:00 hora de Chile en adelante.
+      const dias = Math.floor((new Date(contrato.fecha_termino+'T12:00:00') - hoy) / (1000*60*60*24));
       if(dias < 0){
         alertas.push(_alerta('critico','Contratos',`contrato_vencido_${t.rut}`,
           'Contrato vencido', `El contrato de ${t.nombre} venció hace ${Math.abs(dias)} día(s)`,
@@ -222,13 +227,23 @@ function calcularAlertas(){
 
   /* ═══ IMPORTANTES ═══ */
 
+  // ✅ Corregido — leía epp_entregados/irl_declarado directo del
+  // trabajador, pero esos datos SIEMPRE se guardan en el contrato
+  // (contratos.js), nunca en el trabajador — así que estas dos alertas
+  // se disparaban para el 100% de los trabajadores activos, siempre,
+  // sin importar si el contrato real sí tenía el EPP/IRL cargado. Mismo
+  // patrón de búsqueda que ya usa "sin_contrato" más arriba. Si no hay
+  // contrato, no se duplica el aviso — ya lo cubre esa alerta.
   activos.forEach(t => {
-    if(!t.epp_entregados || !t.epp_entregados.length){
+    const contratoEpp = (typeof contratos !== 'undefined' ? contratos : []).find(c => _mismoTrabajador(c.trabajador_id, t.id));
+    if(!contratoEpp) return;
+
+    if(!contratoEpp.epp_entregados || !contratoEpp.epp_entregados.length){
       alertas.push(_alerta('importante','Contratos',`sin_epp_${t.rut}`,
         'EPP no registrado', `${t.nombre} no tiene elementos de protección personal registrados`,
         () => { if(typeof irAContratoEpp==='function') irAContratoEpp(t.rut); else irA('contratos'); }));
     }
-    if(!t.irl_declarado){
+    if(!contratoEpp.irl_declarado){
       alertas.push(_alerta('importante','Contratos',`sin_irl_${t.rut}`,
         'RIOHS / IRL no declarado', `${t.nombre} no ha declarado haber recibido la inducción RIOHS/IRL`,
         () => { if(typeof irAContratoEpp==='function') irAContratoEpp(t.rut); else irA('contratos'); }));

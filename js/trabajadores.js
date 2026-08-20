@@ -429,6 +429,13 @@ function _renderDatosPersonalesPerfil(t, contenedorId){
 
   const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
   const mandante = findMandante(t);
+  // ✅ Corregido — EPP e IRL se guardan en el CONTRATO, nunca en el
+  // trabajador (contratos.js) — la ficha leía t.epp_entregados/
+  // t.irl_declarado directo, que nunca están poblados, así que esta
+  // sección siempre se veía vacía sin importar lo que hubiera cargado
+  // en el contrato real. Mismo criterio de búsqueda que ya usa Alertas
+  // para el mismo dato.
+  const contratoEpp = (typeof contratos !== 'undefined' ? contratos : []).find(c => _mismoTrabajador(c.trabajador_id, t.id));
 
   const fila = (label, valor) => `
     <div style="padding:8px 0;border-bottom:1px solid var(--borde);display:flex;justify-content:space-between;gap:12px;">
@@ -478,14 +485,14 @@ function _renderDatosPersonalesPerfil(t, contenedorId){
     <div class="form-section" style="margin:18px 0 8px;">
       <i class="ti ti-shield-check"></i> EPP entregados
     </div>
-    ${fila('Elementos entregados', (t.epp_entregados&&t.epp_entregados.length) ? t.epp_entregados.join(', ') + (t.epp_entregados.includes('Otro')&&t.epp_otro?` (${t.epp_otro})`:'') : null)}
-    ${fila('Fecha de entrega', t.epp_fecha_entrega ? fmtFecha(t.epp_fecha_entrega) : null)}
+    ${fila('Elementos entregados', (contratoEpp?.epp_entregados&&contratoEpp.epp_entregados.length) ? contratoEpp.epp_entregados.join(', ') + (contratoEpp.epp_entregados.includes('Otro')&&contratoEpp.epp_otro?` (${contratoEpp.epp_otro})`:'') : null)}
+    ${fila('Fecha de entrega', contratoEpp?.epp_fecha_entrega ? fmtFecha(contratoEpp.epp_fecha_entrega) : null)}
 
     <div class="form-section" style="margin:18px 0 8px;">
       <i class="ti ti-notebook"></i> RIOHS / IRL
     </div>
-    ${fila('Fecha de inducción', t.irl_fecha_induccion ? fmtFecha(t.irl_fecha_induccion) : null)}
-    <div style="padding:8px 0;">${t.irl_declarado ? '<span class="badge badge-verde">✅ Declarado recibido</span>' : '<span class="badge badge-gris">Pendiente</span>'}</div>`;
+    ${fila('Fecha de inducción', contratoEpp?.irl_fecha_induccion ? fmtFecha(contratoEpp.irl_fecha_induccion) : null)}
+    <div style="padding:8px 0;">${contratoEpp?.irl_declarado ? '<span class="badge badge-verde">✅ Declarado recibido</span>' : '<span class="badge badge-gris">Pendiente</span>'}</div>`;
 }
 
 /* ════════════════════════════════════════════════════════
