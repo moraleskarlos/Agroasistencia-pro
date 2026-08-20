@@ -498,6 +498,32 @@ function guardarContrato(){
   const formaRem = document.getElementById('c-tipo-rem').value;
   if(!formaRem){ toast('⚠️ Selecciona la forma de remuneración (Mensual o Diaria)','error'); return; }
 
+  // ✅ Nuevo — validación de sueldo mínimo. No bloquea (podría haber
+  // motivos legítimos: jornada parcial ya contemplada, o el indicador
+  // del período todavía no se cargó) — avisa y pide confirmación
+  // explícita, mismo criterio que el aviso de 3er contrato de más
+  // abajo. Se compara el sueldo pactado contra el mínimo proporcional
+  // a la jornada semanal (45h = jornada de referencia completa, mismo
+  // criterio que ya usa el resto del sistema para prorratear).
+  {
+    const tChequeoMin = trabajadores.find(x => x.rut === id || x.id === id);
+    const sueldoIngresado = parseFloat(document.getElementById('c-sueldo')?.value) || 0;
+    const horasSemIngresadas = parseFloat(document.getElementById('c-horas')?.value) || 45;
+    const fechaFirmaMin = document.getElementById('c-fecha-firma')?.value;
+    const periodoMin = (fechaFirmaMin || hoyISO()).slice(0,7);
+    const minimo = (typeof _sueldoMinimoAplicable === 'function') ? _sueldoMinimoAplicable(tChequeoMin, periodoMin) : null;
+
+    if(minimo && sueldoIngresado > 0){
+      const minimoProporcional = Math.round(minimo.monto * Math.min(horasSemIngresadas, 45) / 45);
+      if(sueldoIngresado < minimoProporcional){
+        const continuarMin = confirm(
+          `⚠️ El sueldo ingresado ($${sueldoIngresado.toLocaleString('es-CL')}) está por debajo del ingreso mínimo legal vigente para ${periodoMin} (tramo ${minimo.tramo}), proporcional a ${horasSemIngresadas}h semanales: $${minimoProporcional.toLocaleString('es-CL')}.\n\n¿Continuar y guardar igual?`
+        );
+        if(!continuarMin) return;
+      }
+    }
+  }
+
   // ✅ BL-062 punto 4 — aviso del 3er contrato a Plazo Fijo genérico
   // (Art. 159 N°4 CT, distinto de Temporada — no aplica a esta última,
   // que sí puede repetirse faena tras faena indefinidamente). Se avisa

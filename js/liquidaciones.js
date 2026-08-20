@@ -354,6 +354,22 @@ function renderReporteLiquidaciones(){
     const descuentos_ = liq.total_descuentos;
     const fueraDePeriodo = _tieneDatosFueraDePeriodo(t.rut, periodo);
 
+    // ✅ Aviso de sueldo bajo el mínimo legal — se compara el sueldo
+    // PACTADO en el contrato (vars.sueldo_base, antes de cualquier
+    // descuento por ausencia de este mes en particular) contra el
+    // mínimo vigente para el período, proporcional a la jornada. Solo
+    // informativo — no bloquea, capaz de que ya se corrija con un
+    // anexo antes de generar.
+    const minimoAplicable = (typeof _sueldoMinimoAplicable === 'function') ? _sueldoMinimoAplicable(t, periodo) : null;
+    let avisoSueldoMinimo = '';
+    if(minimoAplicable){
+      const horasSem = vars.horas_semanales || 45;
+      const minimoProporcional = Math.round(minimoAplicable.monto * Math.min(horasSem, 45) / 45);
+      if(vars.sueldo_base > 0 && vars.sueldo_base < minimoProporcional){
+        avisoSueldoMinimo = `<span class="badge badge-amarillo" style="margin-left:4px;" title="Sueldo pactado $${vars.sueldo_base.toLocaleString('es-CL')} — mínimo legal proporcional a ${horasSem}h (tramo ${minimoAplicable.tramo}): $${minimoProporcional.toLocaleString('es-CL')}">⚠️ Bajo el mínimo</span>`;
+      }
+    }
+
     // ✅ Aviso de días sin clasificar (sin marca de Asistencia y sin
     // novedad) — se están descontando por defecto en este cálculo, así
     // que hay que verlo ANTES de generar, no como sorpresa después.
@@ -387,7 +403,7 @@ function renderReporteLiquidaciones(){
 
     return `<tr>
       <td><input type="checkbox" class="chk-rep-liq" data-rut="${t.rut}" onchange="toggleCheckRepLiq('${t.rut}', this.checked)" style="accent-color:var(--verde);width:16px;height:16px;"></td>
-      <td style="font-weight:500;">${t.nombre}${semaforo}<div style="font-size:11px;color:var(--texto3);">${t.rut}</div></td>
+      <td style="font-weight:500;">${t.nombre}${semaforo}${avisoSueldoMinimo}<div style="font-size:11px;color:var(--texto3);">${t.rut}</div></td>
       <td style="text-align:right;">$${liq.sueldo_base.toLocaleString('es-CL')}</td>
       <td style="text-align:right;">${bonos>0 ? '$'+bonos.toLocaleString('es-CL') : '—'}</td>
       <td style="text-align:right;">${horasExtra>0 ? '$'+horasExtra.toLocaleString('es-CL') : '—'}</td>

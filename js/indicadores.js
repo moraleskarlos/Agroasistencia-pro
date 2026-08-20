@@ -492,3 +492,32 @@ function getRentaMinima(periodo){
   const ind = getIndicadoresPorPeriodo(periodo);
   return ind?.renta_minima || null;
 }
+
+/* ✅ Nuevo — validación de sueldo mínimo. El dato ya se cargaba en este
+   formulario (renta_minima, renta_menor18) desde hacía tiempo, pero
+   nada lo usaba — quedaba guardado sin que ningún módulo lo
+   consultara. Confirmado con fuentes oficiales (Ley N°21.830, DT
+   ORD. N°307/28): el ingreso mínimo mensual tiene dos tramos según
+   edad — $553.553 para 18 a 65 años, $412.938 para menores de 18 o
+   mayores de 65 (vigentes desde 01-05-2026) — y se aplica de forma
+   proporcional a la jornada pactada (no a jornada completa) si es
+   menor a la jornada de referencia. */
+function _edadEnPeriodo(fecha_nacimiento, periodo){
+  if(!fecha_nacimiento || !periodo) return null;
+  const fnac = new Date(fecha_nacimiento+'T12:00:00');
+  const [anio, mes] = periodo.split('-').map(Number);
+  const finPeriodo = new Date(anio, mes, 0, 12); // último día del período — la edad "a la fecha del pago"
+  let edad = finPeriodo.getFullYear() - fnac.getFullYear();
+  const mDiff = finPeriodo.getMonth() - fnac.getMonth();
+  if(mDiff < 0 || (mDiff === 0 && finPeriodo.getDate() < fnac.getDate())) edad--;
+  return edad;
+}
+
+function _sueldoMinimoAplicable(t, periodo){
+  const ind = getIndicadoresPorPeriodo(periodo);
+  if(!ind || !ind.renta_minima) return null; // sin dato cargado ese período — no se puede validar, no se asume nada
+  const edad = _edadEnPeriodo(t?.fecha_nacimiento, periodo);
+  const esMenorOMayor = edad !== null && (edad < 18 || edad >= 65);
+  const base = (esMenorOMayor && ind.renta_menor18) ? ind.renta_menor18 : ind.renta_minima;
+  return { monto: base, tramo: esMenorOMayor ? 'menor de 18 o mayor de 65' : '18 a 65 años' };
+}
