@@ -145,6 +145,12 @@ function _renderLibroDT(lista, periodo){
 
   const filas = lista.map((l,i) => {
     const t = trabajadores.find(x => x.rut === l.rut);
+    // ✅ Aporte patronal por trabajador (BL — hallazgo Libro punto 3,
+    // confirmado contra el Suplemento LRE de la DT, Categoría 4 "Aportes
+    // del Empleador" — son campos por trabajador, no solo un total
+    // agregado). Se suman los 3 aportes que ya calcula el motor por
+    // persona: AFP empleador + SIS + AFC empleador.
+    const aportePatronal = (l.monto_afp_emp||0) + (l.monto_sis||0) + (l.monto_afc_emp||0);
     return `<tr style="${i%2===0?'':'background:#F8FAFC'}">
       <td style="font-size:11px;white-space:nowrap;">${i+1}</td>
       <td class="rut-mono" style="white-space:nowrap;">${l.rut}</td>
@@ -164,6 +170,7 @@ function _renderLibroDT(lista, periodo){
       <td style="font-size:11px;text-align:right;">${fmtM(l.total_desc_adicionales)}</td>
       <td style="font-size:11px;text-align:right;font-weight:500;color:#dc2626;">${fmtM(l.total_descuentos)}</td>
       <td style="font-size:12px;text-align:right;font-weight:700;color:#065f46;">${fmtM(l.liquido)}</td>
+      <td style="font-size:11px;text-align:right;color:#6d28d9;">${fmtM(aportePatronal)}</td>
     </tr>`;
   }).join('');
 
@@ -211,6 +218,7 @@ function _renderLibroDT(lista, periodo){
             <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Otros desc.</th>
             <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Total desc.</th>
             <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Líquido</th>
+            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Aporte patronal</th>
           </tr>
         </thead>
         <tbody>${filas}</tbody>
@@ -230,6 +238,7 @@ function _renderLibroDT(lista, periodo){
             <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.otros_desc)}</td>
             <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.total_desc)}</td>
             <td style="text-align:right;padding:9px 6px;color:#10b981;">${fmtM(tot.liquido)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.afp_emp + tot.sis + tot.afc_emp)}</td>
           </tr>
         </tfoot>
       </table>
