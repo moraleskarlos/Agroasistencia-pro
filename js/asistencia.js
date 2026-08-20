@@ -486,6 +486,8 @@ function guardarMarcacion(rut){
   const salida  = document.getElementById(`hora-salida-${rid}`)?.value || '';
   const fecha   = document.getElementById('asist-fecha-desde').value;
 
+  if(typeof _bloqueaPorMesCerrado === 'function' && _bloqueaPorMesCerrado(rut, fecha)) return;
+
   const colMin           = _colacionMinutosTrabajador(rut, fecha);
   const horas           = calcularHoras(entrada, salida, colMin);
   const { jornada, alerta } = calcularJornada(horas);
@@ -534,9 +536,10 @@ function cancelarEdicionAsistencia(rut){
 
 function eliminarMarcacionAsistencia(rut){
   const t = trabajadores.find(x => x.rut === rut);
+  const fecha = document.getElementById('asist-fecha-desde').value;
+  if(typeof _bloqueaPorMesCerrado === 'function' && _bloqueaPorMesCerrado(rut, fecha)) return;
   if(!confirm(`¿Eliminar la marcación de ${t?.nombre||rut}? Esta acción no se puede deshacer.`)) return;
 
-  const fecha = document.getElementById('asist-fecha-desde').value;
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
   const idx   = data.findIndex(x => x.rut === rut);
@@ -785,6 +788,8 @@ function guardarMarcacionManual(){
   const fecha  = document.getElementById('manual-fecha').value;
   if(!fecha){ toast('⚠️ Selecciona una fecha', 'error'); return; }
 
+  if(typeof _bloqueaPorMesCerrado === 'function' && _bloqueaPorMesCerrado(rut, fecha)) return;
+
   const entrada = document.getElementById('manual-hora-entrada').value;
   const salida  = document.getElementById('manual-hora-salida').value;
   if(!entrada){ toast('⚠️ Ingresa al menos la hora de entrada', 'error'); return; }
@@ -823,6 +828,7 @@ function eliminarMarcacionManual(){
   const rut = _manualRutSeleccionado;
   if(!rut) return;
   const fecha = document.getElementById('manual-fecha').value;
+  if(typeof _bloqueaPorMesCerrado === 'function' && _bloqueaPorMesCerrado(rut, fecha)) return;
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]').filter(x => x.rut !== rut);
   localStorage.setItem(clave, JSON.stringify(data));

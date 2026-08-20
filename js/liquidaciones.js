@@ -44,6 +44,37 @@ function esMesCerrado(periodo, empresaId){
   return meses_cerrados.some(m => m.periodo === periodo && m.empresa_propia_id === empresaId);
 }
 
+/* ✅ Bloqueo centralizado — un solo lugar para el chequeo que se repite
+   en los 13 puntos que escriben datos "de un período" (bonos, horas
+   extra, descuentos, asistencia, novedades de un solo día, finiquitos).
+   Se resuelve la empresa a partir del RUT (mismo campo que ya usan
+   estos módulos desde antes — trabajador_rut — no es una dependencia
+   nueva). Devuelve true si hay que bloquear (y ya mostró el toast). */
+function _bloqueaPorMesCerrado(rut, fecha){
+  if(!fecha) return false; // sin fecha no hay período que chequear (validaciones de campo obligatorio se encargan aparte)
+  const t = trabajadores.find(x => x.rut === rut);
+  const periodo = fecha.slice(0,7);
+  if(esMesCerrado(periodo, t?.empresa_propia_id)){
+    toast(`🔒 ${getNombreMes(periodo)} ya está cerrado para esta empresa — usa "Corrección" en Libro de Remuneraciones`, 'error');
+    return true;
+  }
+  return false;
+}
+
+/* ✅ Variante para RANGOS (Novedades: licencias, permisos que pueden
+   cruzar de un mes a otro). Solo bloquea si el rango completo cae
+   DENTRO de un único mes ya cerrado — si cruza hacia un mes abierto,
+   se deja cargar (el reparto por mes ya existe — _diasNovedadEnPeriodo
+   — y el mes cerrado no se recalcula de todas formas, esa protección
+   ya la tiene la Liquidación en sí). */
+function _bloqueaPorMesCerradoRango(rut, inicio, fin){
+  if(!inicio) return false;
+  const periodoInicio = inicio.slice(0,7);
+  const periodoFin     = (fin||inicio).slice(0,7);
+  if(periodoInicio !== periodoFin) return false; // cruza de mes — no bloquea, se reparte
+  return _bloqueaPorMesCerrado(rut, inicio);
+}
+
 /* ✅ Corrección de emergencia — NO reabre el mes cerrado. Registra un
    ajuste (monto + motivo) que se va a sumar como línea aparte en la
    próxima liquidación abierta del trabajador (periodo_aplicado = mes

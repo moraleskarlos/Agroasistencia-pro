@@ -172,6 +172,8 @@ function generarFiniquito(){
   if(!fecha)  { toast('⚠️ Ingresa la fecha de término', 'error'); return; }
   if(!causal) { toast('⚠️ Selecciona la causal de término', 'error'); return; }
 
+  if(typeof _bloqueaPorMesCerrado === 'function' && _bloqueaPorMesCerrado(rut, fecha)) return;
+
   const fin = calcularFiniquito(rut, fecha, causal, avisoDado);
   if(fin.error){ toast(`❌ ${fin.error}`, 'error'); return; }
 

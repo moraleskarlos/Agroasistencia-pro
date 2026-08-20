@@ -621,6 +621,8 @@ function guardarNovedad(){
 function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
   if(_guardandoGL) return false;
 
+  if(_bloqueaPorMesCerradoRango(rut, inicio, fin || inicio)) return false;
+
   // ✅ Validación cruzada contra Asistencia — reemplaza al paso de
   // aprobación manual que se eliminó. Si el trabajador ya tiene una
   // marcación real (hora_entrada) en algún día del rango, no se permite
@@ -683,6 +685,8 @@ function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
 }
 
 function eliminarNovedad(id){
+  const n = novedades.find(x => x.id === id);
+  if(n && _bloqueaPorMesCerradoRango(n.trabajador_rut, n.fecha_inicio, n.fecha_fin)) return;
   if(!confirm('¿Eliminar esta novedad?')) return;
   novedades = novedades.filter(x => x.id !== id);
   guardarNovedades();
@@ -776,6 +780,13 @@ function guardarHaber(){
 
   if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
   if(!rut||!tipo||!monto){ toast('⚠️ Completa trabajador, tipo y monto','error'); return; }
+  // ✅ Fecha ahora obligatoria — antes, si quedaba vacía, el registro
+  // caía en silencio al mes CALENDARIO actual (_mesActual()) en vez del
+  // período que el usuario tenía en pantalla, generando bonos "perdidos"
+  // en el mes equivocado sin ningún aviso.
+  if(!fecha){ toast('⚠️ Ingresa la fecha de la bonificación','error'); return; }
+
+  if(_bloqueaPorMesCerrado(rut, fecha)) return;
 
   // ✅ NUEVO — Aviso (no bloqueo) si el trabajador tiene una ausencia,
   // licencia médica o permiso registrado justo ese día. A diferencia de
@@ -783,7 +794,7 @@ function guardarHaber(){
   // y se puede confirmar igual — hay bonos legítimos que no dependen de
   // la asistencia puntual de ese día (ej. un bono ya devengado, o una
   // corrección retroactiva).
-  if(fecha){
+  {
     const novedadEseDia = novedades.find(n =>
       n.trabajador_rut === rut && n.fecha_inicio <= fecha && n.fecha_fin >= fecha);
     if(novedadEseDia){
@@ -805,8 +816,8 @@ function guardarHaber(){
   const h = {
     id:             Date.now().toString(),
     trabajador_rut: rut,
-    periodo:        (fecha||_mesActual()).slice(0,7),
-    tipo, monto: parseFloat(monto), fecha: fecha||'', observacion: obs,
+    periodo:        fecha.slice(0,7),
+    tipo, monto: parseFloat(monto), fecha, observacion: obs,
     registrado_por: sesionActiva?.usuario||'admin',
   };
   haberes_variables.push(h);
@@ -821,6 +832,8 @@ function guardarHaber(){
 }
 
 function eliminarHaber(id){
+  const h = haberes_variables.find(x => x.id === id);
+  if(h && _bloqueaPorMesCerrado(h.trabajador_rut, h.fecha)) return;
   if(!confirm('¿Eliminar esta bonificación?')) return;
   haberes_variables = haberes_variables.filter(x => x.id!==id);
   guardarHaberes();
@@ -935,11 +948,16 @@ function guardarDescuento(){
   const tipo       = document.getElementById('gl-des-tipo')?.value;
   const montoTotal = document.getElementById('gl-des-monto')?.value;
   const cuotas     = document.getElementById('gl-des-cuotas')?.value||1;
-  const mesInicio  = document.getElementById('gl-des-mes')?.value || _mesActual();
+  const mesInicio  = document.getElementById('gl-des-mes')?.value;
   const obs        = document.getElementById('gl-des-obs')?.value||'';
 
   if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
   if(!rut||!tipo||!montoTotal){ toast('⚠️ Completa trabajador, tipo y monto','error'); return; }
+  // ✅ Mes ahora obligatorio — mismo motivo que Bonificaciones/Horas
+  // Extra: sin esto, caía en silencio al mes calendario actual.
+  if(!mesInicio){ toast('⚠️ Selecciona el mes de inicio del descuento','error'); return; }
+
+  if(_bloqueaPorMesCerrado(rut, mesInicio)) return;
 
   // El campo del formulario ("Monto total") es la deuda completa, no la
   // cuota. La cuota mensual se calcula aquí.
@@ -1009,6 +1027,8 @@ function guardarDescuento(){
 }
 
 function eliminarDescuento(id){
+  const d = descuentos.find(x => x.id === id);
+  if(d && _bloqueaPorMesCerrado(d.trabajador_rut, d.periodo)) return;
   if(!confirm('¿Eliminar esta cuota? (Solo se borra la de este mes; las demás cuotas del mismo descuento no se ven afectadas)')) return;
   descuentos = descuentos.filter(x => x.id!==id);
   guardarDescuentos();
@@ -1170,6 +1190,12 @@ function guardarJornada(){
 
   if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
   if(!rut||!tipo||!horas){ toast('⚠️ Completa trabajador, tipo y horas','error'); return; }
+  // ✅ Fecha ahora obligatoria — mismo motivo que en Bonificaciones: sin
+  // esto, un registro sin fecha caía en silencio al mes calendario
+  // actual en vez del período que el usuario tenía en pantalla.
+  if(!fecha){ toast('⚠️ Ingresa la fecha de la hora extra','error'); return; }
+
+  if(_bloqueaPorMesCerrado(rut, fecha)) return;
 
   // ✅ NUEVO — Tope legal diario (Art. 31 Código del Trabajo): máximo 2
   // horas extraordinarias por día. Solo aplica al tipo "hora_extra" — los
@@ -1227,8 +1253,8 @@ function guardarJornada(){
   const j = {
     id:             Date.now().toString(),
     trabajador_rut: rut,
-    periodo:        (fecha||_mesActual()).slice(0,7),
-    tipo, fecha: fecha||'', horas: parseFloat(horas),
+    periodo:        fecha.slice(0,7),
+    tipo, fecha, horas: parseFloat(horas),
     recargo:        tipo==='hora_extra' ? recargo : null,
     observacion:    obs,
     registrado_por: sesionActiva?.usuario||'admin',
@@ -1245,6 +1271,8 @@ function guardarJornada(){
 }
 
 function eliminarJornada(id){
+  const j = jornada_especial.find(x => x.id === id);
+  if(j && _bloqueaPorMesCerrado(j.trabajador_rut, j.fecha)) return;
   if(!confirm('¿Eliminar este registro?')) return;
   jornada_especial = jornada_especial.filter(x => x.id!==id);
   guardarJornadaEspecial();
