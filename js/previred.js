@@ -456,7 +456,7 @@ function exportarPreviredExcel(){
     'AFC trabajador':         Math.round(liq.monto_afc_trab||0),
     'AFC empleador':          Math.round(liq.monto_afc_emp||0),
     'IUSC':                   Math.round(liq.iusc||0),
-    'Tipo contrato':          _tipoContratoLabel(liq.tipo_contrato),
+    'Tipo contrato':          _tipoContratoLabel(typeof _tipoContratoReal === 'function' ? _tipoContratoReal(liq) : liq.tipo_contrato),
     'Faena / centro costo':   _faenaVigente(t.rut, periodo) || '—',
   }));
 

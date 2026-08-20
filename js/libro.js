@@ -86,7 +86,12 @@ function _renderKPIsLibro(lista){
 
 /* ════════════════════════════════════════════════════════
    FORMATO 1 — LIBRO DT (Art. 62 CT)
-   Columnas obligatorias según Resolución Exenta N°961 DT
+   ✅ Corregido — el código citaba "Resolución Exenta N°961 DT", que no
+   se encontró evidencia de que exista o esté relacionada al Libro de
+   Remuneraciones. Referencias reales confirmadas: Art. 62 del Código
+   del Trabajo (obligación del libro), Dictamen DT N°877/006 (10-03-2021)
+   y Resolución Exenta N°285 (2021) de la DT — el manual oficial del
+   Libro de Remuneraciones Electrónico.
    ════════════════════════════════════════════════════════ */
 /* ✅ Botón "Cerrar mes" / "Corrección" — solo tiene sentido con UNA
    empresa específica seleccionada (el cierre es por empresa+período,
@@ -144,7 +149,7 @@ function _renderLibroDT(lista, periodo){
       <td style="font-size:11px;white-space:nowrap;">${i+1}</td>
       <td class="rut-mono" style="white-space:nowrap;">${l.rut}</td>
       <td style="font-size:12px;font-weight:500;white-space:nowrap;min-width:160px;">${l.nombre}</td>
-      <td style="font-size:11px;text-align:center;">${_tipoContratoLabel(l.tipo_contrato)}</td>
+      <td style="font-size:11px;text-align:center;">${_tipoContratoLabel(_tipoContratoReal(l))}</td>
       <td style="font-size:11px;text-align:center;">${30-(l.dias_a_descontar||0)}</td>
       <td style="font-size:11px;text-align:right;">${fmtM(l.sueldo_base)}</td>
       <td style="font-size:11px;text-align:right;">${fmtM(l.total_haberes_imponibles)}</td>
@@ -481,7 +486,7 @@ function exportarLibroExcel(){
     'N°':                    i+1,
     'RUT':                   l.rut,
     'Nombre':                l.nombre,
-    'Tipo contrato':         _tipoContratoLabel(l.tipo_contrato),
+    'Tipo contrato':         _tipoContratoLabel(_tipoContratoReal(l)),
     'Días trabajados':       30-(l.dias_a_descontar||0),
     'Sueldo base':           l.sueldo_base||0,
     'Hab. imponibles':       l.total_haberes_imponibles||0,
@@ -558,6 +563,23 @@ function exportarResumenExcel(){
 
 /* ── UTILIDADES ─────────────────────────────────────────── */
 function _tipoContratoLabel(tipo){
-  const map = { indefinido:'Indefinido', fijo:'Plazo Fijo', temporada:'Temporada' };
+  // ✅ Corregido — el mapa no tenía 'plazo_fijo' (el valor real que
+  // guarda el contrato), solo 'fijo' (la categoría normalizada para
+  // AFC). Se agrega como alias — mismo criterio que ya se usó para el
+  // mismo bug en el modal de liquidación individual.
+  const map = { indefinido:'Indefinido', fijo:'Plazo Fijo', plazo_fijo:'Plazo Fijo', temporada:'Temporada' };
   return map[tipo] || tipo || '—';
+}
+
+/* ✅ Tipo real del contrato — antes se leía directo l.tipo_contrato,
+   que es la categoría YA NORMALIZADA para AFC (solo 'fijo' o
+   'indefinido', nunca 'temporada' — ver _normalizarTipoContrato en
+   variables.js). Eso hacía que un contrato de Temporada se mostrara
+   como "Plazo Fijo" en el Libro. Se busca primero en el contrato
+   vigente real de ese período (mismo criterio ya usado en el modal de
+   liquidación individual), con l.tipo_contrato como último respaldo
+   por si ese contrato ya no existe (reingreso a otro ciclo, etc.). */
+function _tipoContratoReal(l){
+  const cont = (typeof _getContratoVigente === 'function') ? _getContratoVigente(l.rut, l.periodo) : null;
+  return cont?.tipo || cont?.tipo_contrato || l.tipo_contrato;
 }
