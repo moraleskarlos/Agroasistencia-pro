@@ -194,8 +194,13 @@ function _renderListaVisualTrabajadorContrato(){
 
   cont.innerHTML = lista.map(t => {
     const seleccionado  = valActual === t.id;
+    // ✅ Mejora pedida por el usuario — antes era texto suelto (nombre
+    // flexible + rut al final), ahora es una grilla real (mismo
+    // grid-template-columns que el encabezado en index.html), con la
+    // columna de Cargo agregada — aprovecha el espacio ancho que
+    // sobraba y queda alineado como una tabla, no texto flotando.
     return `<div onclick="_seleccionarTrabajadorContratoVisual('${t.id}')"
-        style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
+        style="display:grid;grid-template-columns:28px 1fr 130px 180px;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
         border-bottom:1px solid var(--borde);background:${seleccionado?'#EFF6FF':'#fff'};"
         onmouseover="this.style.background='${seleccionado?'#EFF6FF':'#f8fafc'}'"
         onmouseout="this.style.background='${seleccionado?'#EFF6FF':'#fff'}'">
@@ -204,8 +209,9 @@ function _renderListaVisualTrabajadorContrato(){
         display:flex;align-items:center;justify-content:center;">
         ${seleccionado ? '<span style="width:6px;height:6px;border-radius:50%;background:#fff;"></span>' : ''}
       </span>
-      <span style="font-size:13px;font-weight:500;flex:1;">${t.nombre}</span>
+      <span style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</span>
       <span class="rut-mono">${t.rut}</span>
+      <span style="font-size:12px;color:var(--texto2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.funcion_cargo || '—'}</span>
     </div>`;
   }).join('');
 }
@@ -733,8 +739,14 @@ function construirDocumentoContrato(t, emp, mandante, datos){
   const delTrabajador      = esMujer ? 'de la'           : 'del';
 
   // Fechas formateadas
-  const fmtLarga = v => v ? new Date(v).toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'}) : '___________';
-  const fmtCorta = v => v ? new Date(v).toLocaleDateString('es-CL') : '___________';
+  // ✅ Corregido — mismo bug de zona horaria de toda la sesión
+  // (BL-052 y siguientes): sin el ancla de mediodía, new Date(v)
+  // interpreta la fecha como UTC medianoche, que en Chile cae en el
+  // día ANTERIOR — el documento del contrato (el PDF legal que firma
+  // el trabajador) imprimía la fecha de firma, término, ingreso y
+  // nacimiento un día antes de la real.
+  const fmtLarga = v => v ? new Date(v+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'}) : '___________';
+  const fmtCorta = v => v ? new Date(v+'T12:00:00').toLocaleDateString('es-CL') : '___________';
 
   const fechaFirma   = fmtLarga(datos.fecha_firma);
   const fechaIngreso = fmtLarga(t?.fecha_ingreso);
@@ -1474,7 +1486,10 @@ function renderContratosEmitidos(){
     return;
   }
 
-  const fmt = v => v ? new Date(v).toLocaleDateString('es-CL') : '—';
+  // ✅ Corregido — mismo bug de zona horaria de toda la sesión, ahora en
+  // la tabla de "Contratos Emitidos" (fecha de firma/término mostradas
+  // podían salir un día antes de la real).
+  const fmt = v => v ? new Date(v+'T12:00:00').toLocaleDateString('es-CL') : '—';
   const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' };
 
   tbody.innerHTML = lista.map(({c,t,mandante,tags}) => `
@@ -1540,7 +1555,9 @@ function _cargarValorAnteriorRectificacion(){
   let valor = c[campo];
   if(campo === 'tipo_remuneracion') valor = tipoTxt[valor] || valor;
   if(campo === 'sueldo_monto') valor = valor ? '$' + Number(valor).toLocaleString('es-CL') : '';
-  if((campo === 'fecha_firma' || campo === 'fecha_termino') && valor) valor = new Date(valor).toLocaleDateString('es-CL');
+  // ✅ Corregido — mismo bug de zona horaria, ahora en el "valor anterior"
+  // que se muestra al rectificar fecha_firma/fecha_termino.
+  if((campo === 'fecha_firma' || campo === 'fecha_termino') && valor) valor = new Date(valor+'T12:00:00').toLocaleDateString('es-CL');
   document.getElementById('rect-valor-anterior').value = valor || '—';
 }
 
