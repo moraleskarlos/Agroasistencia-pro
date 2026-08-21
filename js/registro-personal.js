@@ -108,6 +108,24 @@ function _actualizarListasPorSexo(){
   }
 }
 
+/* ✅ Cálculo de edad — un solo lugar para los dos usos (registro
+   individual y carga masiva), en vez de la misma cuenta duplicada dos
+   veces (mismo riesgo de desincronización ya visto en Empresas). Ancla
+   la fecha de nacimiento al mediodía — mismo bug de zona horaria que
+   ya se corrigió en Alertas y Empresas: sin el ancla, new Date(fecha)
+   se interpreta como UTC medianoche, que en Chile cae en el día
+   ANTERIOR — alguien que cumple 18 años mañana quedaba tratado como si
+   ya los hubiera cumplido hoy, saltándose la validación legal de menor
+   de edad un día antes de tiempo. */
+function _calcularEdadDesde(fechaNacimiento){
+  const hoy  = new Date();
+  const fnac = new Date(fechaNacimiento+'T12:00:00');
+  let edad = hoy.getFullYear() - fnac.getFullYear();
+  const mDiff = hoy.getMonth() - fnac.getMonth();
+  if(mDiff < 0 || (mDiff === 0 && hoy.getDate() < fnac.getDate())) edad--;
+  return edad;
+}
+
 /* ───────── RP-006: Validación centralizada ─────────
    Devuelve { ok:true } o { ok:false, mensaje } — nunca lanza excepción. */
 function validarFormularioTrabajador(datos, idOriginal){
@@ -133,18 +151,15 @@ function validarFormularioTrabajador(datos, idOriginal){
   if(!anioNac || String(anioNac).length !== 4 || anioNac < 1900 || anioNac > anioActual){
     return { ok:false, mensaje:'La fecha de nacimiento no es válida (año fuera de rango)' };
   }
-  if(new Date(datos.fecha_nacimiento) > new Date()){
+  // ✅ Corregido — mismo bug de zona horaria, ancla al mediodía.
+  if(new Date(datos.fecha_nacimiento+'T12:00:00') > new Date()){
     return { ok:false, mensaje:'La fecha de nacimiento no puede ser futura' };
   }
 
   // ✅ NUEVO — Restricción de edad (Hallazgo Grande #10). Antes el sistema
   // no validaba nada más allá del rango de año, dejando registrar tanto a
   // menores de edad como a personas de 100+ años sin ningún aviso.
-  const _hoy = new Date();
-  const _fnac = new Date(datos.fecha_nacimiento);
-  let edad = _hoy.getFullYear() - _fnac.getFullYear();
-  const _mDiff = _hoy.getMonth() - _fnac.getMonth();
-  if(_mDiff < 0 || (_mDiff === 0 && _hoy.getDate() < _fnac.getDate())) edad--;
+  const edad = _calcularEdadDesde(datos.fecha_nacimiento);
 
   if(edad < 15){
     // Art. 13 Código del Trabajo: prohibido el trabajo de menores de 15
@@ -621,11 +636,9 @@ function procesarExcel(event){
         // import masivo: sin confirm() por fila (sería inmanejable con
         // muchos trabajadores), en su lugar bloquea directo bajo 15 años,
         // y deja advertencia (no bloquea) para 15-17 y mayores de 80.
-        const _hoyBulk  = new Date();
-        const _fnacBulk = new Date(fecha_nacimiento);
-        let _edadBulk = _hoyBulk.getFullYear() - _fnacBulk.getFullYear();
-        const _mDiffBulk = _hoyBulk.getMonth() - _fnacBulk.getMonth();
-        if(_mDiffBulk < 0 || (_mDiffBulk === 0 && _hoyBulk.getDate() < _fnacBulk.getDate())) _edadBulk--;
+        // ✅ Corregido — reusa _calcularEdadDesde() (mismo bug de zona
+        // horaria que el registro individual, ya arreglado ahí).
+        const _edadBulk = _calcularEdadDesde(fecha_nacimiento);
         if(_edadBulk < 15){
           errores.push({ fila, nombre, mensaje:`El trabajador tendría ${_edadBulk} años — el Código del Trabajo (Art. 13) prohíbe contratar menores de 15 años`, correccion:'Verifica la Fecha de Nacimiento; si es correcta, esta persona no puede registrarse.' });
           return;

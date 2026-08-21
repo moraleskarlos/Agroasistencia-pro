@@ -301,7 +301,12 @@ function eliminarMandante(idOrRut){
 function verTrabajadoresEmpresa(idOrRut){
   const sel = document.getElementById('filtro-empresa');
   if(sel) sel.value = idOrRut;
-  irA('trabajadores', document.querySelectorAll('.sb-item')[3]);
+  // ✅ Corregido — antes pasaba un índice fijo (querySelectorAll('.sb-item')[3])
+  // para saber qué botón del menú resaltar, que hoy apunta a un ítem
+  // distinto de "Trabajadores" (se desincroniza si el menú cambia de
+  // orden). irA() ya sabe resolver el botón correcto por su cuenta
+  // cuando no se le pasa ninguno — no hace falta este segundo argumento.
+  irA('trabajadores');
   setTimeout(() => { if(sel){ sel.value = idOrRut; cargarTrabajadores(); } }, 50);
 }
 
@@ -339,14 +344,18 @@ function renderKpisMandantes(){
   // NO se ve de un vistazo en la lista, a diferencia de faenas/trabajadores
   // que sí están visibles por fila). "Trabajadores" eliminado por la misma
   // razón que en Mis Empresas — ya está en la lista.
+  // ✅ Corregido — antes recalculaba "por vencer"/"vencidos" con su propio
+  // new Date() sin ancla (mismo bug de zona horaria que estadoVencimiento(),
+  // duplicado en dos lugares). Ahora reusa estadoVencimiento(), que ya
+  // quedó corregido — un solo lugar con el criterio de vigencia, no dos
+  // que puedan desincronizarse.
   const porVencer = empresas.filter(e => {
-    if(!e.vigencia_contrato) return false;
-    const d = (new Date(e.vigencia_contrato) - new Date()) / (1000*60*60*24);
-    return d >= 0 && d <= 30;
+    const v = estadoVencimiento(e.vigencia_contrato);
+    return v.dias !== null && v.dias >= 0 && v.dias <= 30;
   }).length;
   const vencidos = empresas.filter(e => {
-    if(!e.vigencia_contrato) return false;
-    return (new Date(e.vigencia_contrato) - new Date()) < 0;
+    const v = estadoVencimiento(e.vigencia_contrato);
+    return v.dias !== null && v.dias < 0;
   }).length;
   const vigTexto = vencidos > 0
     ? `${vencidos} vencido${vencidos>1?'s':''}`
@@ -712,8 +721,16 @@ function abrirModalMandante(){
 
 function estadoVencimiento(fecha){
   if(!fecha) return {texto:'Sin fecha',color:'var(--texto-secundario)',badge:'',dias:null};
-  const dias=(new Date(fecha)-new Date())/(1000*60*60*24);
-  const txt=new Date(fecha).toLocaleDateString('es-CL');
+  // ✅ Corregido — mismo bug de zona horaria ya arreglado en Alertas
+  // (BL, sesión 20-08-2026): new Date(fecha) sin ancla de mediodía se
+  // interpreta como UTC medianoche, lo que a partir de las 20:00 hora de
+  // Chile ya cuenta como "un día antes" — un mandante que vence mañana
+  // podía aparecer como "vencido", y hasta la fecha mostrada salía un
+  // día antes de la real. Se ancla al mediodía, mismo criterio que
+  // _calcularSemaforo() (trabajadores.js).
+  const venc = new Date(fecha+'T12:00:00');
+  const dias=(venc-new Date())/(1000*60*60*24);
+  const txt=venc.toLocaleDateString('es-CL');
   if(dias<0)   return{texto:txt,color:'#dc2626',badge:'<span style="background:#FEE2E2;color:#dc2626;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:6px;">🔴 VENCIDO</span>',dias};
   if(dias<=30) return{texto:txt,color:'#d97706',badge:`<span style="background:#FEF3C7;color:#d97706;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;margin-left:6px;">⚡ Vence en ${Math.ceil(dias)}d</span>`,dias};
   return{texto:txt,color:'#16a34a',badge:'',dias};
