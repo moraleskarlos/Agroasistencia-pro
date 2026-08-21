@@ -775,7 +775,14 @@
           <label class="form-label" id="lbl-c-trabajador-select">Seleccionar trabajador</label>
           <select class="f-input" id="c-trabajador" onchange="precargarContrato()" style="display:none;"><option value="">— Seleccionar trabajador —</option></select>
           <input type="text" id="ct-buscar-visual" oninput="_renderListaVisualTrabajadorContrato()" placeholder="Buscar por RUT o nombre..." style="width:100%;max-width:420px;padding:7px 10px;font-size:13px;border:1px solid var(--borde);border-radius:6px;margin-bottom:8px;">
-          <div id="lista-visual-trabajador-contrato" style="max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:8px;"></div>
+          <!-- ✅ Encabezado de columnas — mismo grid que usan las filas
+               (ver _renderListaVisualTrabajadorContrato en contratos.js),
+               para que quede alineado como una tabla real, aprovechando
+               todo el ancho disponible en vez de texto suelto. -->
+          <div style="display:grid;grid-template-columns:28px 1fr 130px 180px;align-items:center;gap:10px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;border:1px solid var(--borde);border-bottom:none;border-radius:8px 8px 0 0;background:var(--gris-bg);">
+            <span></span><span>Nombre</span><span>RUT</span><span>Cargo</span>
+          </div>
+          <div id="lista-visual-trabajador-contrato" style="max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:0 0 8px 8px;"></div>
         </div>
       </div>
 
