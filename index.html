@@ -435,11 +435,16 @@
               <div class="drop-sub">o haz clic para explorar · .xlsx / .xls</div>
             </div>
             <input type="file" id="archivo-excel" accept=".xlsx,.xls" style="display:none;" onchange="procesarExcel(event)">
-            <div id="lote-aviso-deshacer" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;margin-top:12px;">
-              <span style="font-size:12px;color:#92400E;"></span>
-              <button class="btn btn-secondary btn-sm" onclick="deshacerUltimaImportacionMasiva()" style="color:var(--danger);flex-shrink:0;">
-                <i class="ti ti-arrow-back-up"></i> Deshacer
-              </button>
+            <div id="lote-aviso-deshacer" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:#D1FAE5;border:1px solid #6EE7B7;border-radius:8px;padding:10px 14px;margin-top:12px;">
+              <span id="lote-aviso-texto" style="font-size:12px;color:#065F46;"></span>
+              <div style="display:flex;gap:8px;flex-shrink:0;">
+                <button class="btn btn-secondary btn-sm" onclick="confirmarCuadrillaOk()">
+                  <i class="ti ti-check"></i> Sí, está bien
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="deshacerUltimaImportacionMasiva()" style="color:var(--danger);">
+                  <i class="ti ti-arrow-back-up"></i> No, deshacer
+                </button>
+              </div>
             </div>
           </div>
           <!-- ✅ Bloque 2, separado del anterior — antes vivía adentro de
