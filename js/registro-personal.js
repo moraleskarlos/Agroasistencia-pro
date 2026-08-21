@@ -667,7 +667,12 @@ function procesarExcel(event){
           }
           if(!tipo_doc_migratorio){
             advertencias.push({ fila, nombre, mensaje:'Trabajador extranjero sin Situación Migratoria indicada', correccion:'Completa la columna "Tipo Doc. Migratorio" cuando la tengas — mientras tanto se importará sin esa información.' });
-          } else if(!fecha_venc_migratorio){
+          } else if(_fechaVencMigratorioObligatoria(tipo_doc_migratorio) && !fecha_venc_migratorio){
+            // ✅ Corregido — antes avisaba "sin fecha de vencimiento" para
+            // CUALQUIER extranjero sin esa fecha, incluida Residencia
+            // Definitiva, que por diseño NO la necesita (ver
+            // _fechaVencMigratorioObligatoria) — generaba una advertencia
+            // confusa para un caso perfectamente correcto.
             advertencias.push({ fila, nombre, mensaje:'Trabajador extranjero sin fecha de vencimiento de documento', correccion:'Agrega la fecha en la columna "Fecha Venc. Documento" — mientras falte, el semáforo de vencimiento no mostrará alertas para esta persona.' });
           }
         }
