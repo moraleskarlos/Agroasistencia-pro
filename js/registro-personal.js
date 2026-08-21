@@ -589,7 +589,21 @@ function procesarExcel(event){
       const fmtFecha = v => {
         if(!v) return null;
         if(v instanceof Date) return fechaDesdeDate(v);
-        return v.toString().trim() || null;
+        const str = v.toString().trim();
+        if(!str) return null;
+        // ✅ NUEVO — acepta también DD-MM-AAAA / DD/MM/AAAA (el formato
+        // que se usa día a día en Chile), sin ambigüedad posible: el
+        // año siempre tiene 4 dígitos, y ni el día ni el mes llegan
+        // nunca a 4 — así que no hay forma de confundirlos, sea cual
+        // sea el orden en que vengan. Si ya viene en AAAA-MM-DD (el
+        // formato esperado) se deja igual, sin tocar nada.
+        if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(str)) return str;
+        const ddmmaaaa = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+        if(ddmmaaaa){
+          const [, dd, mm, aaaa] = ddmmaaaa;
+          return `${aaaa}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+        }
+        return str; // formato no reconocido — queda igual, la validación de abajo lo rechaza con su mensaje de siempre
       };
 
       datosExcel = [];

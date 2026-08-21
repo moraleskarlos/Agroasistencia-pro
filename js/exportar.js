@@ -146,17 +146,17 @@ function descargarPlantilla(){
     { Campo:'RUT',              'Formato / Valores aceptados':'12.345.678-9  (con puntos y guión)',                                                                   Obligatorio:'Sí',  Ejemplo:'12.345.678-9' },
     { Campo:'Nombre',           'Formato / Valores aceptados':'Nombre completo',                                                                                       Obligatorio:'Sí',  Ejemplo:'Juan Pérez González' },
     { Campo:'Nacionalidad',     'Formato / Valores aceptados':'Chileno · Colombiano · Peruano · Boliviano · Venezolano · Ecuatoriano · Haitiano · Argentino · Otro',   Obligatorio:'Sí',  Ejemplo:'Chileno' },
-    { Campo:'Fecha Nacimiento', 'Formato / Valores aceptados':'AAAA-MM-DD',                                                                                            Obligatorio:'Sí',  Ejemplo:'1990-05-15' },
+    { Campo:'Fecha Nacimiento', 'Formato / Valores aceptados':'AAAA-MM-DD  (también se acepta DD-MM-AAAA)',                                                                                            Obligatorio:'Sí',  Ejemplo:'1990-05-15' },
     { Campo:'Sexo',             'Formato / Valores aceptados':'Hombre · Mujer',                                                                                        Obligatorio:'Sí',  Ejemplo:'Hombre' },
     { Campo:'Estado Civil',     'Formato / Valores aceptados':'Soltero · Casado · Divorciado · Viudo · Conviviente',                                                   Obligatorio:'Sí',  Ejemplo:'Soltero' },
     { Campo:'Domicilio',        'Formato / Valores aceptados':'Texto libre (calle, número, ciudad)',                                                                    Obligatorio:'Sí',  Ejemplo:'Av. Principal 123, Curicó' },
     { Campo:'Correo',           'Formato / Valores aceptados':'correo@dominio.com',                                                                                    Obligatorio:'No',  Ejemplo:'juan@gmail.com' },
     { Campo:'AFP',              'Formato / Valores aceptados':'Habitat · Provida · Capital · Cuprum · Planvital · Modelo · Uno · No cotiza',                           Obligatorio:'Sí',  Ejemplo:'Habitat' },
     { Campo:'Salud',            'Formato / Valores aceptados':'Fonasa · Isapre Banmédica · Isapre Cruz Blanca · Isapre Colmena · Isapre Consalud · Isapre Esencial',  Obligatorio:'Sí',  Ejemplo:'Fonasa' },
-    { Campo:'Fecha Ingreso',    'Formato / Valores aceptados':'AAAA-MM-DD',                                                                                            Obligatorio:'Sí',  Ejemplo:'2026-01-10' },
+    { Campo:'Fecha Ingreso',    'Formato / Valores aceptados':'AAAA-MM-DD  (también se acepta DD-MM-AAAA)',                                                                                            Obligatorio:'Sí',  Ejemplo:'2026-01-10' },
     { Campo:'Tipo Doc. Migratorio',  'Formato / Valores aceptados':'Residencia Temporal · Residencia Definitiva · Prórroga / Ampliación de Residencia (180 días) · Documento en trámite · Otro', Obligatorio:'Solo si no es chileno', Ejemplo:'Residencia Temporal' },
     { Campo:'N° Doc. Migratorio',    'Formato / Valores aceptados':'Texto libre',                                                                                      Obligatorio:'Solo si no es chileno', Ejemplo:'123456789' },
-    { Campo:'Fecha Venc. Documento', 'Formato / Valores aceptados':'AAAA-MM-DD',                                                                                       Obligatorio:'Solo si Residencia Temporal o Prórroga/Ampliación', Ejemplo:'2026-12-31' },
+    { Campo:'Fecha Venc. Documento', 'Formato / Valores aceptados':'AAAA-MM-DD  (también se acepta DD-MM-AAAA)',                                                                                       Obligatorio:'Solo si Residencia Temporal o Prórroga/Ampliación', Ejemplo:'2026-12-31' },
   ];
   const ws2 = XLSX.utils.json_to_sheet(dict);
   ws2['!cols'] = [{wch:16},{wch:70},{wch:12},{wch:26}];
