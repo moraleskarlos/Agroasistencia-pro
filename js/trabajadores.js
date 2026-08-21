@@ -64,7 +64,7 @@ function cargarTrabajadores(){
       </td>
       <td style="font-size:12px;">${empPrincipal}</td>
       <td style="font-size:12px;color:var(--texto2);white-space:nowrap;">
-        ${t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString('es-CL') : '—'}
+        ${t.fecha_ingreso ? fmtFecha(t.fecha_ingreso) : '—'}
       </td>
       <td class="rut-mono">${t.rut||'—'}</td>
       <td class="wrap-ok" style="font-size:13px;font-weight:500;min-width:160px;">${t.nombre||'—'}</td>
@@ -531,7 +531,14 @@ function _tablaDocsCarpeta(docs, idxBase){
 }
 
 function _fechaOrdenDoc(d){
-  return new Date(d.fecha_firma || d.fecha_generacion || 0).getTime();
+  // ✅ Corregido — mismo patrón de zona horaria del resto de la sesión.
+  // Acá solo se usa para ORDENAR (no para mostrar), así que el riesgo
+  // real era bajo, pero se ancla igual por consistencia — mismo criterio
+  // en todo el archivo, ninguna sorpresa si se reusa para mostrar fecha
+  // en el futuro.
+  const raw = d.fecha_firma || d.fecha_generacion || null;
+  if(!raw) return 0;
+  return new Date(raw+'T12:00:00').getTime();
 }
 
 function _renderCarpetaTrabajador(rut){
