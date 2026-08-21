@@ -441,7 +441,15 @@
                 <i class="ti ti-arrow-back-up"></i> Deshacer
               </button>
             </div>
-            <div id="seccion-preview" style="display:none;margin-top:14px;">
+          </div>
+          <!-- ✅ Bloque 2, separado del anterior — antes vivía adentro de
+               la misma tarjeta de max-width:900px, dejando la tabla de
+               vista previa (14 columnas) apretada con scroll horizontal.
+               Sin límite de ancho, como el resto de las tablas anchas del
+               sistema (Libro, Trabajadores, etc. — ninguna otra tarjeta
+               del sistema tiene este límite salvo la de arriba). Solo se
+               ve una vez que hay un archivo cargado. -->
+          <div class="card" id="seccion-preview" style="display:none;margin-top:14px;">
               <div style="font-size:13px;font-weight:600;margin-bottom:10px;" id="preview-count"></div>
               <div id="preview-avisos" style="margin-bottom:10px;"></div>
               <div class="tabla-wrap" style="max-height:240px;overflow-y:auto;margin-bottom:14px;"><table class="tabla" id="tabla-excel"><thead></thead><tbody></tbody></table></div>
@@ -485,7 +493,6 @@
                 <button class="btn btn-secondary btn-sm" onclick="cancelarMasivo()"><i class="ti ti-x"></i> Cancelar</button>
                 <button class="btn btn-primary btn-sm" id="btn-subir-masivo" onclick="subirMasivo()" disabled><i class="ti ti-cloud-upload"></i> Subir a la nube</button>
               </div>
-            </div>
           </div>
         </div><!-- /sub-tab-reg-masivo -->
       </div>
