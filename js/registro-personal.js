@@ -329,6 +329,17 @@ function limpiarFormulario(){
   const idField = document.getElementById('m-rut-original');
   if(idField) idField.value='';
   document.getElementById('btn-guardar-txt').textContent='Registrar trabajador';
+  // ✅ Corregido — el select de Estado Civil (y Cargo/Nacionalidad) trae
+  // hardcodeadas solo las formas masculinas en el HTML; las femeninas
+  // recién se generan al tocar "Sexo" (_actualizarListasPorSexo). Si el
+  // usuario completaba el formulario sin ese orden exacto (ej. elegía
+  // Estado Civil antes que Sexo), "Soltera" ni siquiera existía todavía
+  // como opción — y al elegir Sexo después, la lista se reconstruía sin
+  // nada que conservar, quedando vacía para siempre sin ningún aviso.
+  // Ahora se regenera apenas se abre/limpia el formulario, para que
+  // esté sincronizada desde el arranque sin depender del orden de
+  // llenado.
+  _actualizarListasPorSexo();
   evaluarCampos();
   _borrarBorrador();
   _actualizarFichaPreviewRegistro();
@@ -1168,6 +1179,13 @@ function _initBorradorAutosave(){
   // RP-004: la fecha de nacimiento nunca puede ser futura
   const fechaNac = document.getElementById('m-fecha-nac');
   if(fechaNac) fechaNac.max = hoyISO();
+
+  // ✅ Corregido — mismo motivo que en limpiarFormulario(): en el primer
+  // arranque de la página (antes de tocar cualquier botón), el select
+  // de Estado Civil todavía tenía solo las opciones masculinas
+  // hardcodeadas del HTML. Se sincroniza acá también, para cubrir el
+  // primer render, no solo cuando se limpia el formulario después.
+  _actualizarListasPorSexo();
 
   _verificarBorradorPendiente();
   _actualizarFichaPreviewRegistro(); // primer render (formulario vacío o borrador recuperado)
