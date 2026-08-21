@@ -898,8 +898,14 @@ function confirmarImportacionMasiva(){
   const avisoDeshacer = document.getElementById('lote-aviso-deshacer');
   if(avisoDeshacer && rutsImportados.length){
     avisoDeshacer.style.display = 'flex';
-    avisoDeshacer.querySelector('span').textContent =
-      `${rutsImportados.length} trabajador${rutsImportados.length!==1?'es':''} recién importado${rutsImportados.length!==1?'s':''} — ¿la cuadrilla quedó mal configurada?`;
+    // ✅ Corregido — el mensaje no decía en qué cargo quedaron, y la
+    // pregunta ("¿la cuadrilla quedó mal configurada?") sonaba a que
+    // algo estaba mal por defecto, generando dudas incluso cuando la
+    // carga salió perfecta. Ahora nombra el cargo, y la pregunta es
+    // neutral con dos botones explícitos en vez de una sola salida
+    // ("Deshacer") sin forma de decir "está todo bien".
+    document.getElementById('lote-aviso-texto').textContent =
+      `${rutsImportados.length} trabajador${rutsImportados.length!==1?'es':''} importado${rutsImportados.length!==1?'s':''} como ${loteCargo} — ¿quedó todo correcto?`;
   }
 
   datosExcel = [];
@@ -920,6 +926,16 @@ function confirmarImportacionMasiva(){
 
   if(typeof cargarTrabajadores === 'function') cargarTrabajadores();
   if(typeof renderContratistas === 'function') renderContratistas();
+}
+
+/* ✅ Nuevo — "Sí, está bien": simplemente cierra el aviso, sin tocar
+   ningún dato (ya estaban guardados desde que se confirmó el modal de
+   importación). Le da al aviso una salida clara además de "Deshacer",
+   para que dejar de verlo no dependa de irse del módulo o ignorarlo. */
+function confirmarCuadrillaOk(){
+  const avisoDeshacer = document.getElementById('lote-aviso-deshacer');
+  if(avisoDeshacer) avisoDeshacer.style.display = 'none';
+  _ultimosRutsImportadosMasivo = [];
 }
 
 /* Deshace la última importación masiva (borra a los recién importados).
