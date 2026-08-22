@@ -71,6 +71,19 @@
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
+/* ✅ Corregido — el margen negativo de arriba asume que la barra es el
+   PRIMER elemento de su contenedor (para "sangrar" hasta el borde de la
+   tarjeta sin taparse con nada). Cuando se usa como segundo título
+   dentro de un mismo bloque (ej. el modal de Confirmación Masiva de
+   Contratos: "Revisar antes de crear" arriba, "Vista previa del
+   contrato" más abajo), ese mismo empuje hacia arriba tapaba el
+   contenido que tenía justo encima. Se anula el margen superior
+   únicamente cuando NO es el primer hijo — el resto del comportamiento
+   (sangrado a los costados, radio del borde) queda igual. */
+.card-title-oscuro:not(:first-child) {
+  margin-top: 0;
+}
+
 /* ── Grillas de layout ─────────────────────────── */
 
 .g2 {
