@@ -194,13 +194,11 @@ function _renderListaVisualTrabajadorContrato(){
 
   cont.innerHTML = lista.map(t => {
     const seleccionado  = valActual === t.id;
-    // ✅ Mejora pedida por el usuario — antes era texto suelto (nombre
-    // flexible + rut al final), ahora es una grilla real (mismo
-    // grid-template-columns que el encabezado en index.html), con la
-    // columna de Cargo agregada — aprovecha el espacio ancho que
-    // sobraba y queda alineado como una tabla, no texto flotando.
+    // ✅ Columna "Fecha de Ingreso" agregada a pedido — mismo criterio
+    // ya usado en el panel de "Datos Precargados" (t.fecha_ingreso),
+    // ahora visible también acá arriba, antes de elegir al trabajador.
     return `<div onclick="_seleccionarTrabajadorContratoVisual('${t.id}')"
-        style="display:grid;grid-template-columns:28px 1fr 130px 180px;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
+        style="display:grid;grid-template-columns:28px 1fr 130px 180px 130px;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
         border-bottom:1px solid var(--borde);background:${seleccionado?'#EFF6FF':'#fff'};"
         onmouseover="this.style.background='${seleccionado?'#EFF6FF':'#f8fafc'}'"
         onmouseout="this.style.background='${seleccionado?'#EFF6FF':'#fff'}'">
@@ -212,6 +210,7 @@ function _renderListaVisualTrabajadorContrato(){
       <span style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.nombre}</span>
       <span class="rut-mono">${t.rut}</span>
       <span style="font-size:12px;color:var(--texto2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.funcion_cargo || '—'}</span>
+      <span style="font-size:12px;color:var(--texto2);white-space:nowrap;">${t.fecha_ingreso ? fmtFecha(t.fecha_ingreso) : '—'}</span>
     </div>`;
   }).join('');
 }
@@ -1163,10 +1162,15 @@ ${clausulasHTML}
 
   <div class="check-row" style="margin:16px 0;">
     ${['Legionario','Guantes','Lentes','Chaleco','Bloqueador'].map(item => {
-      const marcado = (t?.epp_entregados||[]).includes(item);
+      // ✅ Corregido — leía t?.epp_entregados (el TRABAJADOR), que nunca
+      // tiene ese dato — el EPP se guarda en el CONTRATO (datos), no en
+      // el trabajador. Mismo patrón exacto que ya se corrigió ayer en
+      // Alertas y en la ficha del trabajador (trabajadores.js) — acá
+      // vivía la misma falla, en el propio documento que se imprime.
+      const marcado = (datos?.epp_entregados||[]).includes(item);
       return `<span class="check-item"><span class="checkbox${marcado?' checked':''}">${marcado?'X':''}</span> ${item}</span>`;
     }).join('\n    ')}
-    <span class="check-item"><span class="checkbox${(t?.epp_entregados||[]).includes('Otro')?' checked':''}">${(t?.epp_entregados||[]).includes('Otro')?'X':''}</span> Otro: ${t?.epp_otro || '_______________'}</span>
+    <span class="check-item"><span class="checkbox${(datos?.epp_entregados||[]).includes('Otro')?' checked':''}">${(datos?.epp_entregados||[]).includes('Otro')?'X':''}</span> Otro: ${datos?.epp_otro || '_______________'}</span>
   </div>
 
   <p>Declaro que los elementos entregados se encuentran en buen estado y cumplen con la
@@ -1190,7 +1194,7 @@ ${clausulasHTML}
   <div class="doc-folio">${folioLinea}</div>
   <div class="doc-titulo" style="margin-bottom:14px;">Constancia de Entrega de Reglamento Interno de Orden, Higiene y Seguridad</div>
 
-  <p style="margin-bottom:10px;">Con fecha <strong>${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</strong>, la empresa
+  <p style="margin-bottom:10px;">Con fecha <strong>${fmtCorta(datos?.irl_fecha_induccion || t?.fecha_ingreso)}</strong>, la empresa
   <strong>${emp.razon_social || '______________'}</strong>,
   RUT <strong>${emp.rut || '___________'}</strong>,
   representada por don(ña) <strong>${emp.representante || '______________'}</strong>,
@@ -1229,7 +1233,7 @@ ${clausulasHTML}
       <div class="firma-linea"></div>
       <div class="firma-nombre">${emp.representante || '______________'}</div>
       <div class="firma-rol">Entrega efectuada por</div>
-      <div class="firma-rol">Fecha: ${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</div>
+      <div class="firma-rol">Fecha: ${fmtCorta(datos?.irl_fecha_induccion || t?.fecha_ingreso)}</div>
     </div>
   </div>
 </div>
@@ -1270,20 +1274,23 @@ ${clausulasHTML}
     <tr><td>RUT</td><td>${t?.rut || '—'}</td></tr>
     <tr><td>Empresa</td><td>${emp.razon_social || '—'}</td></tr>
     <tr><td>Faena</td><td>${datos.nombre_faena || '—'}</td></tr>
-    <tr><td>Fecha</td><td>${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</td></tr>
+    <tr><td>Fecha</td><td>${fmtCorta(datos?.irl_fecha_induccion || t?.fecha_ingreso)}</td></tr>
   </table>
 
   <p style="margin-top:16px;"><strong>3. Identificación del Relator(a)</strong></p>
   <table>
     <tr><td>Nombre del relator(a)</td><td>${emp.representante || '—'}</td></tr>
     <tr><td>Empresa</td><td>${emp.razon_social || '—'}</td></tr>
-    <tr><td>Fecha de inducción</td><td>${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</td></tr>
+    <tr><td>Fecha de inducción</td><td>${fmtCorta(datos?.irl_fecha_induccion || t?.fecha_ingreso)}</td></tr>
     <tr><td>Hora inicio</td><td>&nbsp;</td></tr>
     <tr><td>Hora término</td><td>&nbsp;</td></tr>
   </table>
 
   <p style="margin-top:16px;"><strong>4. Declaración de Recepción de IRL</strong>
-    ${t?.irl_declarado ? ' <span style="color:#0a7a35;">✅ Declarado recibido por ${elTrabajador} en su ficha</span>' : ''}
+    <!-- ✅ Corregido — leía t?.irl_declarado (trabajador, nunca poblado),
+         mismo patrón que el EPP de arriba — ahora lee datos?.irl_declarado
+         (el contrato, donde realmente se guarda). -->
+    ${datos?.irl_declarado ? ' <span style="color:#0a7a35;">✅ Declarado recibido por ${elTrabajador} en su ficha</span>' : ''}
   </p>
   <p>Declaro haber recibido información clara y suficiente sobre los riesgos laborales
   asociados a mis funciones, así como respecto de las medidas preventivas y procedimientos
@@ -1303,7 +1310,7 @@ ${clausulasHTML}
       <div class="firma-nombre">${t?.nombre || '______________'}</div>
       <div class="firma-rol">Firma ${Trabajador}</div>
       <div class="firma-rol">RUT: ${t?.rut || '___________'}</div>
-      <div class="firma-rol">Fecha: ${fmtCorta(t?.irl_fecha_induccion || t?.fecha_ingreso)}</div>
+      <div class="firma-rol">Fecha: ${fmtCorta(datos?.irl_fecha_induccion || t?.fecha_ingreso)}</div>
     </div>
   </div>
 </div>
@@ -1557,8 +1564,24 @@ function _cargarValorAnteriorRectificacion(){
   if(campo === 'sueldo_monto') valor = valor ? '$' + Number(valor).toLocaleString('es-CL') : '';
   // ✅ Corregido — mismo bug de zona horaria, ahora en el "valor anterior"
   // que se muestra al rectificar fecha_firma/fecha_termino.
-  if((campo === 'fecha_firma' || campo === 'fecha_termino') && valor) valor = new Date(valor+'T12:00:00').toLocaleDateString('es-CL');
+  const esCampoFecha = campo === 'fecha_firma' || campo === 'fecha_termino';
+  if(esCampoFecha && valor) valor = new Date(valor+'T12:00:00').toLocaleDateString('es-CL');
   document.getElementById('rect-valor-anterior').value = valor || '—';
+
+  // ✅ Corregido — el campo "Nuevo valor" era texto libre incluso para
+  // fechas: sin selector de calendario ni validación de formato, un
+  // valor tipeado a mano en formato distinto a AAAA-MM-DD (ej.
+  // "21/08/2026") se guardaba tal cual, rompiendo en silencio todos
+  // los cálculos posteriores que dependen de esa fecha (Alertas,
+  // Liquidaciones, etc. — confirmado con un caso real: da NaN días
+  // hasta el vencimiento). Ahora usa un selector de calendario real
+  // cuando el campo elegido es una fecha, igual que el resto del
+  // sistema.
+  const inputNuevo = document.getElementById('rect-valor-nuevo');
+  if(inputNuevo){
+    inputNuevo.type = esCampoFecha ? 'date' : 'text';
+    inputNuevo.value = '';
+  }
 }
 
 function guardarRectificacion(){
@@ -1572,6 +1595,13 @@ function guardarRectificacion(){
 
   if(!valorNuevo){ toast('⚠️ Ingresa el nuevo valor', 'error'); return; }
   if(!motivo){ toast('⚠️ Ingresa el motivo de la rectificación', 'error'); return; }
+
+  // ✅ Resguardo adicional — aunque el campo ya usa type="date" para
+  // fechas, se valida el formato igual antes de guardar (defensa en
+  // profundidad, por si el valor llega de otra forma).
+  if((campo === 'fecha_firma' || campo === 'fecha_termino') && !/^\d{4}-\d{2}-\d{2}$/.test(valorNuevo)){
+    toast('⚠️ La fecha no tiene un formato válido — selecciónala con el calendario','error'); return;
+  }
 
   cargarContratos();
   const idx = contratos.findIndex(x => x.id === _rectContratoId);
