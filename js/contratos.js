@@ -1290,7 +1290,7 @@ ${clausulasHTML}
     <!-- ✅ Corregido — leía t?.irl_declarado (trabajador, nunca poblado),
          mismo patrón que el EPP de arriba — ahora lee datos?.irl_declarado
          (el contrato, donde realmente se guarda). -->
-    ${datos?.irl_declarado ? ' <span style="color:#0a7a35;">✅ Declarado recibido por ${elTrabajador} en su ficha</span>' : ''}
+    ${datos?.irl_declarado ? ` <span style="color:#0a7a35;">✅ Declarado recibido por ${elTrabajador} en su ficha</span>` : ''}
   </p>
   <p>Declaro haber recibido información clara y suficiente sobre los riesgos laborales
   asociados a mis funciones, así como respecto de las medidas preventivas y procedimientos
