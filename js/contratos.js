@@ -658,6 +658,16 @@ function limpiarContrato(){
   document.getElementById('c-trabajador').value = '';
   document.getElementById('c-tipo').value = 'temporada';
   document.getElementById('c-tipo-rem').value = '';
+
+  // ✅ Corregido — la Jornada y el bloque EPP/IRL nunca se limpiaban al
+  // guardar un contrato: quedaban con los datos del trabajador anterior
+  // marcados, listos para colarse sin querer en el próximo contrato que
+  // se generara. Se resetean acá también, mismo criterio que el resto
+  // del formulario.
+  renderJornadaDias(null); // vuelve la Jornada a su estado por defecto (mismo que al elegir un trabajador nuevo)
+  const eppCont = document.getElementById('epp-en-contrato');
+  if(eppCont) eppCont.innerHTML = _htmlFormularioEpp('cepp', {}); // limpia checks de EPP + Fecha/Declaración de IRL
+
   limpiarPreview();
 }
 
