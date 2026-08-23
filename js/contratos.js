@@ -601,6 +601,35 @@ function guardarContrato(){
   }
   guardarLocal();
 
+  // ✅ Corregido — guardarContrato() nunca registraba el contrato en
+  // Carpeta Laboral; eso solo pasaba dentro de generarPDFContrato(),
+  // una acción SEPARADA (el botón "Generar PDF"/"Imprimir"). Como
+  // _tieneContratoVigente() (usada por Contrato Masivo para filtrar
+  // "pendientes", y también por el aviso del 3er contrato a Plazo Fijo
+  // más arriba) lee la Carpeta, no la tabla contratos[] — un contrato
+  // guardado sin haber generado su PDF quedaba invisible para esos dos
+  // chequeos: seguía apareciendo como "pendiente" en Masivo aunque ya
+  // estuviera creado, y el aviso legal de Art. 159 N°4 podía no
+  // dispararse cuando correspondía. Se registra acá también, en el
+  // mismo momento de guardar — registrarDocumentoCarpeta() ya evita
+  // duplicados si después sí se genera el PDF (mismo trabajador+tipo+
+  // subtipo+fecha_firma).
+  {
+    const empCarpeta      = getEmpresaEmpleadora(datos.empresa_propia_id);
+    const mandanteCarpeta = empresas.find(e => e.id === datos.mandante_id) || null;
+    const { folioDoc, tipo } = construirDocumentoContrato(t, empCarpeta, mandanteCarpeta, datos);
+    const tipoTxtCarpeta = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[tipo] || tipo;
+    registrarDocumentoCarpeta({
+      trabajador_id:  id,
+      trabajador_rut: t?.rut || '',
+      empresa_propia_id: datos.empresa_propia_id || '',
+      tipo:           'contrato',
+      subtipo:        tipo,
+      folio:          folioDoc,
+      fecha_firma:    datos.fecha_firma || '',
+      descripcion:    `Contrato ${tipoTxtCarpeta} — ${datos.nombre_faena || ''} — ${datos.temporada || ''}`.trim().replace(/—\s*$/, ''),
+    });
+  }
 
   toast('✅ Contrato guardado correctamente','exito');
   limpiarContrato();
@@ -1737,6 +1766,7 @@ function renderBloquesMasivo(){
             <label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
               <input type="checkbox" class="masivo-check-${key}" data-id="${t.id}" onchange="_toggleCheckBloqueMasivo('${key}','${t.id}', this.checked)" style="width:auto;">
               <span style="flex:1;">${t.nombre} <span class="rut-mono">${t.rut}</span></span>
+              <span style="font-size:12px;color:var(--texto3);white-space:nowrap;" title="Fecha de ingreso">${t.fecha_ingreso ? fmtFecha(t.fecha_ingreso) : '—'}</span>
             </label>`).join('')}
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;">
