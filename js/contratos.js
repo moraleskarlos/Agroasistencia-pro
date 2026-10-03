@@ -2380,8 +2380,10 @@ function _poblarSelectEppTrabajador(){
   let lista = trabajadores.slice();
   if(epFiltro) lista = lista.filter(t => (t.empresa_propia_id || '') === epFiltro);
 
+  // ✅ Corregido — RUT vs ID: el valor de cada opción ahora es el id
+  // del trabajador, no su RUT, mismo criterio que el resto del sistema.
   sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>' +
-    lista.map(t => `<option value="${t.rut}">${t.nombre} — ${t.rut}</option>`).join('');
+    lista.map(t => `<option value="${t.id}">${t.nombre} — ${t.rut}</option>`).join('');
   if(val) sel.value = val;
 }
 
@@ -2394,7 +2396,8 @@ function _poblarSelectEppTrabajador(){
 function _onCambioEmpresaEpp(){
   const epFiltro = document.getElementById('epp-f-empresa')?.value || '';
   const selTrabajador = document.getElementById('epp-sel-trabajador');
-  const actual = trabajadores.find(t => t.rut === selTrabajador?.value);
+  // ✅ Corregido — RUT vs ID.
+  const actual = trabajadores.find(t => t.id === selTrabajador?.value);
 
   if(epFiltro && actual && (actual.empresa_propia_id || '') !== epFiltro){
     selTrabajador.value = '';
@@ -2484,28 +2487,58 @@ function _leerFormularioEpp(prefix){
 
 /* ── INDIVIDUAL ──────────────────────────────────────────── */
 function cargarEppTrabajador(){
-  const rut = document.getElementById('epp-sel-trabajador')?.value;
+  const id = document.getElementById('epp-sel-trabajador')?.value;
   const cont = document.getElementById('epp-form-individual');
   if(!cont) return;
-  if(!rut){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
+  if(!id){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
 
-  const t = trabajadores.find(x => x.rut === rut);
+  // ✅ Corregido — RUT vs ID. El formulario arranca siempre en blanco
+  // (no se precarga con la última entrega) — cada guardado acá registra
+  // una entrega NUEVA en la Carpeta Laboral, no edita un estado único.
   cont.style.display = 'block';
-  cont.innerHTML = _htmlFormularioEpp('eppi', t, true) + `
+  cont.innerHTML = _htmlFormularioEpp('eppi', {}, true) + `
     <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="guardarEppIndividual()">
       <i class="ti ti-device-floppy"></i> Guardar EPP
     </button>`;
 }
 
+/* ✅ Reescrito — el EPP se puede entregar varias veces durante la
+   relación laboral (guantes nuevos, reposición de botas, etc.). Antes
+   esto pisaba un único estado en el trabajador (Object.assign) — un
+   dato que además, al día de hoy, no lo lee nadie (Alertas y la ficha
+   del trabajador ya leen el EPP del CONTRATO vigente, no de acá — ver
+   el hallazgo de Alertas). Ahora cada entrega queda como un documento
+   nuevo en la Carpeta Laboral, con su propia fecha — igual que ya
+   hacen Contratos y Anexos, preservando el historial completo de
+   entregas en vez de solo la última. */
 function guardarEppIndividual(){
-  const rut = document.getElementById('epp-sel-trabajador')?.value;
-  if(!rut){ toast('⚠️ Selecciona un trabajador', 'error'); return; }
-  const t = trabajadores.find(x => x.rut === rut);
+  const id = document.getElementById('epp-sel-trabajador')?.value;
+  if(!id){ toast('⚠️ Selecciona un trabajador', 'error'); return; }
+  const t = trabajadores.find(x => x.id === id);
   if(!t){ toast('⚠️ Trabajador no encontrado', 'error'); return; }
 
-  Object.assign(t, _leerFormularioEpp('eppi'));
-  guardarLocal();
-  toast(`✅ EPP guardado para ${t.nombre}`, 'exito');
+  const datos = _leerFormularioEpp('eppi');
+  if(!datos.epp_entregados.length){ toast('⚠️ Marca al menos un elemento entregado', 'error'); return; }
+  if(!datos.epp_fecha_entrega){ toast('⚠️ Ingresa la fecha de entrega', 'error'); return; }
+
+  // ✅ Mismo chequeo de mes cerrado que Anexos/Contratos.
+  if(typeof _bloqueaPorMesCerrado === 'function' && _bloqueaPorMesCerrado(t.rut, datos.epp_fecha_entrega)) return;
+
+  const itemsTxt = datos.epp_entregados.map(i => (i==='Otro' && datos.epp_otro) ? `Otro (${datos.epp_otro})` : i).join(', ');
+
+  registrarDocumentoCarpeta({
+    trabajador_id:  t.id,
+    trabajador_rut: t.rut,
+    empresa_propia_id: t.empresa_propia_id || '',
+    tipo:           'epp',
+    subtipo:        'entrega',
+    folio:          'EPP-' + Date.now().toString(36).toUpperCase(),
+    fecha_firma:    datos.epp_fecha_entrega,
+    descripcion:    `Entrega de EPP — ${itemsTxt}`,
+  });
+
+  toast(`✅ Entrega de EPP registrada en la Carpeta Laboral de ${t.nombre}`, 'exito');
+  cargarEppTrabajador(); // vuelve a dejar el formulario en blanco, listo para otra entrega
 }
 
 /* ── MASIVO ──────────────────────────────────────────────── */
@@ -2524,9 +2557,11 @@ function renderListaEppMasivo(){
     return;
   }
 
+  // ✅ Corregido — RUT vs ID: el checkbox ahora guarda el id del
+  // trabajador, no su RUT.
   cont.innerHTML = lista.map(t => `
     <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px;border-bottom:1px solid var(--borde);cursor:pointer;">
-      <input type="checkbox" class="epp-cm-check-trab" value="${t.rut}" onchange="_eppCmActualizarContador()" style="width:auto;">
+      <input type="checkbox" class="epp-cm-check-trab" value="${t.id}" onchange="_eppCmActualizarContador()" style="width:auto;">
       <span>${t.nombre} <span class="rut-mono">${t.rut}</span></span>
     </label>`).join('');
 
@@ -2553,19 +2588,47 @@ function _eppCmSeleccionarTodos(val){
   _eppCmActualizarContador();
 }
 
+/* ✅ Reescrito — mismo motivo que guardarEppIndividual(): cada entrega
+   queda como un documento nuevo en la Carpeta Laboral de cada
+   trabajador seleccionado, no como un estado que se pisa. */
 function guardarEppMasivo(){
+  // ✅ Corregido — RUT vs ID: los checkboxes ahora guardan id, no RUT.
   const seleccionados = Array.from(document.querySelectorAll('.epp-cm-check-trab:checked')).map(c => c.value);
   if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador', 'error'); return; }
 
   const datos = _leerFormularioEpp('eppm');
+  if(!datos.epp_entregados.length){ toast('⚠️ Marca al menos un elemento entregado', 'error'); return; }
+  if(!datos.epp_fecha_entrega){ toast('⚠️ Ingresa la fecha de entrega', 'error'); return; }
+
+  const trabajadoresSel = seleccionados.map(id => trabajadores.find(x => x.id === id)).filter(Boolean);
+
+  // ✅ Mismo chequeo de mes cerrado que Anexos — revisado por cada
+  // trabajador del lote, pueden pertenecer a empresas distintas.
+  if(typeof esMesCerrado === 'function'){
+    const periodo = datos.epp_fecha_entrega.slice(0,7);
+    const bloqueados = trabajadoresSel.filter(t => esMesCerrado(periodo, t.empresa_propia_id));
+    if(bloqueados.length){
+      alert(`⚠️ No se puede registrar — el período de la fecha de entrega ya está cerrado para: ${bloqueados.map(t=>t.nombre).join(', ')}.`);
+      return;
+    }
+  }
+
+  const itemsTxt = datos.epp_entregados.map(i => (i==='Otro' && datos.epp_otro) ? `Otro (${datos.epp_otro})` : i).join(', ');
+
   let aplicados = 0;
-  seleccionados.forEach(rut => {
-    const t = trabajadores.find(x => x.rut === rut);
-    if(!t) return;
-    Object.assign(t, datos);
+  trabajadoresSel.forEach(t => {
+    registrarDocumentoCarpeta({
+      trabajador_id:  t.id,
+      trabajador_rut: t.rut,
+      empresa_propia_id: t.empresa_propia_id || '',
+      tipo:           'epp',
+      subtipo:        'entrega',
+      folio:          'EPP-' + Date.now().toString(36).toUpperCase() + '-' + t.id,
+      fecha_firma:    datos.epp_fecha_entrega,
+      descripcion:    `Entrega de EPP — ${itemsTxt}`,
+    });
     aplicados++;
   });
 
-  guardarLocal();
-  toast(`✅ EPP / IRL aplicado a ${aplicados} trabajador${aplicados!==1?'es':''}`, 'exito');
+  toast(`✅ Entrega de EPP registrada en la Carpeta Laboral de ${aplicados} trabajador${aplicados!==1?'es':''}`, 'exito');
 }
