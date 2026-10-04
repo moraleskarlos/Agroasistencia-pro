@@ -2371,7 +2371,12 @@
           </div>
 
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--borde);padding-top:12px;margin-top:12px;">
-            <button class="btn btn-primary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-search"></i> Generar reporte</button>
+            <!-- ✅ Reordenada en una sola fila, en 3 grupos: CONSULTAR · OPERAR · EXPORTAR.
+                 Se quitó "Generar reporte": hacía exactamente lo mismo que "Actualizar"
+                 (y los filtros ya se aplican solos al cambiarlos), y repetía la palabra
+                 "reporte", que ahora aparece una sola vez, en el menú Reportes. -->
+
+            <!-- CONSULTAR -->
             <div style="position:relative;">
               <button class="btn btn-secondary btn-sm" onclick="toggleMenuRangoAsistencia()"><i class="ti ti-calendar-stats"></i> Ver rango de fechas <i class="ti ti-chevron-down" style="font-size:12px;"></i></button>
               <div id="menu-rango-asist" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid var(--borde);border-radius:8px;box-shadow:var(--shadow-md);z-index:20;min-width:160px;overflow:hidden;">
@@ -2384,17 +2389,24 @@
               </div>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="cargarAsistencia()"><i class="ti ti-refresh"></i> Actualizar</button>
-            <button class="btn btn-secondary btn-sm" onclick="recalcularHorasRango()"><i class="ti ti-calculator"></i> Recalcular horas</button>
 
             <div style="width:1px;height:20px;background:var(--borde);margin:0 4px;"></div>
-            <span style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:0.4px;">Reportes</span>
-            <button class="btn btn-secondary btn-sm" onclick="_exportarAsistenciaSegunModo()"><i class="ti ti-download"></i> Excel</button>
-            <span id="asist-acciones-dia" style="display:contents;">
-              <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>
-              <button class="btn btn-secondary btn-sm" onclick="exportarAsistenciaPorMandante()"><i class="ti ti-building-factory"></i> Por mandante</button>
-              <div style="width:1px;height:20px;background:var(--borde);margin:0 4px;"></div>
-              <button class="btn btn-dark btn-sm" onclick="cierreMasivoTurno()"><i class="ti ti-door-exit"></i> Cierre masivo turno</button>
-            </span>
+
+            <!-- OPERAR -->
+            <button id="btn-asist-cerrar-turno" class="btn btn-dark btn-sm" onclick="cierreMasivoTurno()" title="Registra la hora de salida de los trabajadores marcados"><i class="ti ti-door-exit"></i> Cerrar turno</button>
+            <button class="btn btn-secondary btn-sm" onclick="recalcularHorasRango()" title="Vuelve a calcular las horas de las marcaciones ya guardadas"><i class="ti ti-calculator"></i> Recalcular horas</button>
+
+            <div style="width:1px;height:20px;background:var(--borde);margin:0 4px;"></div>
+
+            <!-- EXPORTAR -->
+            <div style="position:relative;">
+              <button class="btn btn-secondary btn-sm" onclick="toggleMenuReportesAsistencia()"><i class="ti ti-download"></i> Reportes <i class="ti ti-chevron-down" style="font-size:12px;"></i></button>
+              <div id="menu-reportes-asist" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid var(--borde);border-radius:8px;box-shadow:var(--shadow-md);z-index:20;min-width:170px;overflow:hidden;">
+                <button class="btn" style="display:block;width:100%;text-align:left;border-radius:0;background:none;" onclick="_reporteAsistencia('excel')"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+                <button id="op-rep-pdf" class="btn" style="display:block;width:100%;text-align:left;border-radius:0;background:none;" onclick="_reporteAsistencia('pdf')"><i class="ti ti-file-type-pdf"></i> PDF</button>
+                <button id="op-rep-mandante" class="btn" style="display:block;width:100%;text-align:left;border-radius:0;background:none;" onclick="_reporteAsistencia('mandante')"><i class="ti ti-building-factory"></i> Por mandante</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2651,6 +2663,23 @@
 
 <!-- MODAL LISTA DE CONTRATOS -->
 <!-- MODAL RECTIFICACIÓN ADMINISTRATIVA -->
+<!-- ✅ Nuevo — Cerrar turno: pide la hora de salida (por defecto la actual, editable) -->
+<div id="modal-cierre-turno" class="modal-overlay">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:420px;box-shadow:var(--shadow-md);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-size:16px;font-weight:700;"><i class="ti ti-door-exit" style="margin-right:8px;color:var(--azul);"></i>Cerrar turno</div>
+      <button class="btn btn-secondary btn-sm" onclick="cancelarCierreTurno()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="cierre-turno-resumen" style="font-size:12px;color:var(--texto3);margin-bottom:14px;"></div>
+    <div class="form-group"><label>Hora de salida</label><input type="time" id="cierre-turno-hora" class="f-input"></div>
+    <div style="font-size:12px;color:var(--texto3);margin:8px 0 14px;">Se registrará esta hora de salida a todos los trabajadores seleccionados. Si algún caso es distinto, usa "Corregir" en su fila.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="cancelarCierreTurno()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarCierreTurno()"><i class="ti ti-check"></i> Cerrar turno</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-rectificacion" class="modal-overlay">
   <div style="background:#fff;border-radius:var(--radius-lg);padding:24px;width:100%;max-width:480px;box-shadow:var(--shadow-md);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
