@@ -68,7 +68,10 @@ function exportarExtranjerosExcel(){
   const data = extranjeros.map(t => {
     const mandante = findMandante(t);
     const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
-    const fmt = v => v ? new Date(v).toLocaleDateString('es-CL') : '';
+    // ✅ Corregido — mismo bug de zona horaria que exportarTrabajadoresExcel():
+    // sin el ancla de mediodía, la Fecha de Vencimiento podía salir un
+    // día antes de la real.
+    const fmt = v => v ? new Date(v+'T12:00:00').toLocaleDateString('es-CL') : '';
     const sem = _calcularSemaforo(t.fecha_venc_migratorio);
     const estadoTxt = { verde:'Vigente', amarillo:'Vigente (iniciar trámite)', rojo:'Por vencer', negro:'Vencido', gris:'Sin fecha' }[sem];
 

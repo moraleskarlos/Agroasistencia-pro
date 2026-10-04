@@ -384,6 +384,10 @@ const _TIPO_DOC_CARPETA = {
   liquidacion:         { icono:'💰', label:'Liquidación' },
   finiquito:           { icono:'📝', label:'Finiquito' },
   epp_riohs_irl:       { icono:'⚠️', label:'RIOHS / IRL' },
+  // ✅ Nuevo — renovación de documento migratorio (ver guardarTrabajador
+  // en registro-personal.js). Se agrega acá porque es este mismo mapa
+  // el que usa _filaDocCarpeta() para mostrar el ícono/label correcto.
+  migratorio:          { icono:'🛂', label:'Documento Migratorio' },
   carta:               { icono:'✉️', label:'Carta' },
   otro:                { icono:'📁', label:'Otro' },
 };

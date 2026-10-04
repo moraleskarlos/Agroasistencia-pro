@@ -497,7 +497,38 @@ async function guardarTrabajador(e){
     if(idOriginal){
       // Modo edición: actualizar por ID, nunca por RUT
       const idx = trabajadores.findIndex(t => t.id === idOriginal);
-      if(idx >= 0) trabajadores[idx] = {...trabajadores[idx], ...datos};
+      if(idx >= 0){
+        // ✅ Nuevo — si cambia el documento migratorio (tipo, fecha de
+        // vencimiento o número) al editar, se registra la renovación
+        // como un documento nuevo en la Carpeta Laboral ANTES de pisar
+        // el dato en la ficha — mismo problema que ya resolvimos con el
+        // EPP: sin esto, cada renovación pisaba la anterior sin dejar
+        // ningún rastro de que existió un documento previo. La ficha
+        // sigue actualizándose igual que siempre (el semáforo y las
+        // alertas la necesitan), esto solo AGREGA el historial.
+        const anterior = trabajadores[idx];
+        const cambioMigratorio =
+          (anterior.fecha_venc_migratorio || anterior.tipo_doc_migratorio || anterior.num_doc_migratorio) &&
+          (anterior.fecha_venc_migratorio !== datos.fecha_venc_migratorio ||
+           anterior.tipo_doc_migratorio   !== datos.tipo_doc_migratorio   ||
+           anterior.num_doc_migratorio    !== datos.num_doc_migratorio);
+
+        if(cambioMigratorio && typeof registrarDocumentoCarpeta === 'function'){
+          const fmtMig = v => v ? new Date(v+'T12:00:00').toLocaleDateString('es-CL') : 'sin fecha';
+          registrarDocumentoCarpeta({
+            trabajador_id:  anterior.id,
+            trabajador_rut: datos.rut || anterior.rut,
+            empresa_propia_id: datos.empresa_propia_id || anterior.empresa_propia_id || '',
+            tipo:           'migratorio',
+            subtipo:        'renovacion',
+            folio:          'MIG-' + Date.now().toString(36).toUpperCase(),
+            fecha_firma:    datos.fecha_venc_migratorio || '',
+            descripcion:    `Renovación de documento migratorio — ${anterior.tipo_doc_migratorio||'—'} (vencía ${fmtMig(anterior.fecha_venc_migratorio)}) → ${datos.tipo_doc_migratorio||'—'} (vence ${fmtMig(datos.fecha_venc_migratorio)})`,
+          });
+        }
+
+        trabajadores[idx] = {...trabajadores[idx], ...datos};
+      }
       // ✅ Fecha de registro (Punto 2 del reporte de Contratos): timestamp
       // automático de cuándo se creó el trabajador, no editable. Solo se
       // fija al crear — nunca se sobreescribe en una edición.
