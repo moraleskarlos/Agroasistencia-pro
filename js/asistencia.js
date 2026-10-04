@@ -979,10 +979,32 @@ function procesarExcelAsistencia(event){
 
       if(!rows.length){ toast('⚠️ El archivo está vacío', 'error'); return; }
 
-      const fmtFechaCelda = v => {
-        if(!v) return null;
-        if(v instanceof Date) return fechaDesdeDate(v);
-        return v.toString().trim() || null;
+      // ✅ Corregido — antes cualquier texto en la columna Fecha pasaba como
+      // válido: una fecha escrita como "10-08-2026" (día-mes-año) se guardaba
+      // bajo una clave que nada lee ("asistencia_10-08-2026") y la marca se
+      // perdía sin ningún aviso. Ahora se aceptan AAAA-MM-DD, DD-MM-AAAA y
+      // DD/MM/AAAA (mismo criterio que la importación de trabajadores; el año
+      // siempre trae 4 dígitos, así que no hay ambigüedad), todo se convierte
+      // al formato interno, y cualquier otra cosa queda como error. También
+      // se descartan fechas que no existen en el calendario (31-02, mes 13).
+      const leerFechaCelda = v => {
+        if(v === undefined || v === null || v === '') return { vacia: true };
+        let iso = null, crudo = '';
+        if(v instanceof Date){
+          crudo = iso = fechaDesdeDate(v);
+        } else {
+          crudo = v.toString().trim();
+          if(!crudo) return { vacia: true };
+          let m;
+          if((m = crudo.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)))              iso = `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+          else if((m = crudo.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/)))    iso = `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+        }
+        if(iso){
+          const [y, mo, d] = iso.split('-').map(Number);
+          const chk = new Date(Date.UTC(y, mo - 1, d));
+          if(chk.getUTCFullYear() !== y || chk.getUTCMonth() !== mo - 1 || chk.getUTCDate() !== d) iso = null;
+        }
+        return { iso, crudo };
       };
       const fmtHora = v => {
         if(!v) return '';
@@ -996,14 +1018,16 @@ function procesarExcelAsistencia(event){
       rows.forEach((row, i) => {
         const fila    = i + 2;
         const rut     = (row['RUT'] || row['Rut'] || row['rut'] || '').toString().trim();
-        const fecha   = fmtFechaCelda(row['Fecha'] || row['fecha']);
+        const celdaFecha = leerFechaCelda(row['Fecha'] || row['fecha']);
+        const fecha   = celdaFecha.iso || null;
         const entrada = fmtHora(row['Hora Entrada'] || row['hora_entrada']);
         const salida  = fmtHora(row['Hora Salida'] || row['hora_salida']);
 
         if(!rut){ _erroresExcelAsist.push({ fila, mensaje:'Falta el RUT' }); return; }
         const t = trabajadores.find(x => x.rut === rut);
         if(!t){ _erroresExcelAsist.push({ fila, rut, mensaje:`RUT "${rut}" no encontrado en el sistema` }); return; }
-        if(!fecha){ _erroresExcelAsist.push({ fila, rut, nombre:t.nombre, mensaje:'Falta la Fecha (formato AAAA-MM-DD)' }); return; }
+        if(celdaFecha.vacia){ _erroresExcelAsist.push({ fila, rut, nombre:t.nombre, mensaje:'Falta la Fecha (formato AAAA-MM-DD o DD-MM-AAAA)' }); return; }
+        if(!fecha){ _erroresExcelAsist.push({ fila, rut, nombre:t.nombre, mensaje:`Fecha inválida ("${celdaFecha.crudo}") — usa AAAA-MM-DD o DD-MM-AAAA` }); return; }
         if(!entrada){ _erroresExcelAsist.push({ fila, rut, nombre:t.nombre, mensaje:'Falta la Hora Entrada' }); return; }
 
         // ✅ Nuevo — una fila cuya fecha cae en un mes cerrado no se carga: queda

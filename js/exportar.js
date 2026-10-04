@@ -179,7 +179,7 @@ function descargarPlantillaAsistencia(){
   const instrucciones = [
     { ' ':'Esta plantilla es para cargar marcaciones de asistencia cuando no fue posible registrarlas con la App (sin teléfono disponible, corte de luz, etc.).' },
     { ' ':'El RUT debe corresponder a un trabajador YA registrado en el sistema.' },
-    { ' ':'La Fecha va en formato AAAA-MM-DD. La Hora Entrada y Hora Salida en formato HH:MM (24 horas).' },
+    { ' ':'La Fecha va en formato AAAA-MM-DD o DD-MM-AAAA. La Hora Entrada y Hora Salida en formato HH:MM (24 horas).' },
     { ' ':'La Hora Salida es opcional — si se deja vacía, la marcación queda como jornada activa (sin cerrar), igual que si se marcara solo la entrada desde la App.' },
     { ' ':'Si ya existe una marcación para ese RUT y esa Fecha, la carga la sobrescribe — revisá la vista previa antes de confirmar.' },
   ];
