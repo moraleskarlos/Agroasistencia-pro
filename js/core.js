@@ -13,9 +13,13 @@ const SUPERADMIN={usuario:'admin',password:'agro2024',rol:'superadmin'};
 const DIAS_JORNADA=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const TIPOS_ANEXO={
   cambio_labor:'Cambio de Labor',cambio_cargo:'Cambio de Cargo',
+  // ✅ Fusionados en "cambio_asignacion" — estos 3 quedan solo para que
+  // los anexos viejos ya guardados con ese tipo sigan mostrándose bien.
   cambio_faena:'Cambio de Faena',cambio_mandante:'Cambio de Empresa Mandante',
+  cambio_domicilio:'Cambio de Domicilio Laboral',
+  cambio_asignacion:'Cambio de Asignación (Faena / Mandante / Domicilio)',
   cambio_jornada:'Cambio de Jornada',cambio_remuneracion:'Cambio de Remuneración',
-  prorroga:'Prórroga de Contrato',cambio_domicilio:'Cambio de Domicilio Laboral',
+  prorroga:'Prórroga de Contrato',
   asignacion_especial:'Asignación Especial',otro:'Otro',
 };
 const PI={

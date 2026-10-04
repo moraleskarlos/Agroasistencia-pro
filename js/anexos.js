@@ -31,7 +31,14 @@ const ANX_CATALOG = {
     materia: 'el cargo desempeñado por el Trabajador',
     fuente:  'cargo',
     campos: [
-      { id:'anx-nuevo-cargo', label:'Nuevo Cargo', tipo:'texto', ph:'Ej: Jefe de Cuadrilla' },
+      // ✅ Corregido a pedido del usuario — antes texto libre, ahora
+      // toma el mismo catálogo que ya usa Registro Personal
+      // (CARGOS_PARES), para no terminar con el mismo cargo escrito de
+      // formas distintas. Se listan ambas formas (masculino/femenino)
+      // sin duplicar las que son iguales en los dos (ej. "Chofer").
+      { id:'anx-nuevo-cargo', label:'Nuevo Cargo', tipo:'select',
+        opciones: () => [...new Set((typeof CARGOS_PARES !== 'undefined' ? CARGOS_PARES : []).flat())]
+          .sort().map(c => ({ value:c, label:c })) },
     ],
     detalle: v => `Nuevo cargo: ${v['anx-nuevo-cargo']||''}`,
     segunda: v => ({
@@ -160,6 +167,62 @@ const ANX_CATALOG = {
     }),
   },
 
+  /* ✅ Nuevo — fusiona Cambio de Faena + Cambio de Empresa Mandante +
+     Cambio de Domicilio Laboral en un solo anexo, a pedido del
+     usuario: si cambia el campo/lugar de trabajo, normalmente cambian
+     juntas (y antes quedaban en 3 anexos sueltos, con riesgo de
+     actualizar uno y olvidarse del resto). Los 3 campos son
+     INDEPENDIENTES — se puede completar solo el que corresponda. Los 3
+     tipos viejos (cambio_faena/cambio_mandante/cambio_domicilio) se
+     mantienen arriba solo para que los anexos ya guardados con esos
+     tipos sigan funcionando — ya no se ofrecen para anexos nuevos. */
+  cambio_asignacion: {
+    materia: 'la faena, la empresa mandante y/o el domicilio laboral del Trabajador',
+    fuente:  'lugar',
+    campos: [
+      { id:'anx-nueva-faena-asig',   label:'Nueva Faena',          tipo:'texto', ph:'Ej: Cosecha Arándanos Sector Norte', opcional:true },
+      { id:'anx-nuevo-mandante-id',  label:'Nuevo Mandante',       tipo:'select', opcional:true,
+        opciones: () => (typeof empresas !== 'undefined' ? empresas : []).map(e => ({ value:e.id, label:e.nombre || e.razon_social || e.rut })) },
+      { id:'anx-nuevo-domicilio-asig', label:'Nuevo Domicilio Laboral', tipo:'texto', ph:'Ej: Av. Principal 456, Talca', opcional:true },
+    ],
+    detalle: v => {
+      const mandanteObj = v['anx-nuevo-mandante-id'] ? (typeof empresas !== 'undefined' ? empresas : []).find(e => e.id === v['anx-nuevo-mandante-id']) : null;
+      const partes = [];
+      if(v['anx-nueva-faena-asig'])    partes.push(`Nueva faena: ${v['anx-nueva-faena-asig']}`);
+      if(mandanteObj)                  partes.push(`Nuevo mandante: ${mandanteObj.nombre || mandanteObj.razon_social}`);
+      if(v['anx-nuevo-domicilio-asig'])partes.push(`Nuevo domicilio: ${v['anx-nuevo-domicilio-asig']}`);
+      return partes.join(' — ');
+    },
+    segunda: v => {
+      const mandanteObj = v['anx-nuevo-mandante-id'] ? (typeof empresas !== 'undefined' ? empresas : []).find(e => e.id === v['anx-nuevo-mandante-id']) : null;
+      const cambia = {
+        faena:     !!v['anx-nueva-faena-asig'],
+        mandante:  !!mandanteObj,
+        domicilio: !!v['anx-nuevo-domicilio-asig'],
+      };
+      const frases = [];
+      if(cambia.faena) frases.push(`la faena en la cual el Trabajador presta sus servicios, estableciendo que, en lo sucesivo, éstos serán desarrollados en la faena denominada <strong>${v['anx-nueva-faena-asig']}</strong>`);
+      if(cambia.mandante) frases.push(`la empresa mandante para la cual el Trabajador presta servicios, estableciendo que, en lo sucesivo, éstos serán desarrollados para la empresa mandante <strong>${mandanteObj?.nombre || mandanteObj?.razon_social || '___________'}</strong>, RUT <strong>${mandanteObj?.rut || '___________'}</strong>`);
+      if(cambia.domicilio) frases.push(`el domicilio o lugar de prestación de servicios del Trabajador, estableciendo que, en lo sucesivo, éste prestará sus servicios en <strong>${v['anx-nuevo-domicilio-asig']}</strong>`);
+
+      return {
+        titulo: 'Modificación de la asignación laboral',
+        html: `
+          <p>A contar del día <strong>${v.fechaVigFmt}</strong>, las partes acuerdan modificar
+          la cláusula <strong>${v.fuenteOrdinal}</strong> del contrato de trabajo suscrito con
+          fecha <strong>${v.fechaContratoFmt}</strong>, relativa a ${frases.join('; y relativa a ')}.</p>
+          <p>La presente modificación no altera la calidad de empleador de
+          <strong>${v.empresaNombre}</strong>, ni modifica el cargo, la jornada ordinaria, la
+          remuneración, ni las demás condiciones pactadas en el contrato de trabajo y en sus
+          anexos vigentes, salvo lo expresamente señalado en la presente cláusula.</p>
+          <p>La presente modificación sustituye únicamente lo señalado precedentemente,
+          manteniéndose plenamente vigentes las demás estipulaciones contractuales, salvo
+          aquellas que hayan sido modificadas expresamente mediante otro instrumento celebrado
+          válidamente entre las partes.</p>`,
+      };
+    },
+  },
+
   cambio_jornada: {
     materia: 'la jornada ordinaria de trabajo del Trabajador',
     fuente:  'jornada',
@@ -221,22 +284,40 @@ const ANX_CATALOG = {
     campos: [
       { id:'anx-nueva-fecha-termino', label:'Nueva Fecha de Término', tipo:'fecha' },
     ],
-    detalle: v => `Nueva fecha de término: ${v['anx-nueva-fecha-termino'] ? new Date(v['anx-nueva-fecha-termino']).toLocaleDateString('es-CL') : '—'}`,
-    segunda: v => ({
-      titulo: 'Prórroga del plazo del contrato',
-      html: `
-        <p>Las partes acuerdan prorrogar la vigencia del contrato de trabajo suscrito con
-        fecha <strong>${v.fechaContratoFmt}</strong>, cuya duración se encuentra regulada en
-        la cláusula <strong>${v.fuenteOrdinal}</strong> del mismo, estableciendo como nueva
-        fecha de término el día
-        <strong>${v['anx-nueva-fecha-termino'] ? new Date(v['anx-nueva-fecha-termino']).toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'}) : '___________'}</strong>.</p>
-        <p>Se deja constancia de que, conforme al artículo 159 N°4 del Código del Trabajo, el
-        contrato a plazo fijo solo admite una renovación; una segunda renovación, o la
-        continuación de los servicios una vez expirado el plazo prorrogado, transformará la
-        relación laboral en un contrato de duración indefinida.</p>
-        <p>La presente modificación sustituye únicamente la fecha de término pactada,
-        manteniéndose inalteradas todas las demás condiciones contractuales vigentes.</p>`,
-    }),
+    // ✅ Corregido — ancla de mediodía (mismo bug de zona horaria de
+    // siempre: sin ella, new Date(v) podía mostrar un día antes de la
+    // fecha real elegida).
+    detalle: v => `Nueva fecha de término: ${v['anx-nueva-fecha-termino'] ? new Date(v['anx-nueva-fecha-termino']+'T12:00:00').toLocaleDateString('es-CL') : '—'}`,
+    segunda: v => {
+      // ✅ Nuevo — texto legal distinto según el tipo de contrato de
+      // origen. Antes citaba siempre el Art. 159 N°4 (solo una
+      // renovación, la segunda te pasa a indefinido) — correcto para
+      // Plazo Fijo, pero inexacto para Temporada: confirmado contra la
+      // Guía de la DT sobre Trabajo Agrícola de Temporada, un contrato
+      // de temporada no sigue esa regla — "la reiteración del contrato
+      // de temporada no lo transforma en contrato indefinido".
+      const esTemporada = v.contratoTipo === 'temporada';
+      const parrafoLegal = esTemporada
+        ? `<p>Se deja constancia de que la presente prórroga se circunscribe a la misma obra o
+           faena que dio origen al contrato de trabajo de temporada, no implicando el inicio
+           de una temporada distinta ni la celebración de un nuevo contrato.</p>`
+        : `<p>Se deja constancia de que, conforme al artículo 159 N°4 del Código del Trabajo, el
+           contrato a plazo fijo solo admite una renovación; una segunda renovación, o la
+           continuación de los servicios una vez expirado el plazo prorrogado, transformará la
+           relación laboral en un contrato de duración indefinida.</p>`;
+      return {
+        titulo: 'Prórroga del plazo del contrato',
+        html: `
+          <p>Las partes acuerdan prorrogar la vigencia del contrato de trabajo suscrito con
+          fecha <strong>${v.fechaContratoFmt}</strong>, cuya duración se encuentra regulada en
+          la cláusula <strong>${v.fuenteOrdinal}</strong> del mismo, estableciendo como nueva
+          fecha de término el día
+          <strong>${v['anx-nueva-fecha-termino'] ? new Date(v['anx-nueva-fecha-termino']+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'}) : '___________'}</strong>.</p>
+          ${parrafoLegal}
+          <p>La presente modificación sustituye únicamente la fecha de término pactada,
+          manteniéndose inalteradas todas las demás condiciones contractuales vigentes.</p>`,
+      };
+    },
   },
 
   asignacion_especial: {
@@ -287,8 +368,13 @@ const ANX_CATALOG = {
    contrato vigente. La usa Asistencia para saber cuánto se esperaba
    trabajar ese día en particular. */
 function _jornadaVigenteTrabajador(rut, fecha){
+  // ✅ Corregido — RUT vs ID: se resuelve el id real del trabajador y se
+  // filtra por ahí (_mismoTrabajador), no por RUT directo — si el RUT de
+  // alguien cambia alguna vez (ej. RUT provisorio → definitivo), sus
+  // anexos de jornada ya guardados no quedan huérfanos.
+  const tJor = trabajadores.find(x => x.rut === rut);
   const anexosJornada = (anexos || [])
-    .filter(a => a.trabajador_rut === rut && a.tipo === 'cambio_jornada' && a.jornada_dias && a.fecha_vigencia <= fecha)
+    .filter(a => _mismoTrabajador(a.trabajador_id, tJor?.id) && a.tipo === 'cambio_jornada' && a.jornada_dias && a.fecha_vigencia <= fecha)
     .sort((a,b) => b.fecha_vigencia.localeCompare(a.fecha_vigencia));
 
   if(anexosJornada.length) return anexosJornada[0].jornada_dias;
@@ -311,14 +397,29 @@ function onCambioTipoAnexo(){
   if(!tipo || !def){ zona.innerHTML=''; actualizarPreviaAnexo(); return; }
 
   const campoHTML = c => {
-    const inputTag = c.tipo === 'fecha'
-      ? `<input type="date" id="${c.id}" oninput="actualizarPreviaAnexo()"
-          style="width:100%;padding:9px;border-radius:var(--radius);border:1px solid var(--borde);font-size:13px;margin-top:5px;">`
-      : `<input type="${c.tipo === 'numero' ? 'number' : 'text'}" id="${c.id}" placeholder="${c.ph||''}"
+    let inputTag;
+    if(c.tipo === 'fecha'){
+      inputTag = `<input type="date" id="${c.id}" oninput="actualizarPreviaAnexo()"
+          style="width:100%;padding:9px;border-radius:var(--radius);border:1px solid var(--borde);font-size:13px;margin-top:5px;">`;
+    } else if(c.tipo === 'select'){
+      // ✅ Nuevo — soporta una lista fija (array) o una función que la
+      // calcula al momento de abrir el formulario (ej. CARGOS_PARES ya
+      // existente, o la lista de mandantes reales desde "empresas").
+      const opciones = typeof c.opciones === 'function' ? c.opciones() : (c.opciones || []);
+      inputTag = `<select id="${c.id}" onchange="actualizarPreviaAnexo()"
+          style="width:100%;padding:9px;border-radius:var(--radius);border:1px solid var(--borde);font-size:13px;margin-top:5px;">
+          <option value="">— Seleccionar —</option>
+          ${opciones.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+        </select>`;
+    } else {
+      inputTag = `<input type="${c.tipo === 'numero' ? 'number' : 'text'}" id="${c.id}" placeholder="${c.ph||''}"
           ${c.soloLectura ? 'readonly style="width:100%;padding:9px;border-radius:var(--radius);border:1px solid var(--borde);font-size:13px;margin-top:5px;background:#F8FAFC;color:var(--texto2);"' : `oninput="${c.tipo==='numero' ? 'onCambioMontoAnexo();' : ''}actualizarPreviaAnexo()" style="width:100%;padding:9px;border-radius:var(--radius);border:1px solid var(--borde);font-size:13px;margin-top:5px;"`}>`;
+    }
+    // ✅ Nuevo — campos marcados opcional:true (ej. los 3 de "Cambio de
+    // Asignación") no llevan el asterisco de obligatorio.
     return `
       <div class="form-group" style="margin-bottom:12px;">
-        <label style="font-size:12px;font-weight:600;color:var(--texto2);">${c.label} *</label>
+        <label style="font-size:12px;font-weight:600;color:var(--texto2);">${c.label}${c.opcional ? '' : ' *'}</label>
         ${inputTag}
       </div>`;
   };
@@ -370,7 +471,12 @@ function construirDocumentoAnexo({ t, emp, cont, tipo, valores, fechaVig, ciudad
   const def = ANX_CATALOG[tipo];
   if(!def) return '';
 
-  const fmtFecha = v => v ? new Date(v).toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'}) : '___________';
+  // ✅ Corregido — mismo bug de zona horaria de siempre: sin el ancla de
+  // mediodía, new Date(v) interpreta la fecha como UTC medianoche, que
+  // en Chile cae en el día anterior. Este es el formateador principal,
+  // usado varias veces en el documento legal del Anexo (fecha de
+  // vigencia y fecha del contrato de origen).
+  const fmtFecha = v => v ? new Date(v+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'}) : '___________';
   const fechaContratoOrig = cont?.fecha_firma || t?.fecha_ingreso;
 
   const fuente = def.fuente ? FUENTE_CLAUSULA_CONTRATO[def.fuente] : null;
@@ -381,6 +487,7 @@ function construirDocumentoAnexo({ t, emp, cont, tipo, valores, fechaVig, ciudad
     fechaContratoFmt:fmtFecha(fechaContratoOrig),
     fuenteOrdinal:   fuente ? fuente.ordinal : '',
     empresaNombre:   emp?.razon_social || '___________',
+    contratoTipo:    cont?.tipo || null, // ✅ Nuevo — para que Prórroga sepa si es Temporada o Plazo Fijo
   };
 
   const segunda = def.segunda(v);
@@ -582,7 +689,12 @@ function guardarAnexo(){
   if(!fechaVig)    { toast('⚠️ Ingresa la fecha de vigencia','error'); return; }
   if(!trabajadorId){ toast('⚠️ Selecciona un trabajador primero','error'); return; }
 
-  const t       = trabajadores.find(x => x.id === trabajadorId);
+  const t = trabajadores.find(x => x.id === trabajadorId);
+
+  // ✅ Nuevo — ningún anexo chequeaba "mes cerrado". Mismo helper que ya
+  // usan Gestión Laboral/Asistencia/Contratos.
+  if(typeof _bloqueaPorMesCerrado === 'function' && _bloqueaPorMesCerrado(t?.rut, fechaVig)) return;
+
   const valores = leerValoresAnexo(tipo);
   const detalle = ANX_CATALOG[tipo].detalle(valores);
   if(!detalle){ toast('⚠️ Completa los campos del anexo','error'); return; }
@@ -611,6 +723,22 @@ function guardarAnexo(){
   guardarLocal();
   actualizarBadgesContratos();
 
+  // ✅ Corregido — guardarAnexo() (Individual) nunca registraba en
+  // Carpeta Laboral; eso solo pasaba al generar el PDF (_abrirVentanaAnexo),
+  // una acción separada. Mismo patrón exacto que BUG 15 de Contratos —
+  // generarAnexosMasivo() ya lo hacía bien, Individual no. Se registra
+  // acá también, en el mismo momento de guardar.
+  registrarDocumentoCarpeta({
+    trabajador_id:  trabajadorId,
+    trabajador_rut: t?.rut || '',
+    empresa_propia_id: t?.empresa_propia_id || '',
+    tipo:           'anexo',
+    subtipo:        tipo,
+    folio:          _folioAnexo(t),
+    fecha_firma:    fechaVig,
+    descripcion:    `Anexo — ${TIPOS_ANEXO[tipo] || tipo}`,
+  });
+
   toast(`✅ Anexo "${TIPOS_ANEXO[tipo]}" guardado`, 'exito');
   renderHistorialAnexos(t?.rut);
 
@@ -626,7 +754,10 @@ function renderHistorialAnexos(rut){
   if(!rut) return;
   const lista = document.getElementById('anexo-historial-lista');
   if(!lista) return;
-  const hist  = (anexos||[]).filter(a => a.trabajador_rut === rut)
+  // ✅ Corregido — RUT vs ID: se resuelve el trabajador y se filtra por
+  // id (_mismoTrabajador), no por RUT directo — mismo motivo que arriba.
+  const tHist = trabajadores.find(x => x.rut === rut);
+  const hist  = (anexos||[]).filter(a => _mismoTrabajador(a.trabajador_id, tHist?.id))
     .sort((a,b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
 
   if(!hist.length){
@@ -645,7 +776,7 @@ function renderHistorialAnexos(rut){
         </div>
         <div style="font-size:11px;color:var(--texto2);margin-top:2px;">${a.detalle}</div>
         <div style="font-size:11px;color:var(--texto3);margin-top:2px;">
-          Vigente desde: ${new Date(a.fecha_vigencia).toLocaleDateString('es-CL')}
+          Vigente desde: ${fmtFecha(a.fecha_vigencia)}
         </div>
       </div>
       <div style="display:flex;gap:6px;">
@@ -730,7 +861,11 @@ function generarPDFAnexoPorId(id){
   const a = (anexos||[]).find(x => x.id === id);
   if(!a) return;
 
-  const t    = trabajadores.find(x => x.rut === a.trabajador_rut);
+  // ✅ Corregido — RUT vs ID: busca primero por id (más confiable — si
+  // el RUT del trabajador cambió desde que se creó este anexo, buscar
+  // solo por RUT ya no lo encontraría), con el RUT como respaldo para
+  // anexos muy viejos que solo tengan eso guardado.
+  const t    = trabajadores.find(x => _mismoTrabajador(x.id, a.trabajador_id)) || trabajadores.find(x => x.rut === a.trabajador_rut);
   const epId = t?.empresa_propia_id || '';
   const emp  = getEmpresaEmpleadora(epId);
   const cont = contratos.find(c => _mismoTrabajador(c.trabajador_id, t?.id) || c.trabajador_rut === t?.rut);
@@ -864,6 +999,20 @@ function generarAnexosMasivo(){
 
   const seleccionados = _anexoSeleccionados();
   if(!seleccionados.length){ toast('⚠️ Selecciona al menos un trabajador','error'); return; }
+
+  // ✅ Nuevo — mismo chequeo de mes cerrado que Individual, revisado
+  // para cada trabajador del lote (pueden pertenecer a empresas
+  // distintas). Si alguno cae en un mes cerrado, se bloquea TODO el
+  // lote y se avisa quién — más seguro que generar solo para los que
+  // pasan, dejando al usuario sin darse cuenta de a quién le faltó.
+  if(typeof esMesCerrado === 'function'){
+    const periodo = (fechaVig||'').slice(0,7);
+    const bloqueados = seleccionados.filter(t => esMesCerrado(periodo, t.empresa_propia_id));
+    if(bloqueados.length){
+      alert(`⚠️ No se puede generar — el período de la fecha de vigencia ya está cerrado para: ${bloqueados.map(t=>t.nombre).join(', ')}.\n\nUsa la "Corrección" de Libro de Remuneraciones para esos casos.`);
+      return;
+    }
+  }
 
   const valores = leerValoresAnexo(tipo);
   const detalle = ANX_CATALOG[tipo].detalle(valores);
@@ -1024,10 +1173,10 @@ function _renderListaVisualTrabajadorAnexo(){
 
   if(modoAnexoActual === 'masivo'){
     cont.innerHTML = lista.map(t => {
-      const totalAnexos = (anexos||[]).filter(a => a.trabajador_rut === t.rut).length;
+      const totalAnexos = (anexos||[]).filter(a => _mismoTrabajador(a.trabajador_id, t.id)).length; // ✅ RUT→ID
       const emp    = getEmpresaEmpleadora(t.empresa_propia_id)?.razon_social || '—';
       const cargo  = t.funcion_cargo || '—';
-      const fecha  = t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString('es-CL') : '—';
+      const fecha  = t.fecha_ingreso ? fmtFecha(t.fecha_ingreso) : '—'; // ✅ Corregido — ancla de mediodía
       return `<label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
           border-bottom:1px solid var(--borde);">
         <div style="flex:1;min-width:0;">
@@ -1045,11 +1194,11 @@ function _renderListaVisualTrabajadorAnexo(){
   }
 
   cont.innerHTML = lista.map(t => {
-    const totalAnexos  = (anexos||[]).filter(a => a.trabajador_rut === t.rut).length;
+    const totalAnexos  = (anexos||[]).filter(a => _mismoTrabajador(a.trabajador_id, t.id)).length; // ✅ RUT→ID
     const seleccionado = valActual === t.id;
     const emp    = getEmpresaEmpleadora(t.empresa_propia_id)?.razon_social || '—';
     const cargo  = t.funcion_cargo || '—';
-    const fecha  = t.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString('es-CL') : '—';
+    const fecha  = t.fecha_ingreso ? fmtFecha(t.fecha_ingreso) : '—'; // ✅ Corregido — ancla de mediodía
     return `<div onclick="_seleccionarTrabajadorAnexoVisual('${t.id}')"
         style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
         border-bottom:1px solid var(--borde);background:${seleccionado?'#EFF6FF':'#fff'};"
@@ -1095,9 +1244,10 @@ function _setDatosPrecargadosAnexo(t){
   set('anexo-pre-mandante',      man?.nombre);
   set('anexo-pre-cargo',         cont?.funcion_cargo || t?.funcion_cargo);
   set('anexo-pre-faena',         cont?.nombre_faena  || '');
+  // ✅ Corregido — ancla de mediodía, mismo bug de zona horaria de siempre.
   set('anexo-pre-fecha-contrato',
-      cont?.fecha_firma ? new Date(cont.fecha_firma).toLocaleDateString('es-CL')
-      : t?.fecha_ingreso ? new Date(t.fecha_ingreso).toLocaleDateString('es-CL') : null);
+      cont?.fecha_firma ? fmtFecha(cont.fecha_firma)
+      : t?.fecha_ingreso ? fmtFecha(t.fecha_ingreso) : null);
 
   // Ciudad desde cfg
   const ciudad = document.getElementById('anexo-ciudad');
