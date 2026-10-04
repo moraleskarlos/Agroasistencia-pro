@@ -80,21 +80,21 @@ function cargarTrabajadores(){
       <td style="min-width:280px;">
         <div style="display:flex;gap:5px;flex-wrap:nowrap;align-items:center;">
           <button class="btn btn-secondary btn-sm"
-            onclick="editarTrabajador('${t.rut}')" title="Editar">
+            onclick="editarTrabajador('${t.id}')" title="Editar">
             <i class="ti ti-edit"></i> Editar
           </button>
           <button class="btn btn-secondary btn-sm"
-            onclick="verPerfilTrabajador('${t.rut}')" title="Carpeta laboral">
+            onclick="verPerfilTrabajador('${t.id}')" title="Carpeta laboral">
             <i class="ti ti-folder"></i> Carpeta
           </button>
           <button class="btn ${activo ? 'btn-danger' : 'btn-secondary'} btn-sm"
-            onclick="cambiarEstado('${t.rut}','${activo ? 'inactivo' : 'activo'}')"
+            onclick="cambiarEstado('${t.id}','${activo ? 'inactivo' : 'activo'}')"
             title="${activo ? 'Dar de baja' : 'Reactivar'}">
             <i class="ti ti-${activo ? 'user-minus' : 'user-check'}"></i> ${activo ? 'Baja' : 'Reactivar'}
           </button>
           ${!_tieneMovimientosTrabajador(t.rut) ? `
           <button class="btn btn-danger btn-sm"
-            onclick="eliminarTrabajadorDefinitivo('${t.rut}')" title="Eliminar definitivamente (sin movimientos registrados)">
+            onclick="eliminarTrabajadorDefinitivo('${t.id}')" title="Eliminar definitivamente (sin movimientos registrados)">
             <i class="ti ti-trash"></i> Eliminar
           </button>` : ''}
         </div>
@@ -118,8 +118,12 @@ function _cerrarModalEditarTrabajadorSiAbierto(){
   if(typeof renderTablaExtranjeros === 'function') renderTablaExtranjeros();
 }
 
-function editarTrabajador(rut){
-  const t = trabajadores.find(x => x.rut === rut);
+// ✅ Corregido — RUT vs ID: ahora recibe el id del trabajador, no su
+// RUT (mismo criterio en las 4 funciones de esta sección). Se
+// actualizaron también los onclick que las llaman, en este archivo,
+// alertas.js y contratos.js.
+function editarTrabajador(id){
+  const t = trabajadores.find(x => x.id === id);
   if(!t) return;
 
   const modal = document.getElementById('modal-editar-trabajador');
@@ -157,7 +161,13 @@ function _devolverFormularioTrabajadorASuLugar(){
 function _tieneMovimientosTrabajador(rut){
   if(typeof cargarGestionLaboral === 'function') cargarGestionLaboral();
 
-  const enCarpeta = (carpeta || []).some(d => d.trabajador_rut === rut);
+  // ✅ Corregido — RUT vs ID: Carpeta Laboral ya guarda trabajador_id en
+  // cada documento, se filtra por ahí (más confiable si el RUT cambió
+  // alguna vez). Haberes/Descuentos/Jornada/Asistencia siguen por RUT
+  // — ese otro subsistema (Gestión Laboral) todavía no guarda id de
+  // forma confiable, es una migración más grande, de otro módulo.
+  const t = trabajadores.find(x => x.rut === rut);
+  const enCarpeta = (carpeta || []).some(d => _mismoTrabajador(d.trabajador_id, t?.id));
   if(enCarpeta) return true;
 
   const enHaberes    = (typeof haberes_variables !== 'undefined' ? haberes_variables : []).some(h => h.trabajador_rut === rut);
@@ -177,32 +187,34 @@ function _tieneMovimientosTrabajador(rut){
   return false;
 }
 
-function eliminarTrabajadorDefinitivo(rut){
-  const t = trabajadores.find(x => x.rut === rut);
+function eliminarTrabajadorDefinitivo(id){
+  const t = trabajadores.find(x => x.id === id);
   if(!t) return;
 
-  if(_tieneMovimientosTrabajador(rut)){
+  // _tieneMovimientosTrabajador sigue recibiendo rut — sus otros chequeos
+  // (haberes/descuentos/jornada/asistencia) todavía son por RUT, ver nota ahí.
+  if(_tieneMovimientosTrabajador(t.rut)){
     toast('⚠️ No se puede eliminar: ya tiene movimientos registrados (usa Dar de baja)', 'error');
     return;
   }
 
   if(!confirm(`¿Eliminar definitivamente a ${t.nombre}?\n\nEsta acción no se puede deshacer. Se usa solo cuando el trabajador nunca llegó a tener movimientos reales en el sistema (ej: se arrepintió antes de ingresar).`)) return;
 
-  trabajadores = trabajadores.filter(x => x.rut !== rut);
+  trabajadores = trabajadores.filter(x => x.id !== id);
   guardarLocal();
   toast(`🗑️ ${t.nombre} eliminado del sistema`, 'exito');
   cargarTrabajadores();
 }
 
-async function cambiarEstado(rut, nuevoEstado){
-  const t = trabajadores.find(x => x.rut === rut);
+async function cambiarEstado(id, nuevoEstado){
+  const t = trabajadores.find(x => x.id === id);
   if(!t) return;
 
   const accion = nuevoEstado === 'inactivo' ? 'dar de baja' : 'reactivar';
   if(!confirm(`¿Confirmas ${accion} a ${t.nombre}?`)) return;
 
   t.estado = nuevoEstado;
-  if(supabaseClient) await supabaseClient.from('trabajadores').update({estado: nuevoEstado}).eq('rut', rut);
+  if(supabaseClient) await supabaseClient.from('trabajadores').update({estado: nuevoEstado}).eq('rut', t.rut);
   guardarLocal();
 
   // Quedarse en trabajadores y refrescar tabla (NO redirigir)
@@ -325,7 +337,7 @@ function renderTablaExtranjeros(){
       <td style="font-size:12px;">${diasTxt}</td>
       <td style="text-align:center;">${badge}</td>
       <td style="text-align:right;">
-        <button class="btn btn-secondary btn-sm" onclick="editarTrabajador('${t.rut}')" title="Editar">
+        <button class="btn btn-secondary btn-sm" onclick="editarTrabajador('${t.id}')" title="Editar">
           <i class="ti ti-edit"></i> Editar
         </button>
       </td>
@@ -363,7 +375,7 @@ function _badgeSemaforo(semaforo, fechaVenc){
 /* ════════════════════════════════════════════════════════
    PERFIL DE TRABAJADOR — Datos Personales + Carpeta Laboral
    ════════════════════════════════════════════════════════ */
-let _perfil_rut_actual = null;
+let _perfil_id_actual = null; // ✅ Corregido — RUT vs ID
 
 const _TIPO_DOC_CARPETA = {
   contrato:            { icono:'📄', label:'Contrato' },
@@ -376,11 +388,11 @@ const _TIPO_DOC_CARPETA = {
   otro:                { icono:'📁', label:'Otro' },
 };
 
-function verPerfilTrabajador(rut){
-  const t = trabajadores.find(x => x.rut === rut);
+function verPerfilTrabajador(id){
+  const t = trabajadores.find(x => x.id === id);
   if(!t){ toast('⚠️ Trabajador no encontrado', 'error'); return; }
 
-  _perfil_rut_actual = rut;
+  _perfil_id_actual = id;
   irA('perfil-trabajador');
 
   const ini = (t.nombre||'??').split(' ').filter(Boolean).slice(0,2).map(n=>n[0]).join('').toUpperCase();
@@ -401,7 +413,7 @@ function verPerfilTrabajador(rut){
   }
 
   _renderDatosPersonalesPerfil(t);
-  _renderCarpetaTrabajador(rut);
+  _renderCarpetaTrabajador(id);
   switchTabPerfil('datos');
 }
 
@@ -420,7 +432,7 @@ function switchTabPerfil(tab){
     btn.style.background = activo ? 'var(--azul)' : 'none';
   });
 
-  if(tab === 'carpeta' && _perfil_rut_actual) _renderCarpetaTrabajador(_perfil_rut_actual);
+  if(tab === 'carpeta' && _perfil_id_actual) _renderCarpetaTrabajador(_perfil_id_actual);
 }
 
 function _renderDatosPersonalesPerfil(t, contenedorId){
@@ -541,11 +553,16 @@ function _fechaOrdenDoc(d){
   return new Date(raw+'T12:00:00').getTime();
 }
 
-function _renderCarpetaTrabajador(rut){
+function _renderCarpetaTrabajador(id){
   const cont = document.getElementById('carpeta-laboral-contenedor');
   if(!cont) return;
 
-  const docs = (carpeta || []).filter(d => d.trabajador_rut === rut);
+  // ✅ Corregido — RUT vs ID: esta es LA función que muestra el
+  // historial completo de alguien (contratos, anexos, liquidaciones,
+  // finiquitos, EPP) — si su RUT cambiara alguna vez, filtrar por RUT
+  // dejaría ese historial completo invisible en su propio perfil.
+  // Ahora recibe directo el id y filtra por ahí.
+  const docs = (carpeta || []).filter(d => _mismoTrabajador(d.trabajador_id, id));
 
   if(!docs.length){
     cont.innerHTML = `<div style="text-align:center;padding:24px;color:var(--texto3);">Sin documentos registrados</div>`;

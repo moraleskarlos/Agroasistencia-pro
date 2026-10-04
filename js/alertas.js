@@ -92,7 +92,7 @@ function calcularAlertas(){
     if(!t.empresa_propia_id){
       alertas.push(_alerta('critico','Trabajadores',`sin_empresa_propia_${t.rut}`,
         'Sin empresa contratista asignada', `${t.nombre} no tiene empresa contratista asignada`,
-        () => verPerfilTrabajador(t.rut)));
+        () => verPerfilTrabajador(t.id)));
     }
     // Alerta "sin_mandante" eliminada — el Mandante ya no vive en el
     // trabajador (Registro Personal), sino que se fija al generar su
@@ -102,17 +102,17 @@ function calcularAlertas(){
     if(!t.domicilio){
       alertas.push(_alerta('critico','Trabajadores',`sin_domicilio_${t.rut}`,
         'Sin domicilio registrado', `${t.nombre} no tiene domicilio registrado`,
-        () => verPerfilTrabajador(t.rut)));
+        () => verPerfilTrabajador(t.id)));
     }
     if(!t.afiliacion_afp){
       alertas.push(_alerta('critico','Trabajadores',`sin_afp_${t.rut}`,
         'Sin AFP definida', `${t.nombre} no tiene AFP definida`,
-        () => verPerfilTrabajador(t.rut)));
+        () => verPerfilTrabajador(t.id)));
     }
     if(!t.sistema_salud){
       alertas.push(_alerta('critico','Trabajadores',`sin_salud_${t.rut}`,
         'Sin sistema de salud definido', `${t.nombre} no tiene sistema de salud definido`,
-        () => verPerfilTrabajador(t.rut)));
+        () => verPerfilTrabajador(t.id)));
     }
   });
 
@@ -123,15 +123,15 @@ function calcularAlertas(){
       if(sem === 'gris'){
         alertas.push(_alerta('critico','Trabajadores',`mig_sin_fecha_${t.rut}`,
           'Documento migratorio sin fecha registrada', `${t.nombre} es extranjero y no tiene fecha de vencimiento registrada`,
-          () => editarTrabajador(t.rut)));
+          () => editarTrabajador(t.id)));
       } else if(sem === 'negro'){
         alertas.push(_alerta('critico','Trabajadores',`mig_vencido_${t.rut}`,
           'Documento migratorio vencido', `El documento de ${t.nombre} está vencido`,
-          () => editarTrabajador(t.rut)));
+          () => editarTrabajador(t.id)));
       } else if(sem === 'rojo'){
         alertas.push(_alerta('importante','Trabajadores',`mig_por_vencer_${t.rut}`,
           'Documento migratorio vence pronto', `El documento de ${t.nombre} vence en menos de 30 días`,
-          () => editarTrabajador(t.rut)));
+          () => editarTrabajador(t.id)));
       }
     }
   });
@@ -276,7 +276,7 @@ function calcularAlertas(){
     if(!t.correo_electronico){
       alertas.push(_alerta('preventivo','Trabajadores',`sin_correo_${t.rut}`,
         'Correo electrónico vacío', `${t.nombre} no tiene correo registrado`,
-        () => verPerfilTrabajador(t.rut)));
+        () => verPerfilTrabajador(t.id)));
     }
     if(typeof calcularSaldoVacaciones === 'function'){
       const vac = calcularSaldoVacaciones(t.rut);

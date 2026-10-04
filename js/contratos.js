@@ -1554,7 +1554,7 @@ function renderContratosEmitidos(){
         <button class="btn btn-secondary btn-sm" title="Ver PDF" onclick="_seleccionarTrabajadorContratoVisual('${t?.id||''}');generarPDFContrato();"><i class="ti ti-file-type-pdf"></i></button>
         <button class="btn btn-secondary btn-sm" title="Rectificar" onclick="abrirRectificacion('${c.id}')"><i class="ti ti-edit"></i></button>
         <button class="btn btn-secondary btn-sm" title="Crear Anexo" onclick="switchTabContratos('anexos')"><i class="ti ti-paperclip"></i></button>
-        <button class="btn btn-secondary btn-sm" title="Carpeta Laboral" onclick="verPerfilTrabajador('${t?.rut||''}')"><i class="ti ti-folder"></i></button>
+        <button class="btn btn-secondary btn-sm" title="Carpeta Laboral" onclick="verPerfilTrabajador('${t?.id||''}')"><i class="ti ti-folder"></i></button>
       </td>
     </tr>`).join('');
 }
@@ -2530,7 +2530,7 @@ function guardarEppIndividual(){
     trabajador_id:  t.id,
     trabajador_rut: t.rut,
     empresa_propia_id: t.empresa_propia_id || '',
-    tipo:           'epp',
+    tipo:           'epp_riohs_irl', // ✅ Corregido — era 'epp', no coincidía con el mapa de íconos de Carpeta Laboral
     subtipo:        'entrega',
     folio:          'EPP-' + Date.now().toString(36).toUpperCase(),
     fecha_firma:    datos.epp_fecha_entrega,
@@ -2621,7 +2621,7 @@ function guardarEppMasivo(){
       trabajador_id:  t.id,
       trabajador_rut: t.rut,
       empresa_propia_id: t.empresa_propia_id || '',
-      tipo:           'epp',
+      tipo:           'epp_riohs_irl', // ✅ Corregido — era 'epp', no coincidía con el mapa de íconos de Carpeta Laboral
       subtipo:        'entrega',
       folio:          'EPP-' + Date.now().toString(36).toUpperCase() + '-' + t.id,
       fecha_firma:    datos.epp_fecha_entrega,

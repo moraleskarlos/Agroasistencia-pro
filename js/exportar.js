@@ -14,7 +14,10 @@ function exportarTrabajadoresExcel(){
     const mandante = findMandante(t);
     const empEmpleadora = getEmpresaEmpleadora(t.empresa_propia_id);
     const cont     = contratos.find(c => _mismoTrabajador(c.trabajador_id, t.id) || c.trabajador_rut === t.rut);
-    const fmt      = v => v ? new Date(v).toLocaleDateString('es-CL') : '';
+    // ✅ Corregido — mismo bug de zona horaria de siempre: sin el ancla
+    // de mediodía, new Date(v) podía mostrar la fecha un día antes de
+    // la real (fecha de nacimiento, ingreso, firma del contrato).
+    const fmt      = v => v ? new Date(v+'T12:00:00').toLocaleDateString('es-CL') : '';
 
     return {
       RUT:                    t.rut,
