@@ -1,6 +1,43 @@
 /* ════ ASISTENCIA ════ */
 
+/* ── Calendario puro ─────────────────────────────────────────
+   Las fechas de Asistencia son texto "AAAA-MM-DD". Para sumar días o
+   recorrer rangos se usa aritmética UTC sobre el calendario, SIN pasar
+   por la hora local: así el resultado no depende de la zona horaria del
+   computador ni de los cambios de hora de Chile (invierno/verano).
+   ✅ Corregido — antes _fechasEnRango recorría con fechas a medianoche
+   local: al cruzar el cambio de hora de septiembre la hora "se corría" a
+   01:00 y el último día del rango se perdía (ej. el reporte de
+   septiembre completo salía sin el día 30). */
+function _sumarDiasISO(fechaISO, n){
+  const [y, m, d] = fechaISO.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+function _diaSemanaISO(fechaISO){            // 0=domingo ... 6=sábado
+  const [y, m, d] = fechaISO.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+function _lunesDeSemanaISO(fechaISO){
+  return _sumarDiasISO(fechaISO, -((_diaSemanaISO(fechaISO) + 6) % 7));
+}
+function _fechasEnRango(inicio, fin){
+  const fechas = [];
+  // tope de seguridad (~10 años) para que un rango absurdo no congele el navegador
+  for(let f = inicio; f <= fin && fechas.length < 3700; f = _sumarDiasISO(f, 1)) fechas.push(f);
+  return fechas;
+}
+
 function initAsistencia(){
+  // Los menús desplegables de la barra se cierran al hacer clic fuera de ellos.
+  if(!window._menusAsistInit){
+    window._menusAsistInit = true;
+    document.addEventListener('click', e => {
+      ['menu-rango-asist','menu-reportes-asist'].forEach(id => {
+        const m = document.getElementById(id);
+        if(m && m.style.display !== 'none' && m.parentElement && !m.parentElement.contains(e.target)) m.style.display = 'none';
+      });
+    });
+  }
   const hoy = hoyISO();
   document.getElementById('asist-fecha-desde').value = hoy;
   document.getElementById('asist-fecha-hasta').value = hoy;
@@ -54,7 +91,7 @@ function _horasEsperadasDia(rut, fecha){
   const jornada = (typeof _jornadaVigenteTrabajador === 'function') ? _jornadaVigenteTrabajador(rut, fecha) : null;
   if(!jornada) return null;
 
-  const diaSemana = _NOMBRES_DIA_SEMANA[new Date(fecha + 'T00:00:00').getDay()];
+  const diaSemana = _NOMBRES_DIA_SEMANA[_diaSemanaISO(fecha)];
   const d = jornada[diaSemana];
   if(!d || !d.activo || !d.inicio || !d.fin) return 0;
 
@@ -75,16 +112,11 @@ function _horasExtraRegistradasDia(rut, fecha){
 /* Suma las horas trabajadas de la semana (lunes a domingo) que contiene
    la fecha dada, para validar el máximo legal de 42 horas semanales. */
 function _horasSemanaTrabajador(rut, fecha){
-  const d = new Date(fecha + 'T00:00:00');
-  const diaISO = (d.getDay() + 6) % 7; // lunes=0 ... domingo=6
-  const lunes = new Date(d);
-  lunes.setDate(d.getDate() - diaISO);
+  const lunes = _lunesDeSemanaISO(fecha);
 
   let total = 0;
   for(let i = 0; i < 7; i++){
-    const f = new Date(lunes);
-    f.setDate(lunes.getDate() + i);
-    const fechaStr = f.toISOString().split('T')[0];
+    const fechaStr = _sumarDiasISO(lunes, i);
     const data = JSON.parse(localStorage.getItem('asistencia_' + fechaStr) || '[]');
     const reg = data.find(x => x.rut === rut);
     if(reg?.horas_trabajadas) total += reg.horas_trabajadas;
@@ -192,45 +224,67 @@ function toggleMenuRangoAsistencia(){
 
 /* Atajos rápidos de rango — fijan Desde/Hasta y recargan */
 function rangoRapidoAsistencia(tipo){
-  const hoy = fechaLocal(hoyISO());
-  const fmt = d => d.toISOString().slice(0,10);
+  // ✅ Calendario puro (ver _sumarDiasISO): sin objetos Date en hora local.
+  const hoy = hoyISO();
   let inicio, fin;
 
   if(tipo === 'hoy'){
-    inicio = fin = new Date(hoy);
+    inicio = fin = hoy;
   } else if(tipo === 'ayer'){
-    inicio = fin = new Date(hoy); inicio.setDate(inicio.getDate()-1); fin = new Date(inicio);
+    inicio = fin = _sumarDiasISO(hoy, -1);
   } else if(tipo === 'semana'){
-    const diaSemana = (hoy.getDay() + 6) % 7; // lunes=0
-    inicio = new Date(hoy); inicio.setDate(hoy.getDate() - diaSemana);
-    fin = new Date(hoy);
+    inicio = _lunesDeSemanaISO(hoy);
+    fin = hoy;
   } else if(tipo === 'semana_pasada'){
-    const diaSemana = (hoy.getDay() + 6) % 7;
-    fin = new Date(hoy); fin.setDate(hoy.getDate() - diaSemana - 1);
-    inicio = new Date(fin); inicio.setDate(fin.getDate() - 6);
+    fin = _sumarDiasISO(_lunesDeSemanaISO(hoy), -1);   // domingo anterior
+    inicio = _sumarDiasISO(fin, -6);                   // su lunes
   } else if(tipo === 'mes'){
-    inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    fin = new Date(hoy);
+    inicio = hoy.slice(0,7) + '-01';
+    fin = hoy;
   } else if(tipo === 'mes_pasado'){
-    inicio = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
-    fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+    fin = _sumarDiasISO(hoy.slice(0,7) + '-01', -1);   // último día del mes anterior
+    inicio = fin.slice(0,7) + '-01';
   }
 
-  document.getElementById('asist-fecha-desde').value = fmt(inicio);
-  document.getElementById('asist-fecha-hasta').value = fmt(fin);
+  document.getElementById('asist-fecha-desde').value = inicio;
+  document.getElementById('asist-fecha-hasta').value = fin;
   toggleMenuRangoAsistencia();
   cargarAsistencia();
 }
 
-function _fechasEnRango(inicio, fin){
-  const fechas = [];
-  const d = new Date(inicio + 'T00:00:00');
-  const dFin = new Date(fin + 'T00:00:00');
-  while(d <= dFin){
-    fechas.push(d.toISOString().slice(0,10));
-    d.setDate(d.getDate()+1);
+/* Las acciones que solo tienen sentido para UN día (Cerrar turno, PDF, Por
+   mandante) quedan visibles pero deshabilitadas al ver un rango, indicando
+   por qué — en vez de desaparecer sin explicación. */
+function _actualizarBarraAsistencia(esDia){
+  const aviso = 'Solo disponible al ver un día';
+  const cerrar = document.getElementById('btn-asist-cerrar-turno');
+  if(cerrar){
+    cerrar.disabled = !esDia;
+    cerrar.style.opacity = esDia ? '' : '0.5';
+    cerrar.title = esDia ? 'Registra la hora de salida de los trabajadores marcados' : aviso;
   }
-  return fechas;
+  ['op-rep-pdf','op-rep-mandante'].forEach(id => {
+    const b = document.getElementById(id);
+    if(!b) return;
+    b.disabled = !esDia;
+    b.style.opacity = esDia ? '' : '0.5';
+    b.title = esDia ? '' : aviso;
+  });
+}
+
+function toggleMenuReportesAsistencia(){
+  const menu = document.getElementById('menu-reportes-asist');
+  if(!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+/* Menú único "Reportes": Excel / PDF / Por mandante */
+function _reporteAsistencia(tipo){
+  const menu = document.getElementById('menu-reportes-asist');
+  if(menu) menu.style.display = 'none';
+  if(tipo === 'excel')    _exportarAsistenciaSegunModo();
+  if(tipo === 'pdf')      exportarAsistenciaPDF();
+  if(tipo === 'mandante') exportarAsistenciaPorMandante();
 }
 
 /* ── Vista de un solo día (editable) ─────────────────────── */
@@ -250,8 +304,11 @@ function _renderAsistenciaDia(fecha){
     if(r){ if(!r.hora_salida) activos++; else cerrados++; }
   });
   const sinMarcar = lista.length - activos - cerrados;
-  const anticipadas = data.filter(r => {
-    const h = r.horas_trabajadas;
+  // ✅ Corregido — antes contaba TODAS las marcaciones del día, ignorando el
+  // filtro de mandante y el buscador (mostraba 2 con un solo trabajador a la
+  // vista). Ahora cuenta solo a los trabajadores que se están mostrando.
+  const anticipadas = lista.filter(t => {
+    const h = data.find(x => x.rut === t.rut)?.horas_trabajadas;
     return h !== null && h !== undefined && h > 0 && h <= 5;
   }).length;
 
@@ -260,14 +317,13 @@ function _renderAsistenciaDia(fecha){
     <div class="kpi azul"><div class="kpi-label">Trabajadores</div><div class="kpi-value">${lista.length}</div><div class="kpi-sub">activos ese día</div></div>
     <div class="kpi verde"><div class="kpi-label">Activos</div><div class="kpi-value">${activos}</div><div class="kpi-sub">jornada en curso</div></div>
     <div class="kpi"><div class="kpi-label">Cerrados</div><div class="kpi-value">${cerrados}</div><div class="kpi-sub">jornada completa</div></div>
-    <div class="kpi"><div class="kpi-label">Sin marcar</div><div class="kpi-value">${sinMarcar}</div><div class="kpi-sub">sin registro hoy</div></div>
+    <div class="kpi"><div class="kpi-label">Sin marcar</div><div class="kpi-value">${sinMarcar}</div><div class="kpi-sub">sin registro ese día</div></div>
     <div class="kpi amarillo"><div class="kpi-label">Salidas anticipadas</div><div class="kpi-value">${anticipadas}</div><div class="kpi-sub">≤5 horas</div></div>`;
 
   const titulo = document.getElementById('asist-card-title');
   if(titulo) titulo.innerHTML = `<i class="ti ti-calendar-check"></i> Asistencia del Día — ${fmtFecha(fecha)}`;
 
-  const accionesDia = document.getElementById('asist-acciones-dia');
-  if(accionesDia) accionesDia.style.display = 'contents';
+  _actualizarBarraAsistencia(true);
 
   const thead = document.getElementById('thead-asistencia');
   if(thead) thead.innerHTML = `<tr>
@@ -402,8 +458,7 @@ function _renderAsistenciaRango(inicio, fin){
   const titulo = document.getElementById('asist-card-title');
   if(titulo) titulo.innerHTML = `<i class="ti ti-calendar-stats"></i> Detalle del período — ${fmtFecha(inicio)} a ${fmtFecha(fin)}`;
 
-  const accionesDia = document.getElementById('asist-acciones-dia');
-  if(accionesDia) accionesDia.style.display = 'none';
+  _actualizarBarraAsistencia(false);
 
   const thead = document.getElementById('thead-asistencia');
   if(thead) thead.innerHTML = `<tr>
@@ -513,7 +568,10 @@ function guardarMarcacion(rut){
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
   const idx   = data.findIndex(x => x.rut === rut);
-  if(idx >= 0) data[idx] = marcacion; else data.push(marcacion);
+  // ✅ Corregido — antes reemplazaba el registro completo y se perdía
+  // hora_entrada_real (la hora real del escaneo que guarda la App como
+  // respaldo). Ahora se mezcla, igual que ya hacía el Registro Manual.
+  if(idx >= 0) data[idx] = { ...data[idx], ...marcacion }; else data.push(marcacion);
   localStorage.setItem(clave, JSON.stringify(data));
 
   const t = trabajadores.find(x => x.rut === rut);
@@ -564,10 +622,11 @@ function recalcularHorasRango(){
   if(!desde || !hasta){ toast('⚠️ Selecciona un rango de fechas primero', 'error'); return; }
 
   const fechas = _fechasEnRango(desde, hasta);
-  if(!confirm(`¿Recalcular las horas de todas las marcaciones guardadas entre ${fmtFecha(desde)} y ${fmtFecha(hasta)}?\n\nSe vuelve a calcular horas y jornada de cada marcación existente, usando la colación del contrato de cada trabajador. No se borra ni se agrega ninguna marcación.`)) return;
+  if(!confirm(`¿Recalcular las horas de todas las marcaciones guardadas entre ${fmtFecha(desde)} y ${fmtFecha(hasta)}?\n\nSe vuelve a calcular horas y jornada de cada marcación existente, usando la colación del contrato de cada trabajador. No se borra ni se agrega ninguna marcación.\n\nLas marcaciones de meses ya cerrados se omiten.`)) return;
 
   let corregidas = 0;
   let revisadas  = 0;
+  let omitidas   = 0; // ✅ Nuevo — marcaciones de meses cerrados, que no se tocan
 
   fechas.forEach(fecha => {
     const clave = 'asistencia_' + fecha;
@@ -577,6 +636,13 @@ function recalcularHorasRango(){
     let cambioEnEsteDia = false;
     data.forEach(m => {
       if(!m.hora_entrada || !m.hora_salida) return;
+
+      // ✅ Nuevo — un mes cerrado no se modifica. Como el rango puede mezclar
+      // meses abiertos y cerrados, se omiten solo las de meses cerrados y se
+      // informa cuántas fueron (en vez de bloquear toda la acción).
+      const tRec = trabajadores.find(x => x.rut === m.rut);
+      if(typeof esMesCerrado === 'function' && esMesCerrado(fecha.slice(0,7), tRec?.empresa_propia_id)){ omitidas++; return; }
+
       revisadas++;
 
       const colMin = _colacionMinutosTrabajador(m.rut, fecha);
@@ -595,47 +661,95 @@ function recalcularHorasRango(){
     if(cambioEnEsteDia) localStorage.setItem(clave, JSON.stringify(data));
   });
 
-  toast(`✅ ${corregidas} de ${revisadas} marcaciones corregidas`, 'exito');
+  toast(`✅ ${corregidas} de ${revisadas} marcaciones corregidas` + (omitidas ? ` · ${omitidas} omitida${omitidas!==1?'s':''} por mes cerrado` : ''), 'exito');
   cargarAsistencia();
 }
+
+/* Cerrar turno: registra la HORA DE SALIDA de los trabajadores marcados (solo
+   un día — no tiene relación con el cierre de mes). Como la App solo marca el
+   ingreso y la salida es manual, esta es la forma de cerrar a toda una
+   cuadrilla de una vez, en lugar de fila por fila con "Corregir".
+   ✅ Nuevo — pide la hora de salida (por defecto la actual, editable): antes
+   usaba siempre la hora del reloj al apretar el botón, lo que daba horas de
+   más si se cerraba tarde, y no servía para cerrar un día anterior. */
+let _cierreTurnoRuts = [];
+let _cierreTurnoFecha = '';
 
 function cierreMasivoTurno(){
   const checks = [...document.querySelectorAll('.asist-check:checked')];
   if(!checks.length){ toast('⚠️ Selecciona trabajadores primero', 'error'); return; }
 
-  const hora  = new Date().toTimeString().slice(0,5);
   const fecha = document.getElementById('asist-fecha-desde').value;
+  const ruts  = checks.map(cb => cb.dataset.rut);
+
+  // ✅ Nuevo — mes cerrado: si alguno del lote cae en un mes cerrado, se bloquea
+  // todo el lote y se avisa quién (mismo criterio que Anexos y EPP masivo).
+  if(typeof esMesCerrado === 'function'){
+    const periodo = (fecha||'').slice(0,7);
+    const bloqueados = ruts.map(r => trabajadores.find(t => t.rut === r))
+      .filter(t => t && esMesCerrado(periodo, t.empresa_propia_id));
+    if(bloqueados.length){
+      alert(`⚠️ No se puede cerrar el turno — ${getNombreMes(periodo)} ya está cerrado para: ${bloqueados.map(t=>t.nombre).join(', ')}.\n\nUsa la "Corrección" de Libro de Remuneraciones para esos casos.`);
+      return;
+    }
+  }
+
+  _cierreTurnoRuts  = ruts;
+  _cierreTurnoFecha = fecha;
+  document.getElementById('cierre-turno-resumen').textContent =
+    `${ruts.length} trabajador${ruts.length!==1?'es':''} · ${fmtFecha(fecha)}`;
+  document.getElementById('cierre-turno-hora').value = new Date().toTimeString().slice(0,5);
+  document.getElementById('modal-cierre-turno').style.display = 'flex';
+}
+
+function cancelarCierreTurno(){
+  document.getElementById('modal-cierre-turno').style.display = 'none';
+  _cierreTurnoRuts = [];
+}
+
+function confirmarCierreTurno(){
+  const hora = document.getElementById('cierre-turno-hora').value;
+  if(!hora){ toast('⚠️ Ingresa la hora de salida', 'error'); return; }
+
+  const fecha = _cierreTurnoFecha;
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
 
   const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre)
     ? cfg.admin_nombre.split(' ')[0] : 'Admin';
 
-  checks.forEach(cb => {
-    const rut = cb.dataset.rut;
+  // Calcular primero, para poder avisar antes de escribir si la hora elegida
+  // dejaría jornadas de más de 12 h (típico error de tipeo: 05:30 en vez de 17:30).
+  const calculos = _cierreTurnoRuts.map(rut => {
     const idx = data.findIndex(x => x.rut === rut);
-    const entrada = idx >= 0 ? data[idx].hora_entrada : hora;
+    if(idx < 0) return null;
+    const entrada = data[idx].hora_entrada;
+    const colMin  = _colacionMinutosTrabajador(rut, fecha);
+    const horas   = calcularHoras(entrada, hora, colMin);
+    const { jornada, alerta, valor } = calcularJornada(horas);
+    return { rut, idx, entrada, horas, jornada, valor, alerta };
+  }).filter(Boolean);
 
-    const colMin           = _colacionMinutosTrabajador(rut, fecha);
-    const horas           = calcularHoras(entrada, hora, colMin);
-    const { jornada, alerta } = calcularJornada(horas);
+  const aRevisar = calculos.filter(c => c.alerta).length;
+  if(aRevisar && !confirm(`Con salida a las ${hora}, ${aRevisar} trabajador${aRevisar!==1?'es':''} quedaría${aRevisar!==1?'n':''} con más de 12 horas (⚠️ Revisar).\n\n¿Continuar de todas formas?`)) return;
 
-    const marcacion = {
-      rut, fecha,
-      hora_entrada:     entrada,
+  calculos.forEach(c => {
+    // ✅ Se mezcla con el registro existente (no se reemplaza): así no se pierde
+    // hora_entrada_real, la hora real del escaneo que guarda la App.
+    data[c.idx] = { ...data[c.idx],
+      hora_entrada:     c.entrada,
       hora_salida:      hora,
-      horas_trabajadas: horas,
-      jornada_valor:    calcularJornada(horas).valor,
-      jornada,
-      registrado_por:   registradoPor
+      horas_trabajadas: c.horas,
+      jornada_valor:    c.valor,
+      jornada:          c.jornada,
+      registrado_por:   registradoPor,
     };
-
-    if(idx >= 0) data[idx] = marcacion;
-    else data.push(marcacion);
   });
 
   localStorage.setItem(clave, JSON.stringify(data));
-  toast(`✅ Cierre masivo a las ${hora} — ${checks.length} trabajador${checks.length>1?'es':''}`, 'exito');
+  document.getElementById('modal-cierre-turno').style.display = 'none';
+  _cierreTurnoRuts = [];
+  toast(`✅ Turno cerrado a las ${hora} — ${calculos.length} trabajador${calculos.length!==1?'es':''}` + (aRevisar ? ` · ${aRevisar} a revisar` : ''), 'exito');
   cargarAsistencia();
 }
 
@@ -672,7 +786,7 @@ function exportarAsistenciaPDF(){
   const win = window.open('', '_blank');
   win.document.write(`
     <!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Asistencia del Día — ${fecha}</title>
+    <title>Asistencia del Día — ${fmtFecha(fecha)}</title>
     <style>
       body{margin:0;padding:20px;font-family:'Segoe UI',sans-serif;color:#1E293B}
       h2{font-size:16px;color:#0f2942;margin-bottom:4px}
@@ -682,7 +796,7 @@ function exportarAsistenciaPDF(){
       th{background:#F1F5F9;}
     </style></head><body>
     <h2>Asistencia del Día</h2>
-    <p>${fecha} · ${lista.length} trabajador${lista.length!==1?'es':''}</p>
+    <p>${fmtFecha(fecha)} · ${lista.length} trabajador${lista.length!==1?'es':''}</p>
     <table><thead><tr>
       <th>Trabajador</th><th>RUT</th><th>Ingreso</th><th>Salida</th><th>Total Horas</th><th>Jornada</th><th>Estado</th>
     </tr></thead><tbody>${filasHTML}</tbody></table>
@@ -892,6 +1006,15 @@ function procesarExcelAsistencia(event){
         if(!fecha){ _erroresExcelAsist.push({ fila, rut, nombre:t.nombre, mensaje:'Falta la Fecha (formato AAAA-MM-DD)' }); return; }
         if(!entrada){ _erroresExcelAsist.push({ fila, rut, nombre:t.nombre, mensaje:'Falta la Hora Entrada' }); return; }
 
+        // ✅ Nuevo — una fila cuya fecha cae en un mes cerrado no se carga: queda
+        // como error en la vista previa (la carga masiva es la única de estas
+        // acciones que puede cambiar un sueldo, porque agrega marcas que evitan
+        // el descuento por "día sin clasificar").
+        if(typeof esMesCerrado === 'function' && esMesCerrado(fecha.slice(0,7), t.empresa_propia_id)){
+          _erroresExcelAsist.push({ fila, rut, nombre:t.nombre, mensaje:`🔒 ${getNombreMes(fecha.slice(0,7))} ya está cerrado para esta empresa — no se carga` });
+          return;
+        }
+
         const clave = 'asistencia_' + fecha;
         const data  = JSON.parse(localStorage.getItem(clave) || '[]');
         const yaExiste = data.some(x => x.rut === rut);
@@ -946,6 +1069,19 @@ function cancelarCargaMasivaAsistencia(){
 
 function subirMasivoAsistencia(){
   if(!_datosExcelAsist.length){ toast('⚠️ No hay marcaciones para cargar', 'error'); return; }
+  // ✅ Nuevo — revalidación al subir (red de seguridad: el estado de los meses
+  // pudo cambiar entre que se armó la vista previa y se confirmó).
+  if(typeof esMesCerrado === 'function'){
+    const cerradas = _datosExcelAsist.filter(d => {
+      const tt = trabajadores.find(x => x.rut === d.rut);
+      return esMesCerrado(d.fecha.slice(0,7), tt?.empresa_propia_id);
+    });
+    if(cerradas.length){
+      alert(`⚠️ No se puede cargar — ${cerradas.length} fila${cerradas.length!==1?'s':''} cae${cerradas.length!==1?'n':''} en un mes ya cerrado:\n${cerradas.slice(0,8).map(d=>`${d.nombre} · ${fmtFecha(d.fecha)}`).join('\n')}${cerradas.length>8?'\n…':''}`);
+      return;
+    }
+  }
+
   if(!confirm(`Se cargarán ${_datosExcelAsist.length} marcación${_datosExcelAsist.length!==1?'es':''}. ¿Continuar?`)) return;
 
   const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre)
