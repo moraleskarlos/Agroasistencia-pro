@@ -104,7 +104,7 @@ function construirVariablesRemuneracion(rut, periodo){
     tipo_contrato,
     antiguedad_anios,
     fecha_inicio_contrato: contrato.fecha_inicio || t.fecha_ingreso,
-    horas_semanales: parseFloat(contrato.horas_semanales) || 45,
+    horas_semanales: parseFloat(contrato.horas_semanales) || JORNADA_SEMANAL_DEFECTO,
 
     // Sueldo base
     sueldo_base,
@@ -391,23 +391,50 @@ function _clasificarHaberes(haberes){
 }
 
 /* ── Calcular horas extra con recargo legal ─────────────── */
-// Art. 32 CT: recargo 50% día hábil, 100% festivo/domingo
-// Valor hora ordinaria = (sueldo_base / 30) / (horas_semanales / 5)
+/* ✅ H1 (auditoría Liquidaciones, 04-10-2026) — fórmula oficial de la
+   Dirección del Trabajo para trabajadores con sueldo mensual (Art. 32 CT;
+   Oficio Circular DT N° 4/1987; consulta DT "¿Cómo se calcula el valor de
+   la hora extraordinaria...?"):
+       hora ordinaria = sueldo ÷ 30 × 28 ÷ (4 × jornada semanal)
+   El "× 28" convierte el sueldo a 4 semanas completas (7 días cada una,
+   porque el valor día ÷30 ya incluye los días de descanso).
+   Antes se usaba (sueldo ÷ 30) ÷ (jornada ÷ 5): suponía semana de 5 días
+   y pagaba la hora extra un 28,6% por debajo de lo legal (verificado:
+   $600.000 y 45h → $3.333 la hora extra en vez de $4.667).
+   Factores de control DT (sueldo × factor = 1 hora extra al 50%):
+   45h → 0,0077777 · 44h → 0,0079545 · 42h → 0,0083333.
+   Se redondea solo el monto final (no la hora ordinaria) para no
+   arrastrar error. Compartida con gestion-laboral.js (_montoHoraExtra),
+   así la pantalla de Horas Extras y la liquidación dan siempre lo mismo. */
+const JORNADA_SEMANAL_DEFECTO = 45; // solo si el contrato no trae jornada (el formulario la calcula desde los horarios)
+
+function _valorHoraOrdinaria(sueldo_base, horas_semanales){
+  const h = parseFloat(horas_semanales) || JORNADA_SEMANAL_DEFECTO;
+  return (sueldo_base / DIVISOR_MES) * 28 / (4 * h);
+}
+
+function _factorRecargoHE(recargo){
+  return parseFloat(recargo) === 100 ? 2.0 : 1.5; // 100% o 50% (mínimo legal)
+}
+
+function _montoHorasExtra(sueldo_base, horas_semanales, horas, recargo){
+  return Math.round(_valorHoraOrdinaria(sueldo_base, horas_semanales) * _factorRecargoHE(recargo) * (parseFloat(horas) || 0));
+}
+
 function _calcularHorasExtra(jornada, sueldo_base, contrato){
-  const horas_semanales = parseFloat(contrato?.horas_semanales) || 45;
-  // Valor hora ordinaria según jornada pactada
-  const valor_hora_ord  = Math.round((sueldo_base / DIVISOR_MES) / (horas_semanales / 5));
+  const horas_semanales = parseFloat(contrato?.horas_semanales) || JORNADA_SEMANAL_DEFECTO;
+  const valor_hora_ord  = _valorHoraOrdinaria(sueldo_base, horas_semanales);
 
   const detalle = jornada
     .filter(j => j.tipo === 'hora_extra')
     .map(j => {
-      const recargo     = parseFloat(j.recargo) === 100 ? 2.0 : 1.5; // 50% o 100%
+      const recargo     = _factorRecargoHE(j.recargo);
       const horas       = parseFloat(j.horas) || 0;
-      const monto       = Math.round(valor_hora_ord * recargo * horas);
+      const monto       = _montoHorasExtra(sueldo_base, horas_semanales, horas, j.recargo);
       return {
         fecha:   j.fecha,
         horas,
-        recargo: j.recargo === '100' ? '100%' : '50%',
+        recargo: recargo === 2.0 ? '100%' : '50%',
         valor_hora_extra: Math.round(valor_hora_ord * recargo),
         monto_imponible: monto,
         observacion: j.observacion || '',

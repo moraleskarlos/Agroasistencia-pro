@@ -1141,23 +1141,22 @@ function renderJornada(){
   }).join('');
 }
 
-/* ✅ NUEVO — Monto a pagar por un registro de hora extra, reutilizando la
-   misma fórmula que ya usa variables.js para la liquidación (sueldo base
-   ÷ 30 ÷ (horas semanales ÷ 5) × recargo). Solo aplica a tipo='hora_extra';
-   los otros 3 tipos (compensada, cambio turno, turno especial) no tienen
-   una fórmula de pago asociada. Si no hay contrato vigente para calcular,
-   retorna null (la tabla muestra "—" en ese caso). */
+/* ✅ NUEVO — Monto a pagar por un registro de hora extra. Solo aplica a
+   tipo='hora_extra'; los otros 3 tipos (compensada, cambio turno, turno
+   especial) no tienen una fórmula de pago asociada. Si no hay contrato
+   vigente para calcular, retorna null (la tabla muestra "—" en ese caso).
+   ✅ H1 (auditoría Liquidaciones, 04-10-2026) — antes repetía aquí su
+   propia copia de la fórmula (la de semana de 5 días, 28,6% bajo lo
+   legal). Ahora usa la misma función que la liquidación
+   (_montoHorasExtra en variables.js, fórmula DT), así ambas pantallas
+   nunca pueden volver a mostrar montos distintos. */
 function _montoHoraExtra(j){
   if(j.tipo !== 'hora_extra') return null;
-  if(typeof _getContratoVigente !== 'function' || typeof _getSueldoBase !== 'function') return null;
+  if(typeof _getContratoVigente !== 'function' || typeof _getSueldoBase !== 'function' || typeof _montoHorasExtra !== 'function') return null;
   const contrato   = _getContratoVigente(j.trabajador_rut, j.periodo);
   const sueldoInfo = _getSueldoBase(j.trabajador_rut, j.periodo);
   if(!contrato || !sueldoInfo || !sueldoInfo.monto) return null;
-  const divisor        = typeof DIVISOR_MES !== 'undefined' ? DIVISOR_MES : 30;
-  const horasSemanales = parseFloat(contrato.horas_semanales) || 45;
-  const valorHoraOrd   = Math.round((sueldoInfo.monto / divisor) / (horasSemanales / 5));
-  const recargo        = j.recargo === '100' ? 2.0 : 1.5;
-  return Math.round(valorHoraOrd * recargo * (parseFloat(j.horas) || 0));
+  return _montoHorasExtra(sueldoInfo.monto, contrato.horas_semanales, j.horas, j.recargo);
 }
 
 function toggleFormJornada(forzar){
