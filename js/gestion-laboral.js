@@ -1152,11 +1152,11 @@ function renderJornada(){
    nunca pueden volver a mostrar montos distintos. */
 function _montoHoraExtra(j){
   if(j.tipo !== 'hora_extra') return null;
-  if(typeof _getContratoVigente !== 'function' || typeof _getSueldoBase !== 'function' || typeof _montoHorasExtra !== 'function') return null;
+  if(typeof _getContratoVigente !== 'function' || typeof _getSueldoBase !== 'function' || typeof _montoHorasExtra !== 'function' || typeof _jornadaEfectiva !== 'function') return null;
   const contrato   = _getContratoVigente(j.trabajador_rut, j.periodo);
   const sueldoInfo = _getSueldoBase(j.trabajador_rut, j.periodo);
   if(!contrato || !sueldoInfo || !sueldoInfo.monto) return null;
-  return _montoHorasExtra(sueldoInfo.monto, contrato.horas_semanales, j.horas, j.recargo);
+  return _montoHorasExtra(sueldoInfo.monto, _jornadaEfectiva(contrato.horas_semanales, j.periodo || (j.fecha||'').slice(0,7)), j.horas, j.recargo);
 }
 
 function toggleFormJornada(forzar){

@@ -363,8 +363,12 @@ function renderReporteLiquidaciones(){
     const minimoAplicable = (typeof _sueldoMinimoAplicable === 'function') ? _sueldoMinimoAplicable(t, periodo) : null;
     let avisoSueldoMinimo = '';
     if(minimoAplicable){
-      const horasSem = vars.horas_semanales || 45;
-      const minimoProporcional = Math.round(minimoAplicable.monto * Math.min(horasSem, 45) / 45);
+      // ✅ H10 — la jornada de referencia para el mínimo es la máxima legal
+      // DEL PERÍODO (44/42/40h según Ley 21.561), no 45h fijas. Con 42h
+      // (jornada completa hoy) corresponde el mínimo entero.
+      const jornadaRef = vars.jornada_maxima_legal || _jornadaMaximaLegal(periodo);
+      const horasSem = vars.horas_semanales || jornadaRef;
+      const minimoProporcional = Math.round(minimoAplicable.monto * Math.min(horasSem, jornadaRef) / jornadaRef);
       if(vars.sueldo_base > 0 && vars.sueldo_base < minimoProporcional){
         avisoSueldoMinimo = `<span class="badge badge-amarillo" style="margin-left:4px;" title="Sueldo pactado $${vars.sueldo_base.toLocaleString('es-CL')} — mínimo legal proporcional a ${horasSem}h (tramo ${minimoAplicable.tramo}): $${minimoProporcional.toLocaleString('es-CL')}">⚠️ Bajo el mínimo</span>`;
       }

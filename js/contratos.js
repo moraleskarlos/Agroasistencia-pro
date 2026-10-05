@@ -508,18 +508,22 @@ function guardarContrato(){
   // del período todavía no se cargó) — avisa y pide confirmación
   // explícita, mismo criterio que el aviso de 3er contrato de más
   // abajo. Se compara el sueldo pactado contra el mínimo proporcional
-  // a la jornada semanal (45h = jornada de referencia completa, mismo
-  // criterio que ya usa el resto del sistema para prorratear).
+  // a la jornada semanal (referencia = jornada máxima legal vigente,
+  // ver _jornadaMaximaLegal en variables.js — H10).
   {
     const tChequeoMin = trabajadores.find(x => x.rut === id || x.id === id);
     const sueldoIngresado = parseFloat(document.getElementById('c-sueldo')?.value) || 0;
-    const horasSemIngresadas = parseFloat(document.getElementById('c-horas')?.value) || 45;
+    // ✅ H10 (auditoría Liquidaciones) — referencia = jornada máxima legal
+    // vigente en la fecha de firma (misma fecha que ya usa este aviso para
+    // elegir el mínimo del período) — Ley 21.561: 44/42/40h, no 45h fijas.
+    const jornadaRefMin = (typeof _jornadaMaximaLegal === 'function') ? _jornadaMaximaLegal(document.getElementById('c-fecha-firma')?.value || hoyISO()) : 45;
+    const horasSemIngresadas = parseFloat(document.getElementById('c-horas')?.value) || jornadaRefMin;
     const fechaFirmaMin = document.getElementById('c-fecha-firma')?.value;
     const periodoMin = (fechaFirmaMin || hoyISO()).slice(0,7);
     const minimo = (typeof _sueldoMinimoAplicable === 'function') ? _sueldoMinimoAplicable(tChequeoMin, periodoMin) : null;
 
     if(minimo && sueldoIngresado > 0){
-      const minimoProporcional = Math.round(minimo.monto * Math.min(horasSemIngresadas, 45) / 45);
+      const minimoProporcional = Math.round(minimo.monto * Math.min(horasSemIngresadas, jornadaRefMin) / jornadaRefMin);
       if(sueldoIngresado < minimoProporcional){
         const continuarMin = confirm(
           `⚠️ El sueldo ingresado ($${sueldoIngresado.toLocaleString('es-CL')}) está por debajo del ingreso mínimo legal vigente para ${periodoMin} (tramo ${minimo.tramo}), proporcional a ${horasSemIngresadas}h semanales: $${minimoProporcional.toLocaleString('es-CL')}.\n\n¿Continuar y guardar igual?`

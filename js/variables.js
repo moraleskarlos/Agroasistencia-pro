@@ -71,7 +71,7 @@ function construirVariablesRemuneracion(rut, periodo){
 
   // ── 8. Horas extra (Art. 32 CT — recargo 50% o 100%) ─
   const jornada_raw    = getJornadaEspecialPorRut(rut, periodo);
-  const horas_extra    = _calcularHorasExtra(jornada_raw, sueldo_base, contrato);
+  const horas_extra    = _calcularHorasExtra(jornada_raw, sueldo_base, contrato, periodo);
 
   // ── 9. Totales ───────────────────────────────────────
   const total_imponible = _calcularTotalImponible(
@@ -104,7 +104,9 @@ function construirVariablesRemuneracion(rut, periodo){
     tipo_contrato,
     antiguedad_anios,
     fecha_inicio_contrato: contrato.fecha_inicio || t.fecha_ingreso,
-    horas_semanales: parseFloat(contrato.horas_semanales) || JORNADA_SEMANAL_DEFECTO,
+    horas_semanales_contrato: parseFloat(contrato.horas_semanales) || null, // lo que dice el papel
+    horas_semanales: _jornadaEfectiva(contrato.horas_semanales, periodo),   // con la que se calcula (tope legal del período)
+    jornada_maxima_legal: _jornadaMaximaLegal(periodo),
 
     // Sueldo base
     sueldo_base,
@@ -406,11 +408,44 @@ function _clasificarHaberes(haberes){
    Se redondea solo el monto final (no la hora ordinaria) para no
    arrastrar error. Compartida con gestion-laboral.js (_montoHoraExtra),
    así la pantalla de Horas Extras y la liquidación dan siempre lo mismo. */
-const JORNADA_SEMANAL_DEFECTO = 45; // solo si el contrato no trae jornada (el formulario la calcula desde los horarios)
+/* ✅ H1 + H10 (auditoría Liquidaciones, 04-10-2026) — jornada máxima
+   legal según la fecha (Ley 21.561, reducción gradual a 40 horas):
+     45h hasta el 25-04-2024 · 44h desde el 26-04-2024 ·
+     42h desde el 26-04-2026 · 40h desde el 26-04-2028
+   Regla acordada con el usuario para el mes del cambio (abril): se usa
+   la jornada vigente el DÍA 1 del período (abril 2026 → 44h; mayo 2026
+   en adelante → 42h). El paso a 40h en 2028 queda automático.
+   Un contrato con más horas que el máximo legal del período (ej. un
+   contrato antiguo que dice 45h) rige igual con el máximo legal — la
+   reducción opera por ley, aunque el papel no se haya actualizado. */
+const JORNADA_LEGAL_TRAMOS = [
+  { desde: '2028-04-26', horas: 40 },
+  { desde: '2026-04-26', horas: 42 },
+  { desde: '2024-04-26', horas: 44 },
+  { desde: '0000-01-01', horas: 45 },
+];
 
+/* Recibe 'AAAA-MM' (período → se evalúa el día 1) o 'AAAA-MM-DD'.
+   Sin argumento: hoy (hora local). Comparación de texto ISO — sin Date,
+   sin riesgo de zona horaria. */
+function _jornadaMaximaLegal(fechaOPeriodo){
+  const f = !fechaOPeriodo ? hoyISO()
+    : (fechaOPeriodo.length === 7 ? fechaOPeriodo + '-01' : fechaOPeriodo);
+  return JORNADA_LEGAL_TRAMOS.find(t => f >= t.desde).horas;
+}
+
+/* Jornada con la que se calcula: la pactada en el contrato, con tope en
+   la máxima legal del período. Si el contrato no trae jornada, se usa la
+   máxima legal (antes: 45h fijas). */
+function _jornadaEfectiva(horasContrato, fechaOPeriodo){
+  const max = _jornadaMaximaLegal(fechaOPeriodo);
+  const h   = parseFloat(horasContrato);
+  return h > 0 ? Math.min(h, max) : max;
+}
+
+/* Recibe la jornada YA efectiva (ver _jornadaEfectiva). */
 function _valorHoraOrdinaria(sueldo_base, horas_semanales){
-  const h = parseFloat(horas_semanales) || JORNADA_SEMANAL_DEFECTO;
-  return (sueldo_base / DIVISOR_MES) * 28 / (4 * h);
+  return (sueldo_base / DIVISOR_MES) * 28 / (4 * horas_semanales);
 }
 
 function _factorRecargoHE(recargo){
@@ -421,8 +456,8 @@ function _montoHorasExtra(sueldo_base, horas_semanales, horas, recargo){
   return Math.round(_valorHoraOrdinaria(sueldo_base, horas_semanales) * _factorRecargoHE(recargo) * (parseFloat(horas) || 0));
 }
 
-function _calcularHorasExtra(jornada, sueldo_base, contrato){
-  const horas_semanales = parseFloat(contrato?.horas_semanales) || JORNADA_SEMANAL_DEFECTO;
+function _calcularHorasExtra(jornada, sueldo_base, contrato, periodo){
+  const horas_semanales = _jornadaEfectiva(contrato?.horas_semanales, periodo);
   const valor_hora_ord  = _valorHoraOrdinaria(sueldo_base, horas_semanales);
 
   const detalle = jornada
