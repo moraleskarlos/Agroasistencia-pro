@@ -459,6 +459,66 @@ function _jornadaMaximaLegal(fechaOPeriodo){
   return JORNADA_LEGAL_TRAMOS.find(t => f >= t.desde).horas;
 }
 
+/* ✅ A9 (auditoría Ausencias y Permisos, 06-10-2026) — validación de la
+   distribución de la jornada (Art. 28 CT, modificado por Ley 21.561;
+   Dictamen DT Ord. 81/02 de 01-02-2024):
+     · días por semana: entre 5 y 6 hasta el 25-04-2028; entre 4 y 6
+       desde el 26-04-2028 (la opción de 4 días requiere acuerdo).
+     · máximo 10 horas ordinarias por día.
+     · total semanal: no más que la jornada máxima legal de la fecha
+       (_jornadaMaximaLegal: 44/42/40h).
+   Devuelve la lista de problemas (vacía = distribución legal). Solo
+   AVISA, no bloquea: existen regímenes especiales (jornadas agrícolas
+   por temporada, excepciones del Art. 38, sistemas excepcionales
+   autorizados por la DT) que el sistema no puede conocer. */
+const JORNADA_DIAS_MIN_TRAMOS = [
+  { desde: '2028-04-26', min: 4 },
+  { desde: '0000-01-01', min: 5 },
+];
+const JORNADA_DIAS_MAX     = 6;
+const JORNADA_MAX_DIARIA_H = 10;
+
+function _validarDistribucionJornada(jornada_dias, colacionMin, fecha){
+  const f = fecha || hoyISO();
+  const problemas = [];
+  const j = jornada_dias || {};
+  const activos = DIAS_JORNADA.filter(d => j[d]?.activo);
+  if(!activos.length){
+    problemas.push('No hay días de trabajo marcados. Para contar faltas, el sistema usará lunes a viernes por defecto.');
+    return problemas;
+  }
+  const min = JORNADA_DIAS_MIN_TRAMOS.find(t => f >= t.desde).min;
+  if(activos.length < min || activos.length > JORNADA_DIAS_MAX){
+    problemas.push(`La jornada está repartida en ${activos.length} día${activos.length!==1?'s':''}. La ley permite entre ${min} y ${JORNADA_DIAS_MAX} días por semana (Art. 28).`);
+  }
+  const sinHorario = activos.filter(d => !j[d].inicio || !j[d].fin);
+  if(sinHorario.length){
+    problemas.push(`Día${sinHorario.length>1?'s':''} sin horario de entrada o salida: ${sinHorario.join(', ')}.`);
+  }
+  const largos = activos
+    .filter(d => j[d].inicio && j[d].fin)
+    .map(d => ({ d, h: calcularHoras(j[d].inicio, j[d].fin, colacionMin) }))
+    .filter(x => x.h > JORNADA_MAX_DIARIA_H);
+  if(largos.length){
+    problemas.push(`Supera las ${JORNADA_MAX_DIARIA_H} horas ordinarias diarias (Art. 28): ${largos.map(x => `${x.d} ${String(x.h).replace('.',',')}h`).join(', ')}.`);
+  }
+  const total = activos
+    .filter(d => j[d].inicio && j[d].fin)
+    .reduce((s, d) => s + (calcularHoras(j[d].inicio, j[d].fin, colacionMin) || 0), 0);
+  const maxLegal = _jornadaMaximaLegal(f);
+  if(Math.round(total*10)/10 > maxLegal){
+    problemas.push(`Suma ${String(Math.round(total*10)/10).replace('.',',')} horas semanales. La jornada máxima legal vigente es de ${maxLegal} horas (Ley 21.561).`);
+  }
+  return problemas;
+}
+
+/* Muestra los problemas y pide confirmación explícita (mismo criterio que
+   el aviso de sueldo mínimo). true = seguir guardando. */
+function _confirmarJornadaLegal(problemas, contexto){
+  if(!problemas || !problemas.length) return true;
+  return confirm(`⚠️ Revisa la jornada${contexto ? ' — ' + contexto : ''}:\n\n• ${problemas.join('\n• ')}\n\nSi corresponde a un régimen especial autorizado, puedes continuar. ¿Guardar igual?`);
+}
+
 /* Jornada con la que se calcula: la pactada en el contrato, con tope en
    la máxima legal del período. Si el contrato no trae jornada, se usa la
    máxima legal (antes: 45h fijas). */

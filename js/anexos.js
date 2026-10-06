@@ -699,6 +699,14 @@ function guardarAnexo(){
   const detalle = ANX_CATALOG[tipo].detalle(valores);
   if(!detalle){ toast('⚠️ Completa los campos del anexo','error'); return; }
 
+  // ✅ A9 — el anexo de Cambio de Jornada pasa por la misma validación
+  // legal que el contrato. La colación sale del contrato del trabajador
+  // (el anexo solo cambia horarios).
+  if(tipo === 'cambio_jornada' && typeof _validarDistribucionJornada === 'function'){
+    const colMinJ = (typeof _colacionMinutosTrabajador === 'function') ? _colacionMinutosTrabajador(t?.rut, fechaVig) : 0;
+    if(!_confirmarJornadaLegal(_validarDistribucionJornada(valores._jornada_dias, colMinJ, fechaVig), 'anexo de cambio de jornada')) return;
+  }
+
   const nuevoAnexo = {
     id:             Date.now().toString(),
     trabajador_rut: t?.rut,
@@ -1017,6 +1025,17 @@ function generarAnexosMasivo(){
   const valores = leerValoresAnexo(tipo);
   const detalle = ANX_CATALOG[tipo].detalle(valores);
   if(!detalle){ toast('⚠️ Completa los campos del anexo','error'); return; }
+
+  // ✅ A9 — validación legal de la jornada para el lote. La colación
+  // puede variar por contrato, así que se revisa trabajador por
+  // trabajador y se juntan los avisos distintos en un solo mensaje.
+  if(tipo === 'cambio_jornada' && typeof _validarDistribucionJornada === 'function'){
+    const probJ = [...new Set(seleccionados.flatMap(t => _validarDistribucionJornada(
+      valores._jornada_dias,
+      (typeof _colacionMinutosTrabajador === 'function') ? _colacionMinutosTrabajador(t.rut, fechaVig) : 0,
+      fechaVig)))];
+    if(!_confirmarJornadaLegal(probJ, `anexo de cambio de jornada (${seleccionados.length} trabajador${seleccionados.length!==1?'es':''})`)) return;
+  }
 
   const ciudad = document.getElementById('anexo-ciudad')?.value.trim() || '';
   const obs    = document.getElementById('anexo-observaciones')?.value.trim() || '';

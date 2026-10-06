@@ -503,6 +503,15 @@ function guardarContrato(){
   const formaRem = document.getElementById('c-tipo-rem').value;
   if(!formaRem){ toast('⚠️ Selecciona la forma de remuneración (Mensual o Diaria)','error'); return; }
 
+  // ✅ A9 — distribución legal de la jornada (Art. 28 / Ley 21.561).
+  // Solo avisa; ver _validarDistribucionJornada en variables.js.
+  if(typeof _validarDistribucionJornada === 'function'){
+    const colMinJ = parseInt(document.getElementById('c-colacion')?.value) || 0;
+    const fechaJ  = document.getElementById('c-fecha-firma')?.value || hoyISO();
+    const probJ   = _validarDistribucionJornada(leerJornadaDias().jornada, colMinJ, fechaJ);
+    if(!_confirmarJornadaLegal(probJ, 'contrato')) return;
+  }
+
   // ✅ Nuevo — validación de sueldo mínimo. No bloquea (podría haber
   // motivos legítimos: jornada parcial ya contemplada, o el indicador
   // del período todavía no se cargó) — avisa y pide confirmación
@@ -2222,6 +2231,13 @@ function confirmarYGenerarContratosMasivo(){
 
   const cfg = _leerConfigGrupoMasivo(gid);
   const cfgCompleto = _construirCfgCompletoMasivo(gid, cfg);
+
+  // ✅ A9 — misma validación de jornada que el contrato individual; la
+  // jornada es una sola para todo el grupo, así que se avisa una vez.
+  if(typeof _validarDistribucionJornada === 'function'){
+    const probJ = _validarDistribucionJornada(cfgCompleto.jornada_dias, parseInt(cfg.colacion) || 0, cfg.firma || hoyISO());
+    if(!_confirmarJornadaLegal(probJ, `contratos del grupo (${g.trabajadores.length})`)) return;
+  }
   const mandanteObj = empresas.find(e => e.id === g.mandanteId || e.rut === g.mandanteId);
   const tipoTxt = { temporada:'Temporada', plazo_fijo:'Plazo Fijo', indefinido:'Indefinido' }[cfgCompleto.tipo_contrato] || cfgCompleto.tipo_contrato;
 
