@@ -136,6 +136,8 @@ function calcularLiquidacion(vars, periodo){
     // Haberes
     sueldo_base:              vars.sueldo_base,
     descuento_ausencias:      vars.descuento_ausencias,
+    descuento_licencia:       vars.descuento_licencia || 0,
+    dias_ausencia:            vars.dias_ausencia || 0,
     sueldo_proporcional:      vars.sueldo_proporcional,
     total_haberes_imponibles: vars.total_imponible,
     total_haberes_no_imponibles: vars.total_no_imponible,

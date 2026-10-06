@@ -33,6 +33,8 @@ function construirVariablesRemuneracion(rut, periodo){
   const tipo_contrato = _normalizarTipoContrato(contrato.tipo_contrato || contrato.tipo);
   const antiguedad_anios = _calcularAntiguedad(contrato.fecha_inicio || t.fecha_ingreso, periodo);
 
+  const [anio_p, mes_p] = periodo.split('-').map(Number);
+
   // ── 3. Valor día (Art. 44 CT + Dictamen DT 5308/230) ─
   const valor_dia = Math.round(sueldo_base / DIVISOR_MES);
 
@@ -44,26 +46,45 @@ function construirVariablesRemuneracion(rut, periodo){
   const novedades_periodo = getNovedadesPorRut(rut, periodo);
 
   // Clasificar ausencias por tipo
-  const dias_licencia_medica     = _contarDiasNovedad(novedades_periodo, 'licencia_medica');
+  const dias_licencia_cal        = _contarDiasNovedad(novedades_periodo, 'licencia_medica'); // días corridos dentro del mes
   const dias_permiso_con_goce    = _contarDiasNovedad(novedades_periodo, 'permiso_goce');
   const dias_permiso_sin_goce    = _contarDiasNovedad(novedades_periodo, 'permiso_sin_goce');
   const dias_ausencia_injust     = _contarDiasNovedad(novedades_periodo, 'ausencia_injustificada');
   const dias_vacaciones          = _contarDiasNovedad(novedades_periodo, 'vacaciones');
 
-  // Días que descuentan del sueldo base (sin goce + injustificadas +
-  // sin clasificar). Licencia médica NO descuenta — la paga
-  // Fonasa/Isapre vía subsidio. Vacaciones NO descuentan — se pagan con
+  // ✅ H2 (auditoría Liquidaciones, 04-10-2026) — la licencia médica SÍ
+  // descuenta del sueldo. Durante la licencia el contrato se suspende: el
+  // empleador no remunera esos días (doctrina DT, basada en el Art. 7 CT)
+  // y el trabajador recibe el subsidio (SIL) de Fonasa/COMPIN/Isapre.
+  // Antes se pagaba el sueldo completo + subsidio, y además la base AFP
+  // incluía esos días mientras la RIMA los volvía a cotizar (SIS doble).
+  // Mes comercial de 30 días (Art. 44 CT): si la licencia cubre TODO el
+  // mes calendario (28, 29, 30 o 31 días) cuenta como 30 → sueldo $0.
+  const diasMesCal = new Date(anio_p, mes_p, 0).getDate();
+  const dias_licencia_medica = dias_licencia_cal >= diasMesCal ? DIVISOR_MES : Math.min(dias_licencia_cal, DIVISOR_MES);
+
+  // Días que descuentan del sueldo base: sin goce + injustificadas + sin
+  // clasificar + licencia médica. Vacaciones NO descuentan — se pagan con
   // remuneración íntegra (Art. 71 CT). Permiso con goce NO descuenta —
   // es de cargo del empleador. Los "sin clasificar" (sin marca de
   // Asistencia y sin novedad) se tratan igual que una falta
   // injustificada por defecto — ver _leerAsistenciaMes() más abajo.
-  const dias_a_descontar = dias_permiso_sin_goce + dias_ausencia_injust + dias_sin_clasificar;
+  // Tope: nunca más de 30 días (mes comercial).
+  const dias_ausencia     = Math.min(DIVISOR_MES, dias_permiso_sin_goce + dias_ausencia_injust + dias_sin_clasificar);
+  const dias_a_descontar  = Math.min(DIVISOR_MES, dias_ausencia + dias_licencia_medica);
+  // Días de licencia que efectivamente entran al descuento (si ausencias
+  // + licencia superan 30, la licencia se recorta para no pasar el tope).
+  const dias_licencia_descontados = dias_a_descontar - dias_ausencia;
 
   // ── 6. Sueldo proporcional ───────────────────────────
-  // Si el mes fue completo o las ausencias son con goce → sueldo íntegro
-  // Solo se descuenta si hay días sin goce o injustificados
-  const descuento_ausencias = dias_a_descontar * valor_dia;
-  const sueldo_proporcional = Math.max(0, sueldo_base - descuento_ausencias);
+  // Mes completo descontado → $0 exacto (sin residuo por redondeo del
+  // valor día). Si no, sueldo − días × valor día. Se separa en dos
+  // líneas visibles en la liquidación: ausencias y licencia médica.
+  const sueldo_proporcional = dias_a_descontar >= DIVISOR_MES
+    ? 0
+    : Math.max(0, sueldo_base - dias_a_descontar * valor_dia);
+  const descuento_ausencias = Math.min(sueldo_base, dias_ausencia * valor_dia);
+  const descuento_licencia  = (sueldo_base - sueldo_proporcional) - descuento_ausencias;
 
   // ── 7. Haberes variables desde Gestión Laboral ───────
   const haberes_raw = getHaberesPorRut(rut, periodo);
@@ -117,7 +138,10 @@ function construirVariablesRemuneracion(rut, periodo){
     dias_trabajados:        asistencia.dias_trabajados,
     dias_sin_clasificar,     // ✅ nuevo — sin marca de Asistencia y sin novedad (se descuenta por defecto)
     fechas_sin_clasificar:  asistencia.fechas_sin_clasificar || [],
-    dias_licencia_medica,
+    dias_licencia_medica,           // días de licencia del mes (tope 30, mes completo = 30)
+    dias_licencia_calendario: dias_licencia_cal,
+    dias_licencia_descontados,
+    dias_ausencia,                  // sin goce + injustificadas + sin clasificar (tope 30)
     dias_permiso_con_goce,
     dias_permiso_sin_goce,
     dias_ausencia_injust,
@@ -125,7 +149,8 @@ function construirVariablesRemuneracion(rut, periodo){
     dias_a_descontar,
 
     // Sueldo proporcional
-    descuento_ausencias,
+    descuento_ausencias,   // solo ausencias (sin goce / injustificadas / sin clasificar)
+    descuento_licencia,    // ✅ H2 — días de licencia médica
     sueldo_proporcional,   // base real para cotizaciones
 
     // Haberes variables

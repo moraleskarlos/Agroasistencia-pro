@@ -808,8 +808,20 @@ function _generarHTMLLiquidacion(liq, guardada){
 
   // Haberes imponibles detalle
   let habImpRows = `<tr><td class="ld-sub">Sueldo base mensual</td><td class="ld-amt">${fmtM(liq.sueldo_base)}</td><td></td></tr>`;
+  // ✅ H2 — dos líneas separadas: ausencias (sin goce / injustificadas /
+  // sin clasificar) y licencia médica. Liquidaciones guardadas antes del
+  // cambio no traen dias_ausencia → se usa dias_a_descontar (mismo valor
+  // que tenían entonces, cuando la licencia no descontaba).
+  const valorDiaTxt  = fmtM(Math.round(liq.sueldo_base/30));
+  const diasAus      = liq.dias_ausencia != null ? liq.dias_ausencia : (liq.dias_a_descontar||0);
+  const diasLicDesc  = (liq.dias_a_descontar||0) - diasAus;
   if(liq.descuento_ausencias > 0){
-    habImpRows += `<tr><td class="ld-sub" style="color:#dc2626;">Descuento ${liq.dias_a_descontar} día${liq.dias_a_descontar>1?'s':''} ausencia${liq.dias_permiso_sin_goce>0?' sin goce':' injustificada'} (× ${fmtM(Math.round(liq.sueldo_base/30))})</td><td class="ld-amt" style="color:#dc2626;">-${fmtM(liq.descuento_ausencias)}</td><td></td></tr>`;
+    habImpRows += `<tr><td class="ld-sub" style="color:#dc2626;">Descuento ${diasAus} día${diasAus>1?'s':''} ausencia${liq.dias_permiso_sin_goce>0?' sin goce':' injustificada'} (× ${valorDiaTxt})</td><td class="ld-amt" style="color:#dc2626;">-${fmtM(liq.descuento_ausencias)}</td><td></td></tr>`;
+  }
+  if(liq.descuento_licencia > 0){
+    habImpRows += `<tr><td class="ld-sub" style="color:#dc2626;">Descuento ${diasLicDesc} día${diasLicDesc>1?'s':''} licencia médica — cubiertos por subsidio (× ${valorDiaTxt})</td><td class="ld-amt" style="color:#dc2626;">-${fmtM(liq.descuento_licencia)}</td><td></td></tr>`;
+  }
+  if(liq.descuento_ausencias > 0 || liq.descuento_licencia > 0){
     habImpRows += `<tr><td class="ld-sub">Sueldo proporcional</td><td class="ld-amt">${fmtM(liq.sueldo_proporcional)}</td><td></td></tr>`;
   }
   (liq.haberes_variables||[]).filter(h=>h.imponible!==false).forEach(h => {
@@ -929,6 +941,7 @@ function _generarHTMLLiquidacion(liq, guardada){
           <div class="ld-row"><span class="ld-row-label">Contrato</span><span class="ld-row-val">${badgeTipo(cont?.tipo || cont?.tipo_contrato || liq.tipo_contrato)}</span></div>
           <div class="ld-row"><span class="ld-row-label">Inicio contrato</span><span class="ld-row-val">${fmtFecha(liq.fecha_inicio_contrato)}</span></div>
           <div class="ld-row"><span class="ld-row-label">Días mes / trabajados</span><span class="ld-row-val">30 / ${30 - (liq.dias_a_descontar||0)}</span></div>
+          ${(liq.dias_licencia_medica||0) > 0 ? `<div class="ld-row"><span class="ld-row-label">Licencia médica</span><span class="ld-row-val">${liq.dias_licencia_medica} día${liq.dias_licencia_medica>1?'s':''}</span></div>` : ''}
           <div class="ld-row"><span class="ld-row-label">AFP</span><span class="ld-row-val">${_capitalizar(liq.afp||'—')} (${liq.pct_afp_trab||'—'}%)</span></div>
           <div class="ld-row"><span class="ld-row-label">Salud</span><span class="ld-row-val">${liq.sistema_salud||'Fonasa'} (7%)</span></div>
           <div class="ld-row"><span class="ld-row-label">Valor UF</span><span class="ld-row-val">${ind?.uf ? '$'+ind.uf.toLocaleString('es-CL',{minimumFractionDigits:2}) : '—'}</span></div>
