@@ -8,6 +8,7 @@ try {
   cargarMesesCerrados();
   cargarAjustes();
   migrarIDs();
+  _migrarCarpetaIDsRetroactivo(); // ✅ Paso 5 — antes de la de empresa (usa el ID)
   _migrarEmpresaCarpetaRetroactivo();
   iniciarSupabase();
   poblarSelects();

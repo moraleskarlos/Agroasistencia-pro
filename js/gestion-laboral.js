@@ -702,6 +702,8 @@ function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
     empresa_propia_id: trabajadores.find(x => x.rut === rut)?.empresa_propia_id || '',
     tipo: 'novedad',
     subtipo: tipo,
+    fecha_firma: inicio,
+    ref_id: nov.id, // ✅ Paso 5 (A4) — un documento por novedad
     descripcion: `${_labelNovedad(tipo)} — ${_fmtFecha(inicio)}${fin&&fin!==inicio?' al '+_fmtFecha(fin):''}`,
   });
 
@@ -715,6 +717,18 @@ function eliminarNovedad(id){
   if(!confirm('¿Eliminar esta novedad?')) return;
   novedades = novedades.filter(x => x.id !== id);
   guardarNovedades();
+  // ✅ Paso 5 (A4) — quitar también su registro de la Carpeta Laboral.
+  // Los nuevos se ubican por ref_id; los antiguos (sin ref_id), por
+  // trabajador + tipo + la misma descripción con que se registraron.
+  if(n && typeof carpeta !== 'undefined'){
+    const descLegacy = `${_labelNovedad(n.tipo)} — ${_fmtFecha(n.fecha_inicio)}${n.fecha_fin&&n.fecha_fin!==n.fecha_inicio?' al '+_fmtFecha(n.fecha_fin):''}`;
+    const antes = carpeta.length;
+    carpeta = carpeta.filter(d => !(d.tipo === 'novedad' && (
+      d.ref_id === id ||
+      (!d.ref_id && d.trabajador_rut === n.trabajador_rut && d.subtipo === n.tipo && d.descripcion === descLegacy)
+    )));
+    if(carpeta.length !== antes && typeof guardarCarpeta === 'function') guardarCarpeta();
+  }
   renderNovedades();
   _renderKPIsGL();
 }

@@ -516,15 +516,43 @@ function _bloqueNavegacionMasivo(total){
 function guardarLocal(){localStorage.setItem(LOCAL_T,JSON.stringify(trabajadores));localStorage.setItem(LOCAL_E,JSON.stringify(empresas));localStorage.setItem(LOCAL_EP,JSON.stringify(empresas_propias));}
 function guardarCarpeta(){ localStorage.setItem(LOCAL_CARPETA, JSON.stringify(carpeta)); }
 
-function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, empresa_propia_id, tipo, subtipo, folio, fecha_firma, descripcion }){
-  // Evita duplicar el mismo documento (ej. reabrir "Ver documento" o cargar el kit dos veces)
-  const yaExiste = carpeta.find(d =>
-    d.trabajador_rut === trabajador_rut && d.tipo === tipo &&
-    d.subtipo === (subtipo||'') && d.fecha_firma === (fecha_firma||''));
-  if(yaExiste) return yaExiste;
+function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, empresa_propia_id, tipo, subtipo, folio, fecha_firma, descripcion, ref_id }){
+  // ✅ Paso 5 (H4 + A4, auditoría Liquidaciones / Ausencias, 06-10-2026)
+  // (1) Si quien llama no pasa trabajador_id (liquidaciones, novedades,
+  //     finiquitos), se resuelve desde el RUT. La Carpeta filtra por ID
+  //     desde el cierre de Trabajadores — sin esto esos documentos
+  //     quedaban invisibles.
+  if(!trabajador_id && trabajador_rut){
+    trabajador_id = (trabajadores || []).find(t => t.rut === trabajador_rut)?.id;
+  }
+  const mismoTrab = d => (trabajador_id && d.trabajador_id) ? d.trabajador_id === trabajador_id : d.trabajador_rut === trabajador_rut;
+  // (2) Duplicados:
+  //   · con ref_id (ej. el id de la novedad): un registro por cada
+  //     origen — dos licencias del mismo tipo son dos documentos.
+  //   · liquidación: una por trabajador y período; recalcular otro día
+  //     ACTUALIZA el registro (antes creaba un segundo con el mismo folio).
+  //   · resto: criterio de siempre (mismo tipo/subtipo/fecha de firma).
+  let yaExiste;
+  if(ref_id)                   yaExiste = carpeta.find(d => d.tipo === tipo && d.ref_id === ref_id);
+  else if(tipo === 'liquidacion') yaExiste = carpeta.find(d => mismoTrab(d) && d.tipo === tipo && d.subtipo === (subtipo||''));
+  else                         yaExiste = carpeta.find(d => mismoTrab(d) && d.tipo === tipo && d.subtipo === (subtipo||'') && d.fecha_firma === (fecha_firma||''));
+  if(yaExiste){
+    if(ref_id || tipo === 'liquidacion'){
+      Object.assign(yaExiste, {
+        trabajador_id:     yaExiste.trabajador_id || trabajador_id,
+        empresa_propia_id: empresa_propia_id || yaExiste.empresa_propia_id,
+        folio:             folio || yaExiste.folio,
+        fecha_firma:       fecha_firma || yaExiste.fecha_firma,
+        descripcion:       descripcion || yaExiste.descripcion,
+        fecha_generacion:  hoyISO(),
+      });
+      guardarCarpeta();
+    }
+    return yaExiste;
+  }
 
   const doc = {
-    id:              Date.now().toString(),
+    id:              Date.now().toString() + Math.random().toString(36).slice(2,6),
     trabajador_id,
     trabajador_rut,
     // ✅ BL-062 punto 2 — empresa con la que se generó este documento.
@@ -541,6 +569,7 @@ function registrarDocumentoCarpeta({ trabajador_id, trabajador_rut, empresa_prop
     fecha_firma:     fecha_firma || '',
     generado_por:    sesionActiva?.usuario || 'admin',
     descripcion:     descripcion || '',
+    ref_id:          ref_id || '',
   };
   carpeta.push(doc);
   guardarCarpeta();
@@ -563,6 +592,33 @@ function _migrarEmpresaCarpetaRetroactivo(){
     const t = trabajadores.find(x => x.rut === d.trabajador_rut || (d.trabajador_id && x.id === d.trabajador_id));
     if(t?.empresa_propia_id){ d.empresa_propia_id = t.empresa_propia_id; cambios = true; }
   });
+  if(cambios) guardarCarpeta();
+}
+
+/* ✅ Paso 5 — migración retroactiva de la Carpeta (idempotente):
+   (a) documentos sin trabajador_id (liquidaciones, novedades, finiquitos
+       guardados antes) → se les asigna el ID desde el RUT, para que se
+       vean en la Carpeta del trabajador;
+   (b) liquidaciones duplicadas por recalcular otro día → se deja una por
+       trabajador y período (la generada más recientemente). */
+function _migrarCarpetaIDsRetroactivo(){
+  let cambios = false;
+  carpeta.forEach(d => {
+    if(!d.trabajador_id && d.trabajador_rut){
+      const t = trabajadores.find(x => x.rut === d.trabajador_rut);
+      if(t){ d.trabajador_id = t.id; cambios = true; }
+    }
+  });
+  const ultima = {};
+  carpeta.forEach((d, i) => {
+    if(d.tipo !== 'liquidacion') return;
+    const k = (d.trabajador_id || d.trabajador_rut) + '|' + d.subtipo;
+    const prev = ultima[k];
+    if(prev === undefined || (d.fecha_generacion || '') >= (carpeta[prev].fecha_generacion || '')) ultima[k] = i;
+  });
+  const antes = carpeta.length;
+  carpeta = carpeta.filter((d, i) => d.tipo !== 'liquidacion' || ultima[(d.trabajador_id || d.trabajador_rut) + '|' + d.subtipo] === i);
+  if(carpeta.length !== antes) cambios = true;
   if(cambios) guardarCarpeta();
 }
 
