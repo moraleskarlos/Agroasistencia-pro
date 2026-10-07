@@ -454,7 +454,6 @@ function _htmlDetalleNovedad(f){
                 <option value="permiso_sin_goce">⚠️ Permiso sin goce de sueldo</option>
                 <option value="vacaciones">🏖️ Vacaciones</option>
                 <option value="ausencia_injustificada">❌ Ausencia injustificada</option>
-                <option value="otro">📋 Otro</option>
               </select>
             </div>
             <div class="form-group" style="margin:0;">
@@ -620,6 +619,14 @@ function guardarNovedad(){
 function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
   if(_guardandoGL) return false;
 
+  // ✅ Paso 4 (A3) — el motivo "Otro" se eliminó: pagaba el día completo
+  // sin dejar rastro en la liquidación. Cada ausencia debe tener un motivo
+  // real (licencia, permiso con o sin goce, vacaciones o injustificada).
+  if(tipo === 'otro'){
+    toast('⚠️ El motivo "Otro" ya no existe — elige el motivo real de la ausencia', 'error');
+    return false;
+  }
+
   if(_bloqueaPorMesCerradoRango(rut, inicio, fin || inicio)) return false;
 
   // ✅ Validación cruzada contra Asistencia — reemplaza al paso de
@@ -725,7 +732,9 @@ function _badgeNovedad(tipo){
     permiso_sin_goce:      ['badge-amarillo', '⚠️ Permiso s/goce'],
     vacaciones:            ['badge-azul',     '🏖️ Vacaciones'],
     ausencia_injustificada:['badge-rojo',     '❌ Injustificada'],
-    otro:                  ['badge-gris',     '📋 Otro'],
+    // ✅ Paso 4 (A3) — "Otro" ya no se puede registrar. Los registros
+    // antiguos se muestran para reclasificar y se descuentan mientras tanto.
+    otro:                  ['badge-rojo',     '⚠️ Otro — reclasificar'],
   };
   const [cls, lbl] = map[tipo]||['badge-gris', tipo];
   return `<span class="badge ${cls}">${lbl}</span>`;
@@ -735,7 +744,7 @@ function _labelNovedad(tipo){
   const map = {
     licencia_medica:'Licencia Médica', permiso_goce:'Permiso con goce',
     permiso_sin_goce:'Permiso sin goce', vacaciones:'Vacaciones',
-    ausencia_injustificada:'Ausencia injustificada', otro:'Otro',
+    ausencia_injustificada:'Ausencia injustificada', otro:'Otro (reclasificar)',
   };
   return map[tipo]||tipo;
 }

@@ -260,7 +260,7 @@ function calcularAlertas(){
         if(!_esDiaLaboral(rut, f)) continue;
         laborales.push(f);
         const cubre = novsRut.filter(n => n.fecha_inicio <= f && (n.fecha_fin || n.fecha_inicio) >= f);
-        const injust = cubre.some(n => n.tipo === 'ausencia_injustificada');
+        const injust = cubre.some(n => n.tipo === 'ausencia_injustificada' || n.tipo === 'otro');
         const sinClasificar = !cubre.length && sinMarca[rut]?.has(f);
         if(injust || sinClasificar) faltas.add(f);
       }
@@ -286,6 +286,19 @@ function calcularAlertas(){
         () => irA('ausencias')));
     });
   }
+
+  // ✅ Paso 4 (A3) — registros antiguos con motivo "Otro" pendientes de
+  // reclasificar (se están descontando como día sin clasificar).
+  (typeof novedades !== 'undefined' ? novedades : [])
+    .filter(n => n.tipo === 'otro' && rutsActivos.includes(n.trabajador_rut))
+    .forEach(n => {
+      const t = trabajadores.find(x => x.rut === n.trabajador_rut);
+      const rango = n.fecha_fin && n.fecha_fin !== n.fecha_inicio ? `${fmtFecha(n.fecha_inicio)} al ${fmtFecha(n.fecha_fin)}` : fmtFecha(n.fecha_inicio);
+      alertas.push(_alerta('importante','Ausencias y Permisos',`otro_reclasificar_${n.id}`,
+        'Ausencia "Otro" por reclasificar',
+        `${t?.nombre||n.trabajador_rut} (${rango}): el motivo "Otro" ya no existe y se descuenta como día sin clasificar. Elimínala y regístrala con su motivo real.`,
+        () => irA('ausencias')));
+    });
 
   // Turnos de asistencia abiertos (días anteriores)
   _turnosAbiertos(rutsActivos, hoy).forEach(x => {

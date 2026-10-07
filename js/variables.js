@@ -51,6 +51,9 @@ function construirVariablesRemuneracion(rut, periodo){
   const dias_permiso_sin_goce    = _contarDiasNovedad(novedades_periodo, 'permiso_sin_goce');
   const dias_ausencia_injust     = _contarDiasNovedad(novedades_periodo, 'ausencia_injustificada');
   const dias_vacaciones          = _contarDiasNovedad(novedades_periodo, 'vacaciones');
+  // ✅ Paso 4 (A3) — registros antiguos "Otro": se descuentan como día sin
+  // clasificar (en días de su jornada) hasta que se reclasifiquen.
+  const dias_otro_reclasificar   = _contarDiasNovedad(novedades_periodo, 'otro');
 
   // ✅ H2 (auditoría Liquidaciones, 04-10-2026) — la licencia médica SÍ
   // descuenta del sueldo. Durante la licencia el contrato se suspende: el
@@ -70,7 +73,7 @@ function construirVariablesRemuneracion(rut, periodo){
   // Asistencia y sin novedad) se tratan igual que una falta
   // injustificada por defecto — ver _leerAsistenciaMes() más abajo.
   // Tope: nunca más de 30 días (mes comercial).
-  const dias_ausencia     = Math.min(DIVISOR_MES, dias_permiso_sin_goce + dias_ausencia_injust + dias_sin_clasificar);
+  const dias_ausencia     = Math.min(DIVISOR_MES, dias_permiso_sin_goce + dias_ausencia_injust + dias_sin_clasificar + dias_otro_reclasificar);
   const dias_a_descontar  = Math.min(DIVISOR_MES, dias_ausencia + dias_licencia_medica);
   // Días de licencia que efectivamente entran al descuento (si ausencias
   // + licencia superan 30, la licencia se recorta para no pasar el tope).
@@ -146,6 +149,7 @@ function construirVariablesRemuneracion(rut, periodo){
     dias_permiso_sin_goce,
     dias_ausencia_injust,
     dias_vacaciones,
+    dias_otro_reclasificar,
     dias_a_descontar,
 
     // Sueldo proporcional
@@ -399,7 +403,7 @@ function _diasHabilesFeriado(desde, hasta){
    la misma regla (criterio del usuario, 06-10-2026: se descuentan solo
    los días que debía trabajar según su contrato, L-V o L-S). La licencia
    médica sigue en días corridos (es un subsidio por días calendario). */
-const TIPOS_NOVEDAD_DIAS_LABORALES = ['ausencia_injustificada', 'permiso_sin_goce'];
+const TIPOS_NOVEDAD_DIAS_LABORALES = ['ausencia_injustificada', 'permiso_sin_goce', 'otro'];
 
 function _leerAsistenciaMes(rut, periodo){
   const [anio, mes] = periodo.split('-').map(Number);
