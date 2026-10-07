@@ -1060,6 +1060,10 @@ function generarAnexosMasivo(){
       observaciones:  obs,
       fecha_creacion: new Date().toISOString(),
       nuevo_sueldo:   tipo === 'cambio_remuneracion' ? (parseFloat(valores['anx-nuevo-sueldo'] || 0) || null) : null,
+      // ✅ A10 (auditoría Ausencias, 06-10-2026) — el masivo no guardaba
+      // la jornada estructurada (el individual sí): Asistencia, horas
+      // extra y el conteo de faltas seguían usando la del contrato.
+      jornada_dias:   tipo === 'cambio_jornada' ? (valores._jornada_dias || null) : null,
     };
     anexos.push(nuevoAnexo);
 

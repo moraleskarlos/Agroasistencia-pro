@@ -172,6 +172,19 @@ function calcularAlertas(){
       () => irA('prevision')));
   }
 
+  // ✅ Paso 2b — feriados del año no cargados (sin ellos, un feriado se
+  // contaría como falta). En diciembre avisa también por el año siguiente.
+  if(typeof tieneFeriadosCargados === 'function'){
+    const anioAct = Number(periodoActual.slice(0,4));
+    const aniosRev = periodoActual.slice(5,7) === '12' ? [anioAct, anioAct + 1] : [anioAct];
+    aniosRev.filter(a => !tieneFeriadosCargados(a)).forEach(a => {
+      alertas.push(_alerta('importante','Previsión',`feriados_faltantes_${a}`,
+        `Feriados ${a} no cargados`,
+        `Carga los feriados legales de ${a} en Remuneraciones → Indicadores, para que no se cuenten como faltas`,
+        () => irA('prevision')));
+    });
+  }
+
   // Liquidación del período CERRADO (el mes anterior, no el actual — las
   // remuneraciones se procesan del mes ya terminado; con periodoActual
   // acá, esta alerta avisaba TODOS los días del mes que faltaba la

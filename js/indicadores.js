@@ -162,6 +162,7 @@ function initIndicadores(){
   if(sel && !sel.value) sel.value = getPeriodoActual();
 
   renderListaIndicadores();
+  renderFeriados(); // ✅ Paso 2b
   const periodo = document.getElementById('ind-periodo-selector')?.value || getPeriodoActual();
   renderDetalleIndicador(periodo);
 
@@ -520,4 +521,209 @@ function _sueldoMinimoAplicable(t, periodo){
   const esMenorOMayor = edad !== null && (edad < 18 || edad >= 65);
   const base = (esMenorOMayor && ind.renta_menor18) ? ind.renta_menor18 : ind.renta_minima;
   return { monto: base, tramo: esMenorOMayor ? 'menor de 18 o mayor de 65' : '18 a 65 años' };
+}
+
+
+/* ════════════════════════════════════════════════════════════════════
+   ✅ FERIADOS (Paso 2b, auditoría Ausencias y Permisos, 06-10-2026)
+   Calendario de feriados legales editable por año. Se guarda en
+   localStorage ('agro_feriados') como [{id, fecha:'AAAA-MM-DD', nombre,
+   ambito:'nacional'|'regional'}]. Lo usarán:
+     · Paso 2c — un feriado nunca se cuenta como falta.
+     · Paso 2d — un feriado no se descuenta de las vacaciones (Art. 69).
+   Precarga solo años verificados contra fuente oficial (2026: feriados.cl,
+   que cita la Biblioteca del Congreso Nacional). Los demás años los carga
+   el usuario cuando se publique la lista oficial — igual que los
+   indicadores. Si un año no tiene feriados, el sistema avisa en vez de
+   asumir que no hay ninguno.
+   ════════════════════════════════════════════════════════════════════ */
+const LOCAL_FERIADOS = 'agro_feriados';
+let feriados = [];
+let _feriadoEditandoId = null;
+
+const FERIADOS_PRECARGA = {
+  '2026': [
+    ['2026-01-01','Año Nuevo'],
+    ['2026-04-03','Viernes Santo'],
+    ['2026-04-04','Sábado Santo'],
+    ['2026-05-01','Día Nacional del Trabajo'],
+    ['2026-05-21','Día de las Glorias Navales'],
+    ['2026-06-21','Día Nacional de los Pueblos Indígenas'],
+    ['2026-06-29','San Pedro y San Pablo'],
+    ['2026-07-16','Día de la Virgen del Carmen'],
+    ['2026-08-15','Asunción de la Virgen'],
+    ['2026-09-18','Independencia Nacional'],
+    ['2026-09-19','Día de las Glorias del Ejército'],
+    ['2026-10-12','Encuentro de Dos Mundos'],
+    ['2026-10-31','Día de las Iglesias Evangélicas y Protestantes'],
+    ['2026-11-01','Día de Todos los Santos'],
+    ['2026-12-08','Inmaculada Concepción'],
+    ['2026-12-25','Navidad'],
+  ],
+};
+
+function cargarFeriados(){
+  try{ feriados = JSON.parse(localStorage.getItem(LOCAL_FERIADOS)) || []; }
+  catch{ feriados = []; }
+}
+
+function guardarFeriados(){
+  feriados.sort((a,b) => a.fecha.localeCompare(b.fecha));
+  localStorage.setItem(LOCAL_FERIADOS, JSON.stringify(feriados));
+}
+
+/* API para el resto del sistema (2c / 2d). Lee siempre desde
+   localStorage para no depender de que la pantalla se haya abierto. */
+function esFeriado(fechaISO){
+  cargarFeriados();
+  return feriados.some(f => f.fecha === fechaISO);
+}
+
+function feriadosDelAnio(anio){
+  cargarFeriados();
+  return feriados.filter(f => f.fecha.slice(0,4) === String(anio));
+}
+
+function tieneFeriadosCargados(anio){
+  return feriadosDelAnio(anio).length > 0;
+}
+
+/* Día de la semana sin riesgo de zona horaria (ancla a mediodía local). */
+function _nombreDiaFeriado(fechaISO){
+  return ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][new Date(fechaISO + 'T12:00:00').getDay()];
+}
+
+function _anioFeriadosSeleccionado(){
+  return document.getElementById('fer-anio')?.value || hoyISO().slice(0,4);
+}
+
+function _poblarAniosFeriados(){
+  const sel = document.getElementById('fer-anio');
+  if(!sel) return;
+  cargarFeriados();
+  const actual = Number(hoyISO().slice(0,4));
+  const anios = new Set([actual - 1, actual, actual + 1,
+    ...Object.keys(FERIADOS_PRECARGA).map(Number),
+    ...feriados.map(f => Number(f.fecha.slice(0,4)))]);
+  const previo = sel.value || String(actual);
+  sel.innerHTML = [...anios].sort((a,b) => a-b).map(a => `<option value="${a}">${a}</option>`).join('');
+  sel.value = [...anios].includes(Number(previo)) ? previo : String(actual);
+}
+
+function renderFeriados(){
+  const tbody = document.getElementById('tbody-feriados');
+  if(!tbody) return;
+  _poblarAniosFeriados();
+  const anio  = _anioFeriadosSeleccionado();
+  const lista = feriadosDelAnio(anio).sort((a,b) => a.fecha.localeCompare(b.fecha));
+
+  // Aviso de año vacío + botón de precarga (solo años verificados)
+  const aviso = document.getElementById('fer-aviso');
+  const btnPre = document.getElementById('fer-btn-precarga');
+  const pre = FERIADOS_PRECARGA[anio] || [];
+  const faltanPre = pre.filter(([f]) => !lista.some(x => x.fecha === f)).length;
+  if(btnPre){
+    btnPre.style.display = faltanPre ? '' : 'none';
+    btnPre.innerHTML = `<i class="ti ti-download"></i> Cargar feriados nacionales ${anio}${faltanPre < pre.length ? ` (faltan ${faltanPre})` : ''}`;
+  }
+  if(aviso){
+    if(!lista.length){
+      aviso.style.display = 'flex';
+      aviso.innerHTML = `<i class="ti ti-alert-triangle" style="font-size:16px;flex-shrink:0;"></i><div><strong>No hay feriados cargados para ${anio}.</strong> ${pre.length
+        ? 'Usa "Cargar feriados nacionales" o agrégalos uno por uno.'
+        : 'Agrégalos cuando se publique la lista oficial. Mientras tanto, el sistema no puede reconocer los feriados de ese año.'}</div>`;
+    } else {
+      aviso.style.display = 'none';
+    }
+  }
+
+  tbody.innerHTML = lista.length ? lista.map(f => `
+    <tr>
+      <td>${fmtFecha(f.fecha)}</td>
+      <td>${_nombreDiaFeriado(f.fecha)}</td>
+      <td>${f.nombre}</td>
+      <td>${f.ambito === 'regional' ? '<span class="badge badge-amarillo">Regional</span>' : '<span class="badge badge-verde">Nacional</span>'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-secondary btn-sm" onclick="editarFeriado('${f.id}')" title="Editar"><i class="ti ti-pencil"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="eliminarFeriado('${f.id}')" title="Eliminar"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`).join('')
+    : `<tr><td colspan="5" style="text-align:center;padding:22px;color:var(--texto3);">Sin feriados para ${anio}</td></tr>`;
+}
+
+function precargarFeriados(){
+  const anio = _anioFeriadosSeleccionado();
+  const pre  = FERIADOS_PRECARGA[anio];
+  if(!pre){ toast(`⚠️ No hay una lista verificada de feriados ${anio} para precargar`, 'error'); return; }
+  cargarFeriados();
+  let agregados = 0;
+  pre.forEach(([fecha, nombre], i) => {
+    if(feriados.some(f => f.fecha === fecha)) return;
+    feriados.push({ id: `fer_${Date.now()}_${i}`, fecha, nombre, ambito: 'nacional' });
+    agregados++;
+  });
+  guardarFeriados();
+  renderFeriados();
+  toast(agregados ? `✅ ${agregados} feriado${agregados!==1?'s':''} nacional${agregados!==1?'es':''} de ${anio} cargado${agregados!==1?'s':''}` : `Los feriados de ${anio} ya estaban cargados`);
+}
+
+function guardarFeriado(){
+  const fecha  = document.getElementById('fer-fecha')?.value || '';
+  const nombre = (document.getElementById('fer-nombre')?.value || '').trim();
+  const ambito = document.getElementById('fer-ambito')?.value || 'nacional';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ toast('⚠️ Ingresa la fecha del feriado', 'error'); return; }
+  if(!nombre){ toast('⚠️ Ingresa el nombre del feriado', 'error'); return; }
+  cargarFeriados();
+  const dup = feriados.find(f => f.fecha === fecha && f.id !== _feriadoEditandoId);
+  if(dup){ toast(`⚠️ El ${fmtFecha(fecha)} ya está registrado como "${dup.nombre}"`, 'error'); return; }
+  if(_feriadoEditandoId){
+    const f = feriados.find(x => x.id === _feriadoEditandoId);
+    if(f) Object.assign(f, { fecha, nombre, ambito });
+  } else {
+    feriados.push({ id: `fer_${Date.now()}`, fecha, nombre, ambito });
+  }
+  guardarFeriados();
+  const fueEdicion = !!_feriadoEditandoId;
+  cancelarEdicionFeriado();
+  const selAnio = document.getElementById('fer-anio');
+  _poblarAniosFeriados();
+  if(selAnio) selAnio.value = fecha.slice(0,4);
+  renderFeriados();
+  toast(fueEdicion ? '✅ Feriado actualizado' : '✅ Feriado agregado');
+}
+
+function editarFeriado(id){
+  cargarFeriados();
+  const f = feriados.find(x => x.id === id);
+  if(!f) return;
+  _feriadoEditandoId = id;
+  document.getElementById('fer-fecha').value  = f.fecha;
+  document.getElementById('fer-nombre').value = f.nombre;
+  document.getElementById('fer-ambito').value = f.ambito || 'nacional';
+  const btn = document.getElementById('fer-btn-guardar');
+  if(btn) btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar cambios';
+  const can = document.getElementById('fer-btn-cancelar');
+  if(can) can.style.display = '';
+}
+
+function cancelarEdicionFeriado(){
+  _feriadoEditandoId = null;
+  ['fer-fecha','fer-nombre'].forEach(id => { const e = document.getElementById(id); if(e) e.value = ''; });
+  const amb = document.getElementById('fer-ambito'); if(amb) amb.value = 'nacional';
+  const btn = document.getElementById('fer-btn-guardar');
+  if(btn) btn.innerHTML = '<i class="ti ti-plus"></i> Agregar';
+  const can = document.getElementById('fer-btn-cancelar');
+  if(can) can.style.display = 'none';
+}
+
+function eliminarFeriado(id){
+  cargarFeriados();
+  const f = feriados.find(x => x.id === id);
+  if(!f) return;
+  if(!confirm(`¿Eliminar el feriado "${f.nombre}" del ${fmtFecha(f.fecha)}?`)) return;
+  feriados = feriados.filter(x => x.id !== id);
+  guardarFeriados();
+  if(_feriadoEditandoId === id) cancelarEdicionFeriado();
+  renderFeriados();
+  toast('Feriado eliminado');
 }
