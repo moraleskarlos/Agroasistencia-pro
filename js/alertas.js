@@ -228,6 +228,65 @@ function calcularAlertas(){
     });
   }
 
+  // ✅ Paso 3 (A8, auditoría Ausencias y Permisos, 06-10-2026) — posible
+  // causal del Art. 160 N°3 CT: no concurrencia sin causa justificada
+  // (a) dos días seguidos, (b) dos lunes en el mes o (c) tres días en
+  // total en el mes. Solo AVISA: despedir es decisión del empleador y
+  // requiere su propio procedimiento (carta, plazos, Inspección).
+  // Cuenta como falta: faltas injustificadas registradas + días sin
+  // clasificar (sin marca y sin novedad) — solo días ya transcurridos y
+  // solo días laborales del trabajador (_esDiaLaboral: su jornada L-V o
+  // L-S y los feriados, Paso 2c). "Seguidos" = días laborales
+  // consecutivos de SU jornada: para quien trabaja L-V, viernes y lunes
+  // son seguidos; para quien trabaja L-S, no. Se revisa también el mes
+  // anterior para detectar dos días seguidos que cruzan de mes.
+  if(typeof _esDiaLaboral === 'function' && typeof _diaSiguienteISO === 'function' && typeof _leerAusenciasAsistencia === 'function'){
+    const hoyStr = (typeof hoyISO === 'function') ? hoyISO() : hoy.toISOString().slice(0,10);
+    const [aA, mA] = periodoActual.split('-').map(Number);
+    const periodoAnt = mA === 1 ? `${aA-1}-12` : `${aA}-${String(mA-1).padStart(2,'0')}`;
+    const desdeVentana = periodoAnt + '-01';
+    const novs = (typeof novedades !== 'undefined' ? novedades : []);
+    // Sin marca en Asistencia, para todos los activos de una vez (2 meses)
+    const sinMarca = {};
+    [periodoAnt, periodoActual].forEach(p => _leerAusenciasAsistencia(p, rutsActivos).forEach(a => {
+      (sinMarca[a.rut] = sinMarca[a.rut] || new Set()).add(a.fecha);
+    }));
+    activos.forEach(t => {
+      const rut = t.rut;
+      const novsRut = novs.filter(n => n.trabajador_rut === rut);
+      const faltas = new Set();
+      const laborales = [];
+      for(let f = desdeVentana; f <= hoyStr; f = _diaSiguienteISO(f)){
+        if(!_esDiaLaboral(rut, f)) continue;
+        laborales.push(f);
+        const cubre = novsRut.filter(n => n.fecha_inicio <= f && (n.fecha_fin || n.fecha_inicio) >= f);
+        const injust = cubre.some(n => n.tipo === 'ausencia_injustificada');
+        const sinClasificar = !cubre.length && sinMarca[rut]?.has(f);
+        if(injust || sinClasificar) faltas.add(f);
+      }
+      if(!faltas.size) return;
+      const motivos = [];
+      // (a) dos días laborales consecutivos, el segundo dentro del mes actual
+      for(let i = 1; i < laborales.length; i++){
+        if(faltas.has(laborales[i-1]) && faltas.has(laborales[i]) && laborales[i].startsWith(periodoActual)){
+          motivos.push(`dos días seguidos (${fmtFecha(laborales[i-1])} y ${fmtFecha(laborales[i])})`);
+          break;
+        }
+      }
+      const delMes = [...faltas].filter(f => f.startsWith(periodoActual)).sort();
+      // (b) dos lunes en el mes
+      const lunes = delMes.filter(f => new Date(f + 'T12:00:00').getDay() === 1);
+      if(lunes.length >= 2) motivos.push(`${lunes.length} lunes en el mes (${lunes.map(fmtFecha).join(', ')})`);
+      // (c) tres días en total en el mes
+      if(delMes.length >= 3) motivos.push(`${delMes.length} días en el mes`);
+      if(!motivos.length) return;
+      alertas.push(_alerta('importante','Ausencias y Permisos',`art160_${rut}_${periodoActual}`,
+        'Posible causal Art. 160 N°3',
+        `${t.nombre}: faltas sin justificación — ${motivos.join('; ')}. Revisa antes de decidir; despedir requiere carta y plazos legales.`,
+        () => irA('ausencias')));
+    });
+  }
+
   // Turnos de asistencia abiertos (días anteriores)
   _turnosAbiertos(rutsActivos, hoy).forEach(x => {
     alertas.push(_alerta('critico','Asistencia',`turno_abierto_${x.rut}_${x.fecha}`,
