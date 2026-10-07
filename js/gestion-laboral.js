@@ -655,7 +655,7 @@ function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
   if(typeof TIPOS_NOVEDAD_DIAS_LABORALES !== 'undefined' && TIPOS_NOVEDAD_DIAS_LABORALES.includes(tipo) && typeof _diasLaboralesEnRango === 'function'){
     dias = _diasLaboralesEnRango(rut, inicio, fin || inicio);
     if(dias === 0){
-      toast('⚠️ En esas fechas el trabajador no tenía que trabajar (fuera de su jornada o feriado) — no corresponde registrar falta', 'error');
+      toast(`⚠️ En esas fechas el trabajador no tenía que trabajar (fuera de su jornada o feriado) — no corresponde registrar ${tipo === 'permiso_sin_goce' ? 'permiso sin goce' : 'falta'}`, 'error');
       return false;
     }
   }

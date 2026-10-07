@@ -395,10 +395,11 @@ function _diasHabilesFeriado(desde, hasta){
 /* Tipos de novedad que se cuentan solo en días de la jornada (no días
    corridos). Una falta injustificada registrada de viernes a lunes a
    alguien que trabaja de lunes a viernes son 2 faltas, no 4: el sábado y
-   el domingo no tenía obligación de trabajar. La licencia médica y el
-   permiso sin goce siguen en días corridos (son suspensiones del
-   contrato por un período continuo). */
-const TIPOS_NOVEDAD_DIAS_LABORALES = ['ausencia_injustificada'];
+   el domingo no tenía obligación de trabajar. El permiso sin goce sigue
+   la misma regla (criterio del usuario, 06-10-2026: se descuentan solo
+   los días que debía trabajar según su contrato, L-V o L-S). La licencia
+   médica sigue en días corridos (es un subsidio por días calendario). */
+const TIPOS_NOVEDAD_DIAS_LABORALES = ['ausencia_injustificada', 'permiso_sin_goce'];
 
 function _leerAsistenciaMes(rut, periodo){
   const [anio, mes] = periodo.split('-').map(Number);
