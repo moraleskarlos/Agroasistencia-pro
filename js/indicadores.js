@@ -574,9 +574,18 @@ function guardarFeriados(){
 
 /* API para el resto del sistema (2c / 2d). Lee siempre desde
    localStorage para no depender de que la pantalla se haya abierto. */
+/* Con caché: el conteo de faltas la llama por cada día y trabajador.
+   Se invalida sola si cambia lo guardado en localStorage. */
+let _feriadosCacheRaw = null, _feriadosCacheSet = new Set();
 function esFeriado(fechaISO){
-  cargarFeriados();
-  return feriados.some(f => f.fecha === fechaISO);
+  const raw = localStorage.getItem(LOCAL_FERIADOS) || '[]';
+  if(raw !== _feriadosCacheRaw){
+    let lista = [];
+    try{ lista = JSON.parse(raw) || []; }catch{ lista = []; }
+    _feriadosCacheSet = new Set(lista.map(f => f.fecha));
+    _feriadosCacheRaw = raw;
+  }
+  return _feriadosCacheSet.has(fechaISO);
 }
 
 function feriadosDelAnio(anio){

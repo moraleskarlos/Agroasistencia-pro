@@ -335,6 +335,53 @@ function _calcularAntiguedad(fechaInicio, periodo){
    fantasma. Los caminos manuales de siempre (marcar asistencia a mano,
    cargar una novedad) resuelven el día exactamente igual que antes —
    esto solo cambia qué pasa cuando NADIE hizo ninguna de las dos cosas. */
+/* ✅ Paso 2c (A7 + A2, auditoría Ausencias y Permisos, 06-10-2026)
+   ¿Era este un día de trabajo para este trabajador?
+     1. Un feriado (calendario de Remuneraciones → Indicadores) nunca es
+        día laboral → nunca se cuenta como falta.
+     2. Si no, manda la jornada vigente en esa fecha: anexo de Cambio de
+        Jornada si existe, si no el contrato (_jornadaVigenteTrabajador).
+        Así se distingue quien trabaja de lunes a viernes de quien
+        trabaja de lunes a sábado (ambas legales, Art. 28).
+     3. Respaldo: si no hay jornada registrada (contratos antiguos sin
+        días marcados), lunes a viernes — el criterio que había antes.
+   Lo usan la liquidación (_leerAsistenciaMes), Faltas y Permisos
+   (_leerAusenciasAsistencia) y el conteo de faltas injustificadas. */
+const _NOMBRE_DIA_POR_GETDAY = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+function _esDiaLaboral(rut, fecha){
+  if(typeof esFeriado === 'function' && esFeriado(fecha)) return false;
+  const dow = new Date(fecha + 'T12:00:00').getDay();
+  const jornada = (typeof _jornadaVigenteTrabajador === 'function') ? _jornadaVigenteTrabajador(rut, fecha) : null;
+  const tieneDias = jornada && DIAS_JORNADA.some(d => jornada[d]?.activo);
+  if(!tieneDias) return dow !== 0 && dow !== 6;
+  return !!jornada[_NOMBRE_DIA_POR_GETDAY[dow]]?.activo;
+}
+
+/* Día siguiente en texto ISO, con aritmética UTC pura (no depende de la
+   zona horaria del equipo — ver A5). */
+function _diaSiguienteISO(f){
+  const [y, m, d] = f.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+}
+
+/* Cuántos días laborales del trabajador hay entre dos fechas (inclusive). */
+function _diasLaboralesEnRango(rut, desde, hasta){
+  let n = 0;
+  for(let f = desde; f <= hasta; f = _diaSiguienteISO(f)){
+    if(_esDiaLaboral(rut, f)) n++;
+  }
+  return n;
+}
+
+/* Tipos de novedad que se cuentan solo en días de la jornada (no días
+   corridos). Una falta injustificada registrada de viernes a lunes a
+   alguien que trabaja de lunes a viernes son 2 faltas, no 4: el sábado y
+   el domingo no tenía obligación de trabajar. La licencia médica y el
+   permiso sin goce siguen en días corridos (son suspensiones del
+   contrato por un período continuo). */
+const TIPOS_NOVEDAD_DIAS_LABORALES = ['ausencia_injustificada'];
+
 function _leerAsistenciaMes(rut, periodo){
   const [anio, mes] = periodo.split('-').map(Number);
   const diasMes = new Date(anio, mes, 0).getDate();
@@ -364,8 +411,9 @@ function _leerAsistenciaMes(rut, periodo){
     const fecha = `${anio}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     if(fecha < inicioContrato || fecha > finContrato) continue; // fuera del rango real del contrato
 
-    const diaSemana = new Date(fecha+'T12:00:00').getDay();
-    if(diaSemana === 0 || diaSemana === 6) continue; // sábado/domingo — el mes comercial ya los cubre
+    // ✅ Paso 2c — antes: siempre se saltaba sábado y domingo. Ahora se
+    // mira la jornada del trabajador y el calendario de feriados.
+    if(!_esDiaLaboral(rut, fecha)) continue;
 
     let data = [];
     try{ data = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]'); }catch{ data = []; }

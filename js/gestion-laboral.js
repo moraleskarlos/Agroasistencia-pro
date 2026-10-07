@@ -553,11 +553,10 @@ function _leerAusenciasAsistencia(periodo, ruts){
       const rango = rangoPorRut[rut];
       if(fecha < rango.inicio || fecha > rango.fin) return; // fuera del rango real del contrato
       const marcacion = data.find(x => x.rut === rut);
-      if(!marcacion){
-        const diaSemana = new Date(fecha+'T12:00:00').getDay();
-        if(diaSemana !== 0 && diaSemana !== 6){
-          ausencias.push({ rut, fecha });
-        }
+      // ✅ Paso 2c — jornada del trabajador + feriados (antes: siempre
+      // lunes a viernes, sin feriados). Misma regla que la liquidación.
+      if(!marcacion && _esDiaLaboral(rut, fecha)){
+        ausencias.push({ rut, fecha });
       }
     });
   }
@@ -649,9 +648,19 @@ function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
     return false;
   }
 
-  _guardandoGL = true;
+  let dias = fin ? _calcDias(inicio, fin) : 1;
+  // ✅ Paso 2c — falta injustificada: solo días de la jornada. Si el rango
+  // no tiene ninguno (ej. un domingo para alguien de lunes a viernes, o
+  // un feriado), no hay falta que registrar.
+  if(typeof TIPOS_NOVEDAD_DIAS_LABORALES !== 'undefined' && TIPOS_NOVEDAD_DIAS_LABORALES.includes(tipo) && typeof _diasLaboralesEnRango === 'function'){
+    dias = _diasLaboralesEnRango(rut, inicio, fin || inicio);
+    if(dias === 0){
+      toast('⚠️ En esas fechas el trabajador no tenía que trabajar (fuera de su jornada o feriado) — no corresponde registrar falta', 'error');
+      return false;
+    }
+  }
 
-  const dias = fin ? _calcDias(inicio, fin) : 1;
+  _guardandoGL = true;
   const nov  = {
     id:              Date.now().toString(),
     trabajador_rut:  rut,
@@ -1460,6 +1469,10 @@ function _diasNovedadEnPeriodo(n, periodo){
   const fin = n.fecha_fin || n.fecha_inicio;
   const desdeClip = n.fecha_inicio > desde ? n.fecha_inicio : desde;
   const hastaClip = fin < hasta ? fin : hasta;
+  // ✅ Paso 2c — la falta injustificada cuenta solo días de su jornada.
+  if(typeof TIPOS_NOVEDAD_DIAS_LABORALES !== 'undefined' && TIPOS_NOVEDAD_DIAS_LABORALES.includes(n.tipo) && typeof _diasLaboralesEnRango === 'function'){
+    return _diasLaboralesEnRango(n.trabajador_rut, desdeClip, hastaClip);
+  }
   return _calcDias(desdeClip, hastaClip);
 }
 
