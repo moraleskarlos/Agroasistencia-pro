@@ -67,11 +67,19 @@ function setDiasProgresivoManual(rut, dias){
 }
 
 /* Días de feriado ya tomados (novedades tipo 'vacaciones' aprobadas), opcionalmente hasta una fecha de corte */
+/* ✅ Paso 2d (A1) — antes sumaba n.dias, que se guardaba en días
+   CORRIDOS (2 semanas = 14) y castigaba el saldo ~40%. Ahora recalcula
+   cada registro en días hábiles (lunes a viernes sin feriados, Art. 67 y
+   69 CT) a partir de sus fechas — así también se corrigen solas las
+   vacaciones registradas antes de este cambio. Comparación de fechas como
+   texto ISO (sin Date → sin riesgo de zona horaria). */
 function _diasVacacionesTomados(rut, fechaCorte){
   return (novedades||[])
     .filter(n => n.trabajador_rut === rut && n.tipo === 'vacaciones' && n.aprobado)
-    .filter(n => !fechaCorte || new Date(n.fecha_inicio) <= new Date(fechaCorte))
-    .reduce((s,n) => s + (parseInt(n.dias)||0), 0);
+    .filter(n => !fechaCorte || n.fecha_inicio <= fechaCorte)
+    .reduce((s,n) => s + (typeof _diasHabilesFeriado === 'function'
+      ? _diasHabilesFeriado(n.fecha_inicio, n.fecha_fin || n.fecha_inicio)
+      : (parseInt(n.dias)||0)), 0);
 }
 
 /* Cálculo completo del saldo de vacaciones de un trabajador a una fecha de corte (por defecto hoy) */

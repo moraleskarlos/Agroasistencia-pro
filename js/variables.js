@@ -374,6 +374,24 @@ function _diasLaboralesEnRango(rut, desde, hasta){
   return n;
 }
 
+/* ✅ Paso 2d (A1) — días hábiles para el FERIADO ANUAL (vacaciones).
+   Regla distinta a la de faltas: el Art. 69 CT dice que, para el
+   feriado, el sábado es SIEMPRE inhábil, aunque la jornada del
+   trabajador incluya el sábado. Tampoco cuentan domingos ni feriados
+   legales (Art. 67: 15 días hábiles). Por eso no depende de la jornada:
+   solo de lunes a viernes que no sean feriado. */
+function _diasHabilesFeriado(desde, hasta){
+  let n = 0;
+  for(let f = desde; f <= hasta; f = _diaSiguienteISO(f)){
+    const dow = new Date(f + 'T12:00:00').getDay();
+    if(dow === 0 || dow === 6) continue;
+    if(typeof esFeriado === 'function' && esFeriado(f)) continue;
+    n++;
+  }
+  return n;
+}
+
+
 /* Tipos de novedad que se cuentan solo en días de la jornada (no días
    corridos). Una falta injustificada registrada de viernes a lunes a
    alguien que trabaja de lunes a viernes son 2 faltas, no 4: el sábado y

@@ -659,6 +659,15 @@ function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
       return false;
     }
   }
+  // ✅ Paso 2d (A1) — vacaciones en días hábiles (lunes a viernes sin
+  // feriados; el sábado es siempre inhábil para el feriado, Art. 69).
+  if(tipo === 'vacaciones' && typeof _diasHabilesFeriado === 'function'){
+    dias = _diasHabilesFeriado(inicio, fin || inicio);
+    if(dias === 0){
+      toast('⚠️ Ese rango no tiene días hábiles (solo fin de semana o feriados) — no descuenta vacaciones', 'error');
+      return false;
+    }
+  }
 
   _guardandoGL = true;
   const nov  = {
@@ -1472,6 +1481,10 @@ function _diasNovedadEnPeriodo(n, periodo){
   // ✅ Paso 2c — la falta injustificada cuenta solo días de su jornada.
   if(typeof TIPOS_NOVEDAD_DIAS_LABORALES !== 'undefined' && TIPOS_NOVEDAD_DIAS_LABORALES.includes(n.tipo) && typeof _diasLaboralesEnRango === 'function'){
     return _diasLaboralesEnRango(n.trabajador_rut, desdeClip, hastaClip);
+  }
+  // ✅ Paso 2d — vacaciones del período también en días hábiles.
+  if(n.tipo === 'vacaciones' && typeof _diasHabilesFeriado === 'function'){
+    return _diasHabilesFeriado(desdeClip, hastaClip);
   }
   return _calcDias(desdeClip, hastaClip);
 }
