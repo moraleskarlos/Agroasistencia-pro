@@ -2203,6 +2203,36 @@
             </div>
           </div>
 
+          <!-- ✅ Paso 2b — Feriados legales (editable por año) -->
+          <div class="card" style="margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:10px;">
+              <div class="card-title card-title-oscuro" style="margin:0;"><i class="ti ti-calendar-event"></i> Feriados legales</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <label style="font-size:12px;color:var(--texto2);">Año</label>
+                <select id="fer-anio" onchange="cancelarEdicionFeriado(); renderFeriados()" style="padding:6px 10px;font-size:13px;"></select>
+                <button id="fer-btn-precarga" type="button" class="btn btn-secondary btn-sm" onclick="precargarFeriados()" style="display:none;"></button>
+              </div>
+            </div>
+            <div id="fer-aviso" style="display:none;gap:10px;align-items:flex-start;padding:10px 14px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:var(--radius);margin-bottom:12px;font-size:12px;color:#92400E;"></div>
+            <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;">
+              Un feriado no se cuenta como falta ni como día de vacaciones. Los regionales (ej. 07-06 Arica, 20-08 Chillán) se agregan a mano solo si tus faenas están en esa zona.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+              <div><label style="display:block;font-size:12px;color:var(--texto2);">Fecha</label><input type="date" id="fer-fecha" style="padding:6px 10px;font-size:13px;"></div>
+              <div style="flex:1;min-width:180px;"><label style="display:block;font-size:12px;color:var(--texto2);">Nombre</label><input type="text" id="fer-nombre" placeholder="Ej: Fiestas Patrias" style="width:100%;padding:6px 10px;font-size:13px;"></div>
+              <div><label style="display:block;font-size:12px;color:var(--texto2);">Ámbito</label>
+                <select id="fer-ambito" style="padding:6px 10px;font-size:13px;"><option value="nacional">Nacional</option><option value="regional">Regional</option></select></div>
+              <button id="fer-btn-guardar" type="button" class="btn btn-primary btn-sm" onclick="guardarFeriado()"><i class="ti ti-plus"></i> Agregar</button>
+              <button id="fer-btn-cancelar" type="button" class="btn btn-secondary btn-sm" onclick="cancelarEdicionFeriado()" style="display:none;">Cancelar</button>
+            </div>
+            <div class="tabla-wrap">
+              <table class="tabla" style="min-width:520px;">
+                <thead><tr><th>Fecha</th><th>Día</th><th>Feriado</th><th>Ámbito</th><th>Acciones</th></tr></thead>
+                <tbody id="tbody-feriados"></tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
 
         <div id="panel-rem-previred" style="display:none;">
