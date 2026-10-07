@@ -163,7 +163,15 @@ function _poblarEmpresasGL(){
 
 /* Inicializa los 8 Buscadores de Trabajador (Revisar + Registrar, ×4
    submódulos) y conecta la cascada Empresa → Trabajador de cada uno. */
+/* ✅ Paso 6 (A6) — se conectan UNA sola vez. Antes, cada visita a
+   Ausencias, Bonos o Descuentos volvía a agregar los mismos listeners:
+   tras 6 visitas, cambiar el Mes recalculaba la tabla 6 veces. Los
+   buscadores leen los datos vigentes en cada uso (getRuts/renders), así
+   que no hace falta recrearlos. */
+let _buscadoresGLIniciados = false;
 function _initBuscadoresGL(){
+  if(_buscadoresGLIniciados) return;
+  _buscadoresGLIniciados = true;
   const renders = { nov: renderNovedades, hab: renderHaberes, des: renderDescuentos, jor: renderJornada };
   ['nov','hab','des','jor'].forEach(prefix => {
     _buscadoresGL[prefix+'-rev'] = initBuscadorTrabajador({
@@ -1514,10 +1522,13 @@ function _diasNovedadEnPeriodo(n, periodo){
 
 /* Suma un día a una fecha ISO (YYYY-MM-DD) — usado para recorrer el rango
    completo de una novedad al calcular qué días ya quedaron clasificados. */
+/* ✅ Paso 6 (A5) — antes: mediodía local + toISOString() (UTC). En
+   zonas UTC+13/+14 devolvía el MISMO día y los ciclos while(d <= fin)
+   no terminaban (pantalla congelada). Ahora aritmética UTC pura sobre
+   el texto ISO: no depende de la zona horaria del equipo. */
 function _sumarDiaISO(fechaISO){
-  const d = new Date(fechaISO + 'T12:00:00');
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+  const [y, m, d] = fechaISO.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
 }
 
 function _fmtFecha(v){
@@ -1529,15 +1540,13 @@ function _fmtFecha(v){
 /* Rango lunes→domingo de la semana que contiene 'fecha' (YYYY-MM-DD),
    usado para el tope legal semanal de horas extra (Art. 31/32 CT). */
 function _semanaDeFecha(fecha){
-  const d = new Date(fecha + 'T12:00:00');
-  const diaSemana = d.getDay(); // 0=domingo, 1=lunes, ... 6=sábado
+  // ✅ Paso 6 (A5) — misma corrección: cálculo en UTC sobre el texto ISO
+  // (antes, en UTC+13/+14 la semana salía corrida en un día).
+  const [y, m, d] = fecha.split('-').map(Number);
+  const diaSemana = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0=domingo … 6=sábado
   const offsetLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-  const lunes = new Date(d);
-  lunes.setDate(d.getDate() + offsetLunes);
-  const domingo = new Date(lunes);
-  domingo.setDate(lunes.getDate() + 6);
-  const toYMD = x => x.toISOString().split('T')[0];
-  return { inicio: toYMD(lunes), fin: toYMD(domingo) };
+  const toYMD = n => new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+  return { inicio: toYMD(offsetLunes), fin: toYMD(offsetLunes + 6) };
 }
 
 function _resetForm(id){
