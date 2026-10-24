@@ -818,6 +818,17 @@ function toggleFormHaber(forzar){
   return abrir;
 }
 
+/* ✅ B2 (auditoría Bonos y Horas Extras) — ¿la fecha cae dentro del
+   contrato vigente del trabajador? Devuelve un texto de error o null.
+   Comparación de fechas como texto ISO (sin riesgo de zona horaria). */
+function _errorFechaFueraDeContrato(rut, fecha){
+  const contrato = (typeof _getContratoVigente === 'function') ? _getContratoVigente(rut, fecha.slice(0,7)) : null;
+  if(!contrato) return `no tiene contrato vigente en ${_fmtFecha(fecha)}`;
+  if(contrato.fecha_inicio && fecha < contrato.fecha_inicio) return `su contrato empieza el ${_fmtFecha(contrato.fecha_inicio)}`;
+  if(contrato.fecha_termino && fecha > contrato.fecha_termino) return `su contrato terminó el ${_fmtFecha(contrato.fecha_termino)}`;
+  return null;
+}
+
 function guardarHaber(){
   if(_guardandoGL) return;
   const empresa = document.getElementById('gl-hab-reg-empresa')?.value;
@@ -834,6 +845,15 @@ function guardarHaber(){
   // período que el usuario tenía en pantalla, generando bonos "perdidos"
   // en el mes equivocado sin ningún aviso.
   if(!fecha){ toast('⚠️ Ingresa la fecha de la bonificación','error'); return; }
+
+  // ✅ B1 — el monto debe ser un número mayor que 0 (antes se aceptaban
+  // negativos y cero: un bono de -$50.000 bajaba la base imponible).
+  if(!(parseFloat(monto) > 0)){ toast('⚠️ El monto debe ser mayor que $0','error'); return; }
+  // ✅ B2 — la fecha debe estar dentro del contrato del trabajador.
+  {
+    const errC = _errorFechaFueraDeContrato(rut, fecha);
+    if(errC){ const t = trabajadores.find(x => x.rut === rut); toast(`⚠️ No se puede registrar: ${t?.nombre||'el trabajador'} ${errC}`,'error'); return; }
+  }
 
   if(_bloqueaPorMesCerrado(rut, fecha)) return;
 
@@ -1242,6 +1262,14 @@ function guardarJornada(){
   // esto, un registro sin fecha caía en silencio al mes calendario
   // actual en vez del período que el usuario tenía en pantalla.
   if(!fecha){ toast('⚠️ Ingresa la fecha de la hora extra','error'); return; }
+
+  // ✅ B1 — horas mayores que 0 (antes -2 horas restaban $10.000).
+  if(!(parseFloat(horas) > 0)){ toast('⚠️ Las horas deben ser mayores que 0','error'); return; }
+  // ✅ B2 — la fecha debe estar dentro del contrato del trabajador.
+  {
+    const errC = _errorFechaFueraDeContrato(rut, fecha);
+    if(errC){ const t = trabajadores.find(x => x.rut === rut); toast(`⚠️ No se puede registrar: ${t?.nombre||'el trabajador'} ${errC}`,'error'); return; }
+  }
 
   if(_bloqueaPorMesCerrado(rut, fecha)) return;
 
