@@ -612,13 +612,44 @@ function _montoHorasExtra(sueldo_base, horas_semanales, horas, recargo){
   return Math.round(_valorHoraOrdinaria(sueldo_base, horas_semanales) * _factorRecargoHE(recargo) * (parseFloat(horas) || 0));
 }
 
+/* ✅ B4 / H8 (auditoría Bonos y Horas Extras) — jornada semanal pactada
+   VIGENTE en una fecha: si hay un anexo de Cambio de Jornada vigente
+   (el más reciente con fecha_vigencia ≤ fecha), se suman las horas de
+   sus días descontando la colación del contrato (el anexo solo cambia
+   horarios, la colación sigue siendo la pactada). Si no hay anexo, la
+   del contrato. Luego se aplica el tope legal del período
+   (_jornadaEfectiva). Antes las horas extra usaban siempre la del
+   contrato: con un anexo que bajaba la jornada a 30h, la hora extra se
+   pagaba con 42h (≈30% menos). */
+function _horasSemanalesVigentes(rut, fecha, contrato){
+  const t = (trabajadores || []).find(x => x.rut === rut);
+  const anexo = (typeof anexos !== 'undefined' ? anexos : [])
+    .filter(a => a.tipo === 'cambio_jornada' && a.jornada_dias && a.fecha_vigencia && a.fecha_vigencia <= fecha &&
+      ((a.trabajador_id && t?.id && a.trabajador_id === t.id) || (!a.trabajador_id && a.trabajador_rut === rut)))
+    .sort((a,b) => b.fecha_vigencia.localeCompare(a.fecha_vigencia))[0];
+  let horas = parseFloat(contrato?.horas_semanales) || 0;
+  if(anexo && typeof calcularHoras === 'function'){
+    const colMin = (typeof _colacionMinutosContrato === 'function') ? _colacionMinutosContrato(contrato) : 0;
+    const total = DIAS_JORNADA
+      .filter(d => anexo.jornada_dias[d]?.activo && anexo.jornada_dias[d].inicio && anexo.jornada_dias[d].fin)
+      .reduce((sum, d) => sum + (calcularHoras(anexo.jornada_dias[d].inicio, anexo.jornada_dias[d].fin, colMin) || 0), 0);
+    if(total > 0) horas = Math.round(total * 10) / 10;
+  }
+  return _jornadaEfectiva(horas, fecha);
+}
+
 function _calcularHorasExtra(jornada, sueldo_base, contrato, periodo){
-  const horas_semanales = _jornadaEfectiva(contrato?.horas_semanales, periodo);
-  const valor_hora_ord  = _valorHoraOrdinaria(sueldo_base, horas_semanales);
+  const rutTrab = jornada[0]?.trabajador_rut;
 
   const detalle = jornada
     .filter(j => j.tipo === 'hora_extra')
     .map(j => {
+      // ✅ B4 — jornada vigente en la fecha de ESA hora extra (un anexo
+      // puede entrar a regir a mitad de mes).
+      const horas_semanales = (j.fecha && rutTrab)
+        ? _horasSemanalesVigentes(rutTrab, j.fecha, contrato)
+        : _jornadaEfectiva(contrato?.horas_semanales, periodo);
+      const valor_hora_ord = _valorHoraOrdinaria(sueldo_base, horas_semanales);
       const recargo     = _factorRecargoHE(j.recargo);
       const horas       = parseFloat(j.horas) || 0;
       const monto       = _montoHorasExtra(sueldo_base, horas_semanales, horas, j.recargo);
