@@ -1225,7 +1225,11 @@ function _montoHoraExtra(j){
   const contrato   = _getContratoVigente(j.trabajador_rut, j.periodo);
   const sueldoInfo = _getSueldoBase(j.trabajador_rut, j.periodo);
   if(!contrato || !sueldoInfo || !sueldoInfo.monto) return null;
-  return _montoHorasExtra(sueldoInfo.monto, _jornadaEfectiva(contrato.horas_semanales, j.periodo || (j.fecha||'').slice(0,7)), j.horas, j.recargo);
+  // ✅ B4 — misma jornada vigente que la liquidación (anexo de jornada).
+  const hs = (j.fecha && typeof _horasSemanalesVigentes === 'function')
+    ? _horasSemanalesVigentes(j.trabajador_rut, j.fecha, contrato)
+    : _jornadaEfectiva(contrato.horas_semanales, j.periodo || (j.fecha||'').slice(0,7));
+  return _montoHorasExtra(sueldoInfo.monto, hs, j.horas, j.recargo);
 }
 
 function toggleFormJornada(forzar){
