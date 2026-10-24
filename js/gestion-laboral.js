@@ -1326,6 +1326,36 @@ function guardarJornada(){
       toast(`⚠️ Tope legal superado (Art. 31/32 Código del Trabajo — máx. 12h extra por semana). ${t?.nombre||'Este trabajador'} ya tiene ${yaHorasSemana.toFixed(1)}h registradas esta semana (${_fmtFecha(semInicio)} al ${_fmtFecha(semFin)})`, 'error');
       return;
     }
+
+    // ✅ B3 + B5 (auditoría Bonos y Horas Extras) — avisos con
+    // confirmación (no bloqueo):
+    //  · B5: día fuera de su jornada o feriado. Trabajar en día de
+    //    descanso tiene reglas propias (Arts. 35–38, descanso
+    //    compensatorio); puede ser válido en agricultura, pero conviene
+    //    revisarlo.
+    //  · B3: ese día otros trabajadores marcaron en Asistencia y él no.
+    //    Datos contradictorios: o trabajó, o falta. Aviso y no bloqueo
+    //    porque la App de terreno puede fallar (criterio del usuario).
+    {
+      const avisos = [];
+      const diaLaboral = typeof _esDiaLaboral !== 'function' || _esDiaLaboral(rut, fecha);
+      if(!diaLaboral){
+        const esFer = typeof esFeriado === 'function' && esFeriado(fecha);
+        const nomDia = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][new Date(fecha + 'T12:00:00').getDay()];
+        avisos.push(esFer
+          ? `El ${_fmtFecha(fecha)} es feriado.`
+          : `El ${_fmtFecha(fecha)} (${nomDia}) no es día de su jornada.`);
+      }
+      let marcas = [];
+      try{ marcas = JSON.parse(localStorage.getItem('asistencia_' + fecha) || '[]'); }catch{ marcas = []; }
+      if(marcas.length && !marcas.some(x => x.rut === rut && x.hora_entrada)){
+        avisos.push(`No tiene marca de asistencia ese día (otros trabajadores sí marcaron).${diaLaboral ? ' Si no se registra su asistencia, ese día además se descontará como falta.' : ''}`);
+      }
+      if(avisos.length){
+        const t = trabajadores.find(x => x.rut === rut);
+        if(!confirm(`⚠️ Revisa antes de registrar horas extra a ${t?.nombre||'este trabajador'}:\n\n• ${avisos.join('\n• ')}\n\n¿Registrar igual?`)) return;
+      }
+    }
   }
 
   _guardandoGL = true;
