@@ -381,6 +381,14 @@ function renderReporteLiquidaciones(){
     // (irA + clasificarAusencia con la primera fecha pendiente).
     const sinClasificar = vars.dias_sin_clasificar || 0;
     const primeraFechaSinClasificar = (vars.fechas_sin_clasificar||[])[0] || '';
+    // ✅ D3 (auditoría Descuentos) — si los descuentos superan lo que hay
+    // para pagar, el líquido queda en $0 y la diferencia no se descuenta
+    // en ninguna parte. Se avisa para ajustar la cuota antes de generar.
+    const disponibleLiq = (liq.total_haberes || 0) + (liq.total_ajustes || 0);
+    const excesoDesc = Math.round((liq.total_descuentos || 0) - disponibleLiq);
+    const avisoExcesoDesc = excesoDesc > 0
+      ? `<span class="badge badge-rojo" style="margin-left:4px;cursor:help;" title="Los descuentos ($${Math.round(liq.total_descuentos).toLocaleString('es-CL')}) superan lo que hay para pagar ($${Math.round(disponibleLiq).toLocaleString('es-CL')}). El líquido queda en $0 y $${excesoDesc.toLocaleString('es-CL')} no se descuentan en ninguna parte. Reduce la cuota en Descuentos antes de generar.">⚠️ Descuentos exceden $${excesoDesc.toLocaleString('es-CL')}</span>`
+      : '';
     const avisoSinClasificar = sinClasificar > 0
       ? `<span class="badge badge-amarillo" style="margin-left:4px;cursor:pointer;" title="Sin marca de asistencia ni novedad: ${(vars.fechas_sin_clasificar||[]).map(fmtFecha).join(', ')} — se están descontando como falta injustificada por defecto. Click para ir a clasificar el primer día pendiente." onclick="irA('ausencias'); setTimeout(() => { if(typeof clasificarAusencia==='function') clasificarAusencia('${t.rut}','${primeraFechaSinClasificar}'); }, 150);">⚠️ ${sinClasificar} sin clasificar</span>`
       : '';
@@ -413,7 +421,7 @@ function renderReporteLiquidaciones(){
       <td style="text-align:right;">${horasExtra>0 ? '$'+horasExtra.toLocaleString('es-CL') : '—'}</td>
       <td style="text-align:right;color:var(--rojo);">${descuentos_>0 ? '-$'+descuentos_.toLocaleString('es-CL') : '—'}</td>
       <td style="text-align:right;font-weight:600;">$${liq.liquido.toLocaleString('es-CL')}</td>
-      <td>${fueraDePeriodo ? `<span class="badge badge-amarillo" style="cursor:pointer;" title="${fueraDePeriodo} registro(s) en el mes anterior o siguiente — revisa que no esté mal fechado. Click para ir a revisarlo." onclick="verDatosFueraDePeriodo('${t.rut}','${periodo}')">⚠️ ${fueraDePeriodo}</span>` : ''}${avisoSinClasificar}</td>
+      <td>${fueraDePeriodo ? `<span class="badge badge-amarillo" style="cursor:pointer;" title="${fueraDePeriodo} registro(s) en el mes anterior o siguiente — revisa que no esté mal fechado. Click para ir a revisarlo." onclick="verDatosFueraDePeriodo('${t.rut}','${periodo}')">⚠️ ${fueraDePeriodo}</span>` : ''}${avisoSinClasificar}${avisoExcesoDesc}</td>
       <td>
         <button class="btn btn-secondary btn-sm" onclick="previsualizarLiquidacion('${t.rut}')" title="Vista previa"><i class="ti ti-eye"></i></button>
         ${botonAccion}

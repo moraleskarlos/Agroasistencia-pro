@@ -1084,6 +1084,33 @@ function guardarDescuento(){
     }
   }
 
+  // ✅ D3 (auditoría Descuentos) — tope del Art. 58 CT: los descuentos
+  // pactados para "pagos de cualquier naturaleza" (préstamos del
+  // empleador y otros) requieren acuerdo escrito y no pueden superar el
+  // 15% de la remuneración total del mes. No cuentan los anticipos (son
+  // sueldo pagado por adelantado) ni los obligatorios (Caja de
+  // Compensación, retención judicial). Se revisa cada mes con cuota.
+  // Solo avisa: puede haber pactos especiales (ej. vivienda, hasta 30%)
+  // que el sistema no conoce.
+  if(TIPOS_DESCUENTO_TOPE_15.includes(tipo)){
+    const excedidos = [];
+    for(let i = 0; i < nCuotas; i++){
+      const p = _sumarMeses(mesInicio, i);
+      const rem = _remuneracionTotalEstimada(rut, p);
+      if(!rem) continue;
+      const cuotaMes = (i === nCuotas - 1) ? Math.round(totalNum - montoCuota * (nCuotas - 1)) : montoCuota;
+      const yaMes = descuentos
+        .filter(d => d.trabajador_rut === rut && d.periodo === p && TIPOS_DESCUENTO_TOPE_15.includes(d.tipo))
+        .reduce((s, d) => s + (parseFloat(d.monto)||0), 0);
+      const total = yaMes + cuotaMes, tope = Math.round(rem * 0.15);
+      if(total > tope) excedidos.push(`${_fmtMes(p)}: $${total.toLocaleString('es-CL')} (${Math.round(total / rem * 100)}% de $${rem.toLocaleString('es-CL')}; tope 15% = $${tope.toLocaleString('es-CL')})`);
+    }
+    if(excedidos.length){
+      const t = trabajadores.find(x => x.rut === rut);
+      if(!confirm(`⚠️ Tope legal de descuentos (Art. 58 CT): los préstamos y otros descuentos pactados no pueden superar el 15% de la remuneración total del mes, y requieren acuerdo escrito con el trabajador.\n\n${t?.nombre||'Este trabajador'} lo supera en:\n• ${excedidos.slice(0,6).join('\n• ')}${excedidos.length > 6 ? `\n• … y ${excedidos.length - 6} mes(es) más` : ''}\n\nSugerencia: aumenta el número de cuotas.\n\n¿Registrar igual?`)) return;
+    }
+  }
+
   // ✅ NUEVO — Aviso de dos niveles cuando el trabajador ya tiene un
   // descuento ese mismo mes. No bloquea (Sí/No), porque puede ser legítimo
   // (ej. anticipo Y préstamo el mismo mes) — pero si es el MISMO tipo, el
@@ -1157,6 +1184,22 @@ function limpiarFiltroTrabajadorDescuento(){
   _buscadoresGL['des-rev']?.reset();
   renderDescuentos();
   _renderKPIsGL();
+}
+
+/* ✅ D3 — tipos sujetos al tope del 15% del Art. 58 (pagos de cualquier
+   naturaleza pactados por escrito). */
+const TIPOS_DESCUENTO_TOPE_15 = ['prestamo', 'otro'];
+
+/* Remuneración total estimada del mes (sueldo proporcional + bonos
+   imponibles + horas extra), con los datos ya registrados. Si no se
+   puede calcular, usa el sueldo base. */
+function _remuneracionTotalEstimada(rut, periodo){
+  try{
+    const v = (typeof construirVariablesRemuneracion === 'function') ? construirVariablesRemuneracion(rut, periodo) : null;
+    if(v && !v.error && v.total_imponible > 0) return Math.round(v.total_imponible);
+  }catch(e){}
+  const sb = (typeof _getSueldoBase === 'function') ? _getSueldoBase(rut, periodo) : null;
+  return sb?.monto ? Math.round(sb.monto) : 0;
 }
 
 function limpiarFiltroFechaDescuento(){
