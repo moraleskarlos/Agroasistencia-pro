@@ -1039,6 +1039,12 @@ function guardarDescuento(){
   // Extra: sin esto, caía en silencio al mes calendario actual.
   if(!mesInicio){ toast('⚠️ Selecciona el mes de inicio del descuento','error'); return; }
   if(!fecha){ toast('⚠️ Ingresa la fecha (día del anticipo o de la firma del acuerdo)','error'); return; }
+  // ✅ D5 (auditoría Descuentos) — "Cuota sindical" se eliminó del
+  // formulario (el sistema es para pymes sin sindicato). "Otro" se
+  // mantiene, pero con el motivo obligatorio: se muestra en la
+  // liquidación para que el trabajador sepa qué se le descuenta.
+  if(tipo === 'cuota_sindical'){ toast('⚠️ El tipo "Cuota sindical" ya no está disponible','error'); return; }
+  if(tipo === 'otro' && !obs.trim()){ toast('⚠️ Para el tipo "Otro" escribe el motivo en Observación (aparecerá en la liquidación)','error'); return; }
   // ✅ D1 — monto mayor que 0 (antes un "préstamo" de -$50.000 subía el líquido).
   if(!(parseFloat(montoTotal) > 0)){ toast('⚠️ El monto debe ser mayor que $0','error'); return; }
   if(mesInicio < fecha.slice(0,7)){ toast('⚠️ El mes del descuento no puede ser anterior a la fecha del anticipo o acuerdo','error'); return; }

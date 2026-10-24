@@ -861,9 +861,13 @@ function _generarHTMLLiquidacion(liq, guardada){
   let otrosDescRows = '';
   if((liq.descuentos_adicionales||[]).length){
     liq.descuentos_adicionales.forEach(d => {
+      // ✅ D6 — antes usaba d.cuotas_pagadas (campo inexistente): el
+      // documento decía siempre "cuota 1/N". El campo real es numero_cuota.
+      // ✅ D5 — "Otro" muestra su motivo.
+      const nombreDesc = (d.tipo === 'otro' && d.observacion) ? `Descuento: ${d.observacion}` : _labelDescuento(d.tipo);
       const label = d.cuotas_total > 1
-        ? `${_labelDescuento(d.tipo)} — cuota ${d.cuotas_pagadas||1}/${d.cuotas_total}`
-        : _labelDescuento(d.tipo);
+        ? `${nombreDesc} — cuota ${d.numero_cuota||1}/${d.cuotas_total}`
+        : nombreDesc;
       otrosDescRows += `<tr><td class="ld-sub">${label}</td><td></td><td class="ld-amt-neg">-${fmtM(d.monto)}</td></tr>`;
     });
   } else {
