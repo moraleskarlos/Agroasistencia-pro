@@ -228,7 +228,9 @@ function _renderKPIsGL(){
   const mesDes      = document.getElementById('gl-des-rev-mes')?.value || '';
   const mandanteDes = document.getElementById('gl-des-rev-empresa')?.value || '';
   const rutsDes     = _rutsFiltrados(mandanteDes);
-  const desPer      = descuentos.filter(d => d.periodo === mesDes && rutsDes.includes(d.trabajador_rut));
+  const fechaDes    = document.getElementById('gl-des-rev-fecha')?.value || '';
+  let   desPer      = descuentos.filter(d => d.periodo === mesDes && rutsDes.includes(d.trabajador_rut));
+  if(fechaDes) desPer = desPer.filter(d => d.fecha === fechaDes);
   const totalDes    = desPer.reduce((s,d) => s + (parseFloat(d.monto)||0), 0);
   const trabDes     = new Set(desPer.map(d => d.trabajador_rut)).size;
   // Con el modelo de "una cuota por mes", cada registro que aparece en el
@@ -952,7 +954,11 @@ function renderDescuentos(){
   const filtroTipo = document.getElementById('gl-des-rev-tipo')?.value || '';
   const ruts       = _rutsFiltrados(mandante);
 
+  const fechaExacta= document.getElementById('gl-des-rev-fecha')?.value || '';
   let lista = descuentos.filter(d => d.periodo===periodo && ruts.includes(d.trabajador_rut));
+  // ✅ Filtro "Fecha exacta" (pedido del usuario) — por la fecha del
+  // anticipo o del acuerdo. Registros antiguos no tienen fecha.
+  if(fechaExacta) lista = lista.filter(d => d.fecha === fechaExacta);
   if(filtroTrab) lista = lista.filter(d => d.trabajador_rut === filtroTrab);
   if(filtroTipo) lista = lista.filter(d => d.tipo === filtroTipo);
 
@@ -960,16 +966,22 @@ function renderDescuentos(){
   if(!tbody) return;
 
   if(!lista.length){
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--texto3);">Sin descuentos en este período</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--texto3);">Sin descuentos en este período</td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map(d => {
     const t = trabajadores.find(x => x.rut === d.trabajador_rut);
     // Saldo restante después de aplicar la cuota de ESTE mes.
-    const saldoRestante = Math.max(0, parseFloat(d.monto_total||0) - (parseFloat(d.monto||0) * (d.numero_cuota||1)));
+    // ✅ D2 — saldo = deuda − suma real de las cuotas hasta esta (la
+    // última puede ser distinta por el ajuste de redondeo).
+    const pagadoHastaAqui = d.grupo_id
+      ? descuentos.filter(x => x.grupo_id === d.grupo_id && (x.numero_cuota||1) <= (d.numero_cuota||1)).reduce((s,x) => s + (parseFloat(x.monto)||0), 0)
+      : parseFloat(d.monto||0) * (d.numero_cuota||1);
+    const saldoRestante = Math.max(0, Math.round(parseFloat(d.monto_total||0) - pagadoHastaAqui));
     return `<tr>
       <td style="font-size:13px;font-weight:500;">${t?.nombre||d.trabajador_rut}</td>
       <td>${_badgeDescuento(d.tipo)}</td>
+      <td style="font-size:12px;">${d.fecha ? _fmtFecha(d.fecha) : '—'}</td>
       <td style="font-size:13px;font-weight:600;color:var(--texto);">$${parseFloat(d.monto_total||0).toLocaleString('es-CL')}</td>
       <td style="font-size:13px;font-weight:600;color:var(--danger);">$${parseFloat(d.monto||0).toLocaleString('es-CL')}</td>
       <td style="font-size:12px;text-align:center;">${d.numero_cuota||1}/${d.cuotas_total||1}</td>
@@ -1019,12 +1031,27 @@ function guardarDescuento(){
   const cuotas     = document.getElementById('gl-des-cuotas')?.value||1;
   const mesInicio  = document.getElementById('gl-des-mes')?.value;
   const obs        = document.getElementById('gl-des-obs')?.value||'';
+  const fecha      = document.getElementById('gl-des-fecha')?.value||'';
 
   if(!empresa){ toast('⚠️ Selecciona la empresa','error'); return; }
   if(!rut||!tipo||!montoTotal){ toast('⚠️ Completa trabajador, tipo y monto','error'); return; }
   // ✅ Mes ahora obligatorio — mismo motivo que Bonificaciones/Horas
   // Extra: sin esto, caía en silencio al mes calendario actual.
   if(!mesInicio){ toast('⚠️ Selecciona el mes de inicio del descuento','error'); return; }
+  if(!fecha){ toast('⚠️ Ingresa la fecha (día del anticipo o de la firma del acuerdo)','error'); return; }
+  // ✅ D1 — monto mayor que 0 (antes un "préstamo" de -$50.000 subía el líquido).
+  if(!(parseFloat(montoTotal) > 0)){ toast('⚠️ El monto debe ser mayor que $0','error'); return; }
+  if(mesInicio < fecha.slice(0,7)){ toast('⚠️ El mes del descuento no puede ser anterior a la fecha del anticipo o acuerdo','error'); return; }
+  // ✅ D4 — fecha y mes de inicio dentro del contrato.
+  {
+    const t = trabajadores.find(x => x.rut === rut);
+    const errC = (typeof _errorFechaFueraDeContrato === 'function') ? _errorFechaFueraDeContrato(rut, fecha) : null;
+    if(errC){ toast(`⚠️ No se puede registrar: ${t?.nombre||'el trabajador'} ${errC}`,'error'); return; }
+    const cont = _getContratoVigente(rut, mesInicio);
+    if(!cont || (cont.fecha_termino && mesInicio > cont.fecha_termino.slice(0,7))){
+      toast(`⚠️ No se puede registrar: ${t?.nombre||'el trabajador'} no tiene contrato vigente en ${_fmtMes(mesInicio)}`,'error'); return;
+    }
+  }
 
   if(_bloqueaPorMesCerrado(rut, mesInicio)) return;
 
@@ -1040,6 +1067,22 @@ function guardarDescuento(){
 
   const totalNum   = parseFloat(montoTotal);
   const montoCuota = Math.round(totalNum / nCuotas);
+
+  // ✅ D4 — cuotas que caen después del término del contrato: nunca se
+  // cobrarían en una liquidación. Aviso con confirmación (el saldo se
+  // debe resolver en el finiquito).
+  {
+    const cont = _getContratoVigente(rut, mesInicio);
+    const mesTermino = cont?.fecha_termino ? cont.fecha_termino.slice(0,7) : null;
+    if(mesTermino){
+      const fuera = [];
+      for(let i = 0; i < nCuotas; i++){ const p = _sumarMeses(mesInicio, i); if(p > mesTermino) fuera.push(p); }
+      if(fuera.length){
+        const t = trabajadores.find(x => x.rut === rut);
+        if(!confirm(`⚠️ El contrato de ${t?.nombre||'este trabajador'} termina el ${_fmtFecha(cont.fecha_termino)}: ${fuera.length} de las ${nCuotas} cuotas (${fuera.map(_fmtMes).join(', ')}) caen después y no se cobrarán en ninguna liquidación. Ese saldo deberá resolverse en el finiquito.\n\nSugerencia: reduce el número de cuotas.\n\n¿Registrar igual?`)) return;
+      }
+    }
+  }
 
   // ✅ NUEVO — Aviso de dos niveles cuando el trabajador ya tiene un
   // descuento ese mismo mes. No bloquea (Sí/No), porque puede ser legítimo
@@ -1067,13 +1110,18 @@ function guardarDescuento(){
   // mes y las cuotas siguientes nunca se aplicaban solas.
   const grupoId = Date.now().toString();
   for(let i = 0; i < nCuotas; i++){
+    // ✅ D2 — la última cuota absorbe la diferencia del redondeo, para que
+    // la suma de las cuotas sea exactamente la deuda ($100.000 en 3 =
+    // 33.333 + 33.333 + 33.334; antes sumaba $99.999).
+    const esUltima = i === nCuotas - 1;
     descuentos.push({
       id:              grupoId + '-' + i,
       grupo_id:        grupoId,
       trabajador_rut:  rut,
       periodo:         _sumarMeses(mesInicio, i),
+      fecha,
       tipo,
-      monto:           montoCuota,
+      monto:           esUltima ? Math.round(totalNum - montoCuota * (nCuotas - 1)) : montoCuota,
       monto_total:     totalNum,
       numero_cuota:    i + 1,
       cuotas_total:    nCuotas,
@@ -1109,6 +1157,19 @@ function limpiarFiltroTrabajadorDescuento(){
   _buscadoresGL['des-rev']?.reset();
   renderDescuentos();
   _renderKPIsGL();
+}
+
+function limpiarFiltroFechaDescuento(){
+  const el = document.getElementById('gl-des-rev-fecha');
+  if(el){ el.value = ''; renderDescuentos(); _renderKPIsGL(); }
+}
+
+/* Al elegir la fecha, si el mes está vacío se propone el mismo mes
+   (un préstamo puede empezar a cobrarse un mes después: es editable). */
+function onCambioFechaDescuento(){
+  const f = document.getElementById('gl-des-fecha')?.value || '';
+  const m = document.getElementById('gl-des-mes');
+  if(f && m && !m.value) m.value = f.slice(0,7);
 }
 
 function limpiarFiltroEmpresaDescuento(){
