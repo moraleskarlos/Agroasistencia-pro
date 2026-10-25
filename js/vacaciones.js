@@ -56,6 +56,47 @@ function _mesesCompletos(fechaInicio, fechaCorte){
   return Math.max(0, meses);
 }
 
+/* ✅ V1 — Antigüedad para el feriado: meses completos + días de la
+   fracción del mes en curso (Art. 73 CT: el feriado proporcional incluye
+   "la fracción de días del mes"). La fecha de corte cuenta como día
+   trabajado (ingreso 01-01, corte 31-01 = 1 mes completo). Aritmética
+   UTC sobre el texto ISO (sin riesgo de zona horaria). No reemplaza a
+   _mesesCompletos, que sigue usando finiquitos.js (se revisa en esa
+   auditoría). */
+function _antiguedadFeriado(fechaInicio, fechaCorte){
+  const p = f => { const [a,m,d] = f.slice(0,10).split('-').map(Number); return {a,m,d}; };
+  const utc = (a,m,d) => Date.UTC(a, m-1, d);
+  const ini = p(fechaInicio), fin = p(fechaCorte);
+  const finExcl = utc(fin.a, fin.m, fin.d) + 86400000; // día siguiente al corte
+  if(finExcl <= utc(ini.a, ini.m, ini.d)) return { meses:0, dias:0 };
+  // Inicio del mes N° m+1 de servicio. Si el día no existe en ese mes
+  // (ingreso un 31 → febrero), el mes cumple el último día del mes y el
+  // siguiente parte el día 1 (ingreso 31-01 → 1 mes completo al 28-02).
+  const aniv = m => {
+    const tot = (ini.m - 1) + m, a = ini.a + Math.floor(tot/12), mes = tot % 12 + 1;
+    const ult = new Date(Date.UTC(a, mes, 0)).getUTCDate();
+    return ini.d <= ult ? utc(a, mes, ini.d) : utc(a, mes, ult) + 86400000;
+  };
+  let meses = 0;
+  while(aniv(meses+1) <= finExcl) meses++;
+  const dias = Math.round((finExcl - aniv(meses)) / 86400000);
+  return { meses, dias };
+}
+
+/* ✅ V3 + V6 — Contrato que rige el feriado a la fecha de corte: el más
+   reciente que ya había empezado (por ID del trabajador o RUT). Un
+   contrato nuevo implica un finiquito previo, así que cada contrato
+   parte de cero; una prórroga por anexo no cambia el contrato ni su
+   fecha de inicio, así que no reinicia el saldo. */
+function _contratoFeriado(rut, corte){
+  const tid = trabajadores.find(t => t.rut === rut)?.id;
+  const lista = (contratos||[]).filter(c =>
+    c.trabajador_rut === rut || (typeof _mismoTrabajador === 'function' ? _mismoTrabajador(c.trabajador_id, tid) : (tid && c.trabajador_id === tid)));
+  const iniciados = lista.filter(c => (c.fecha_inicio||'') <= corte)
+    .sort((a,b) => (b.fecha_inicio||'').localeCompare(a.fecha_inicio||''));
+  return iniciados[0] || null;
+}
+
 /* Días de feriado progresivo Art. 68 CT — ajuste manual guardado por rut */
 function getDiasProgresivoManual(rut){
   return parseFloat(vacaciones_extra[rut]?.dias_progresivo) || 0;
@@ -73,10 +114,13 @@ function setDiasProgresivoManual(rut, dias){
    69 CT) a partir de sus fechas — así también se corrigen solas las
    vacaciones registradas antes de este cambio. Comparación de fechas como
    texto ISO (sin Date → sin riesgo de zona horaria). */
-function _diasVacacionesTomados(rut, fechaCorte){
+/* ✅ V3 — `desde`: inicio del contrato vigente. Las vacaciones tomadas
+   en un contrato anterior (ya finiquitado) no se descuentan del nuevo. */
+function _diasVacacionesTomados(rut, fechaCorte, desde){
   return (novedades||[])
     .filter(n => n.trabajador_rut === rut && n.tipo === 'vacaciones' && n.aprobado)
     .filter(n => !fechaCorte || n.fecha_inicio <= fechaCorte)
+    .filter(n => !desde || n.fecha_inicio >= desde)
     .reduce((s,n) => s + (typeof _diasHabilesFeriado === 'function'
       ? _diasHabilesFeriado(n.fecha_inicio, n.fecha_fin || n.fecha_inicio)
       : (parseInt(n.dias)||0)), 0);
@@ -88,18 +132,21 @@ function calcularSaldoVacaciones(rut, fechaCorte){
   if(!t) return { error: `Trabajador ${rut} no encontrado` };
 
   const corte = fechaCorte || hoyISO();
-  const contrato = (contratos||[])
-    .filter(c => c.trabajador_rut === rut)
-    .sort((a,b) => new Date(a.fecha_inicio||0) - new Date(b.fecha_inicio||0))[0];
+  // ✅ V6 — antes tomaba el contrato MÁS ANTIGUO por RUT (con un
+  // contrato anterior ya terminado, la antigüedad partía en ese contrato).
+  const contrato = _contratoFeriado(rut, corte);
 
   const fechaIngreso = contrato?.fecha_inicio || t.fecha_ingreso;
   if(!fechaIngreso) return { error: `Sin fecha de ingreso para ${rut}` };
 
-  const meses = _mesesCompletos(fechaIngreso, corte);
-  const dias_devengados_base = +(meses * DIAS_FERIADO_MES).toFixed(2);
+  // ✅ V1 — antes solo meses completos (ingreso 02-03 → 0 días al 01-04).
+  // Ahora 1,25 por mes completo + 1,25/30 (0,04167) por día de fracción.
+  const ant = _antiguedadFeriado(fechaIngreso, corte);
+  const meses = ant.meses;
+  const dias_devengados_base = +(meses * DIAS_FERIADO_MES + ant.dias * DIAS_FERIADO_MES / DIVISOR_MES).toFixed(2);
   const dias_progresivo      = getDiasProgresivoManual(rut);
   const dias_devengados_total = +(dias_devengados_base + dias_progresivo).toFixed(2);
-  const dias_tomados         = _diasVacacionesTomados(rut, corte);
+  const dias_tomados         = _diasVacacionesTomados(rut, corte, fechaIngreso);
   const dias_saldo           = +(dias_devengados_total - dias_tomados).toFixed(2);
 
   // Valor día para pago proporcional (mismo criterio que liquidaciones: sueldo base / 30)
@@ -113,6 +160,7 @@ function calcularSaldoVacaciones(rut, fechaCorte){
     fecha_ingreso: fechaIngreso,
     fecha_corte: corte,
     antiguedad_meses: meses,
+    antiguedad_dias_fraccion: ant.dias,
     antiguedad_anios: +(meses/12).toFixed(1),
     dias_devengados_base,
     dias_progresivo,
