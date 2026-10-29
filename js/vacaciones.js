@@ -97,6 +97,60 @@ function _contratoFeriado(rut, corte){
   return iniciados[0] || null;
 }
 
+/* ✅ V4 — Promedio de remuneraciones variables para el feriado (Art. 71
+   CT): "promedio de lo ganado en los últimos tres meses calendario
+   trabajados". Se usan los meses calendario ANTERIORES al de la fecha de
+   corte, dentro del contrato vigente, saltando los meses con licencia
+   médica o permiso sin goce (contrato suspendido — Dictamen DT 2921/55;
+   los meses con faltas injustificadas sí cuentan). Se buscan hasta 12
+   meses atrás para encontrar 3; si hay menos, se promedian los que hay.
+   Entran los haberes imponibles (bonos de producción, tratos, asistencia,
+   etc.). No entran colación, movilización ni viático (no son
+   remuneración) ni las horas extra (Art. 71 no las menciona).
+   El primer mes del contrato, si empezó después del día 1, se lleva a 30
+   días (lo ganado por día × 30) para no castigar el promedio. Si no hay
+   ningún mes anterior (contrato que empezó este mes), se usa lo ganado en
+   el mes en curso hasta la fecha de corte, llevado a 30 días. */
+function _promedioVariablesArt71(rut, corte, inicioContrato){
+  const habs = (typeof haberes_variables !== 'undefined' ? haberes_variables : []) || [];
+  const novs = (novedades||[]).filter(n => n.trabajador_rut === rut && n.aprobado !== false &&
+    (n.tipo === 'licencia_medica' || n.tipo === 'permiso_sin_goce'));
+  const ini = (inicioContrato||'').slice(0,10);
+  const diasEntre = (a,b) => Math.round((Date.UTC(+b.slice(0,4), +b.slice(5,7)-1, +b.slice(8,10)) -
+                                         Date.UTC(+a.slice(0,4), +a.slice(5,7)-1, +a.slice(8,10))) / 86400000) + 1;
+  const ganadoMes = (per, hasta) => {
+    const lista = habs.filter(h => h.trabajador_rut === rut && h.periodo === per && (!hasta || !h.fecha || h.fecha <= hasta));
+    return typeof _clasificarHaberes === 'function'
+      ? _clasificarHaberes(lista).imponibles_total
+      : lista.reduce((s,h) => s + (parseFloat(h.monto)||0), 0);
+  };
+  const meses = [];
+  let [a, m] = corte.slice(0,7).split('-').map(Number);
+  for(let i = 0; i < 12 && meses.length < 3; i++){
+    m--; if(m === 0){ m = 12; a--; }
+    const per = `${a}-${String(m).padStart(2,'0')}`;
+    const primero = `${per}-01`;
+    const ultimo  = `${per}-${String(new Date(Date.UTC(a, m, 0)).getUTCDate()).padStart(2,'0')}`;
+    if(ini && ultimo < ini) break;                  // mes anterior al contrato vigente
+    if(novs.some(n => n.fecha_inicio <= ultimo && (n.fecha_fin||n.fecha_inicio) >= primero)) continue; // suspendido
+    let monto = ganadoMes(per);
+    if(ini && ini > primero){                       // primer mes incompleto → llevar a 30 días
+      const d = diasEntre(ini, ultimo);
+      if(d > 0 && d < DIVISOR_MES) monto = monto * DIVISOR_MES / d;
+    }
+    meses.push({ periodo: per, monto: Math.round(monto) });
+  }
+  if(!meses.length){
+    const per = corte.slice(0,7);
+    const desde = ini && ini > `${per}-01` ? ini : `${per}-01`;
+    const d = diasEntre(desde, corte.slice(0,10));
+    const monto = ganadoMes(per, corte.slice(0,10));
+    if(monto > 0 && d > 0) meses.push({ periodo: per, monto: Math.round(monto * DIVISOR_MES / Math.min(d, DIVISOR_MES)) });
+  }
+  const promedio = meses.length ? Math.round(meses.reduce((s,x) => s + x.monto, 0) / meses.length) : 0;
+  return { promedio, meses };
+}
+
 /* Días de feriado progresivo Art. 68 CT — ajuste manual guardado por rut */
 function getDiasProgresivoManual(rut){
   return parseFloat(vacaciones_extra[rut]?.dias_progresivo) || 0;
@@ -149,10 +203,16 @@ function calcularSaldoVacaciones(rut, fechaCorte){
   const dias_tomados         = _diasVacacionesTomados(rut, corte, fechaIngreso);
   const dias_saldo           = +(dias_devengados_total - dias_tomados).toFixed(2);
 
-  // Valor día para pago proporcional (mismo criterio que liquidaciones: sueldo base / 30)
+  // ✅ V4 — valor día = remuneración íntegra / 30 (Art. 71 CT): sueldo
+  // + promedio de las variables de los últimos 3 meses trabajados. Antes
+  // era solo el sueldo base (con $200.000 de bono de producción mensual,
+  // $20.000 en vez de $26.667).
   const sueldoInfo = _getSueldoBase(rut, corte.slice(0,7));
   const sueldo_base = sueldoInfo?.monto || parseFloat(contrato?.sueldo_monto) || 0;
-  const valor_dia_habil = sueldo_base > 0 ? Math.round(sueldo_base / DIVISOR_MES) : 0;
+  const varInfo = _promedioVariablesArt71(rut, corte, fechaIngreso);
+  const promedio_variables = varInfo.promedio;
+  const remuneracion_integra = sueldo_base + promedio_variables;
+  const valor_dia_habil = remuneracion_integra > 0 ? Math.round(remuneracion_integra / DIVISOR_MES) : 0;
   const monto_saldo_pendiente = Math.max(0, Math.round(dias_saldo * valor_dia_habil));
 
   return {
@@ -168,6 +228,9 @@ function calcularSaldoVacaciones(rut, fechaCorte){
     dias_tomados,
     dias_saldo,
     sueldo_base,
+    promedio_variables,
+    meses_promedio: varInfo.meses,
+    remuneracion_integra,
     valor_dia_habil,
     monto_saldo_pendiente,
   };
@@ -272,6 +335,8 @@ function exportarVacacionesExcel(){
     'Total devengado': s.dias_devengados_total,
     'Días tomados': s.dias_tomados,
     'Saldo pendiente (días)': s.dias_saldo,
+    'Sueldo base': s.sueldo_base,
+    'Promedio variables (Art. 71)': s.promedio_variables,
     'Valor día': s.valor_dia_habil,
     'Provisión $': s.monto_saldo_pendiente,
   }));
@@ -320,7 +385,9 @@ function imprimirCertificadoVacaciones(rut){
       <tr><td>Total días devengados</td><td>${s.dias_devengados_total}</td></tr>
       <tr><td>Días ya tomados</td><td>${s.dias_tomados}</td></tr>
       <tr class="destacado"><td>Saldo pendiente</td><td>${s.dias_saldo} días</td></tr>
-      <tr><td>Valor día hábil (sueldo base / 30)</td><td>$${s.valor_dia_habil.toLocaleString('es-CL')}</td></tr>
+      <tr><td>Sueldo base</td><td>$${s.sueldo_base.toLocaleString('es-CL')}</td></tr>
+      <tr><td>Promedio remuneraciones variables (últimos ${s.meses_promedio.length||0} mes(es) trabajados — Art. 71 CT)</td><td>$${s.promedio_variables.toLocaleString('es-CL')}</td></tr>
+      <tr><td>Valor día ((sueldo + promedio variables) / 30)</td><td>$${s.valor_dia_habil.toLocaleString('es-CL')}</td></tr>
       <tr class="destacado"><td>Provisión estimada</td><td>$${s.monto_saldo_pendiente.toLocaleString('es-CL')}</td></tr>
     </table>
     <div class="firma">Firma empleador</div>
