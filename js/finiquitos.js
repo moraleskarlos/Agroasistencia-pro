@@ -129,6 +129,7 @@ function calcularFiniquito(rut, fechaTermino, causal, avisoPrevioDado){
     sueldo_pendiente,
 
     dias_vacaciones_saldo: vac.error ? 0 : vac.dias_saldo,
+    dias_vacaciones_corridos: vac.error ? 0 : (vac.dias_corridos_pago || 0), // ✅ V5
     monto_vacaciones,
 
     anios_indemnizables,
@@ -290,7 +291,7 @@ function _generarHTMLFiniquito(fin){
 
       <table>
         <tr><td>Remuneración pendiente del mes (${fin.dia_termino} día${fin.dia_termino>1?'s':''} trabajados)</td><td>${fmtM(fin.sueldo_pendiente)}</td></tr>
-        <tr><td>Feriado proporcional — ${fin.dias_vacaciones_saldo} días pendientes</td><td>${fmtM(fin.monto_vacaciones)}</td></tr>
+        <tr><td>Feriado proporcional — ${fin.dias_vacaciones_saldo} días hábiles pendientes${fin.dias_vacaciones_corridos ? ` (${fin.dias_vacaciones_corridos} días a pagar, Art. 73)` : ''}</td><td>${fmtM(fin.monto_vacaciones)}</td></tr>
         ${fin.monto_aviso_previo > 0 ? `<tr><td>Indemnización sustitutiva del aviso previo (Art. 162 CT)</td><td>${fmtM(fin.monto_aviso_previo)}</td></tr>` : ''}
         ${fin.monto_anios_servicio > 0 ? `<tr><td>Indemnización por años de servicio — ${fin.anios_indemnizables} año${fin.anios_indemnizables!==1?'s':''} (Art. 163 CT, tope ${fin.tope_uf_aplicado} UF)</td><td>${fmtM(fin.monto_anios_servicio)}</td></tr>` : ''}
         ${fin.total_descuentos > 0 ? `<tr><td>Descuentos pendientes (anticipos / préstamos)</td><td>-${fmtM(fin.total_descuentos)}</td></tr>` : ''}

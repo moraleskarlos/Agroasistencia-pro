@@ -151,6 +151,27 @@ function _promedioVariablesArt71(rut, corte, inicioContrato){
   return { promedio, meses };
 }
 
+/* ✅ V5 — Días a pagar por el feriado pendiente al término del contrato
+   (Art. 73 CT: se compensa "el tiempo que por concepto de feriado le
+   habría correspondido"). Se imagina que el trabajador sale de vacaciones
+   el día siguiente al término: se cuentan sus días hábiles pendientes
+   (lunes a viernes sin feriados) y se suman los sábados, domingos y
+   festivos que caen entre medio. La fracción de día se agrega al final.
+   Ej.: término jueves, 5 días hábiles → vie, sáb, dom, lun, mar, mié,
+   jue = 7 días a pagar. Con 1 día → solo el viernes = 1. */
+function _diasCorridosFeriado(fechaTermino, diasHabiles){
+  if(!(diasHabiles > 0)) return 0;
+  const enteros = Math.floor(diasHabiles + 1e-9);
+  const fraccion = +(diasHabiles - enteros).toFixed(2);
+  let f = fechaTermino.slice(0,10), corridos = 0, habiles = 0;
+  while(habiles < enteros){
+    f = _diaSiguienteISO(f);
+    corridos++;
+    if(_diasHabilesFeriado(f, f) === 1) habiles++;
+  }
+  return +(corridos + fraccion).toFixed(2);
+}
+
 /* Días de feriado progresivo Art. 68 CT — ajuste manual guardado por rut */
 function getDiasProgresivoManual(rut){
   return parseFloat(vacaciones_extra[rut]?.dias_progresivo) || 0;
@@ -213,7 +234,13 @@ function calcularSaldoVacaciones(rut, fechaCorte){
   const promedio_variables = varInfo.promedio;
   const remuneracion_integra = sueldo_base + promedio_variables;
   const valor_dia_habil = remuneracion_integra > 0 ? Math.round(remuneracion_integra / DIVISOR_MES) : 0;
-  const monto_saldo_pendiente = Math.max(0, Math.round(dias_saldo * valor_dia_habil));
+  // ✅ V5 — antes se pagaban solo los días hábiles del saldo. Ahora se
+  // pagan los días corridos que habría durado ese feriado contado desde
+  // el día siguiente a la fecha de corte (en el finiquito, la de término).
+  // La provisión de la tabla usa el mismo cálculo: es lo que costaría
+  // finiquitar hoy.
+  const dias_corridos_pago = dias_saldo > 0 ? _diasCorridosFeriado(corte, dias_saldo) : 0;
+  const monto_saldo_pendiente = Math.max(0, Math.round(dias_corridos_pago * valor_dia_habil));
 
   return {
     rut, nombre: t.nombre,
@@ -232,6 +259,7 @@ function calcularSaldoVacaciones(rut, fechaCorte){
     meses_promedio: varInfo.meses,
     remuneracion_integra,
     valor_dia_habil,
+    dias_corridos_pago,
     monto_saldo_pendiente,
   };
 }
@@ -337,6 +365,7 @@ function exportarVacacionesExcel(){
     'Saldo pendiente (días)': s.dias_saldo,
     'Sueldo base': s.sueldo_base,
     'Promedio variables (Art. 71)': s.promedio_variables,
+    'Días a pagar (corridos)': s.dias_corridos_pago,
     'Valor día': s.valor_dia_habil,
     'Provisión $': s.monto_saldo_pendiente,
   }));
@@ -388,6 +417,7 @@ function imprimirCertificadoVacaciones(rut){
       <tr><td>Sueldo base</td><td>$${s.sueldo_base.toLocaleString('es-CL')}</td></tr>
       <tr><td>Promedio remuneraciones variables (últimos ${s.meses_promedio.length||0} mes(es) trabajados — Art. 71 CT)</td><td>$${s.promedio_variables.toLocaleString('es-CL')}</td></tr>
       <tr><td>Valor día ((sueldo + promedio variables) / 30)</td><td>$${s.valor_dia_habil.toLocaleString('es-CL')}</td></tr>
+      <tr><td>Días a pagar si termina hoy (hábiles + sáb., dom. y festivos — Art. 73 CT)</td><td>${s.dias_corridos_pago}</td></tr>
       <tr class="destacado"><td>Provisión estimada</td><td>$${s.monto_saldo_pendiente.toLocaleString('es-CL')}</td></tr>
     </table>
     <div class="firma">Firma empleador</div>
