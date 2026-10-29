@@ -684,6 +684,24 @@ function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
       toast('⚠️ Ese rango no tiene días hábiles (solo fin de semana o feriados) — no descuenta vacaciones', 'error');
       return false;
     }
+    // ✅ V2 — no se pueden tomar más vacaciones que el saldo disponible
+    // (criterio del usuario: la mayoría de los contratos son temporales,
+    // y un adelanto de feriado no se puede recuperar al finiquitar).
+    // Disponible = devengado al día de inicio (contrato vigente, con la
+    // fracción del mes) − todas las vacaciones ya registradas en ese
+    // contrato, también las de fechas posteriores.
+    if(typeof calcularSaldoVacaciones === 'function'){
+      const sal = calcularSaldoVacaciones(rut, inicio);
+      if(!sal.error){
+        const tomadas = _diasVacacionesTomados(rut, null, sal.fecha_ingreso);
+        const disponible = +(sal.dias_devengados_total - tomadas).toFixed(2);
+        if(dias > disponible + 0.001){
+          const t = trabajadores.find(x => x.rut === rut);
+          toast(`⚠️ ${t?.nombre||'El trabajador'} tiene ${Math.max(0, disponible).toLocaleString('es-CL')} día(s) hábil(es) de vacaciones disponibles al ${_fmtFecha(inicio)} y se están pidiendo ${dias} — registra como máximo ${Math.max(0, Math.floor(disponible))} día(s)`, 'error');
+          return false;
+        }
+      }
+    }
   }
 
   _guardandoGL = true;
