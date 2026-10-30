@@ -103,6 +103,8 @@ function _leerFormularioFiniquito(){
   const hechos    = (document.getElementById('fin-hechos')?.value || '').trim();
   const letra     = document.getElementById('fin-letra160')?.value || '';
   const afc_cuenta = document.getElementById('fin-afc-cuenta')?.value || '';
+  const alimentos  = document.getElementById('fin-alimentos')?.value || '';
+  const alimentos_consultado = !!document.getElementById('fin-alimentos-consultado')?.checked;
 
   if(!rut)    { toast('⚠️ Selecciona un trabajador', 'error'); return null; }
   if(!fecha)  { toast('⚠️ Ingresa la fecha de término', 'error'); return null; }
@@ -113,7 +115,8 @@ function _leerFormularioFiniquito(){
     toast('⚠️ Describe los hechos en que se funda el despido (con fechas). Sin hechos concretos en la carta, el despido puede declararse injustificado', 'error');
     return null;
   }
-  return { rut, fecha, causal, fechaAviso, hechos, letra, afc_cuenta: ci.indemniza ? afc_cuenta : '' };
+  if(parseFloat(alimentos) < 0){ toast('⚠️ La retención por pensión de alimentos no puede ser negativa', 'error'); return null; }
+  return { rut, fecha, causal, fechaAviso, hechos, letra, afc_cuenta: ci.indemniza ? afc_cuenta : '', alimentos, alimentos_consultado };
 }
 
 const TOPE_ANIOS_INDEMNIZACION = 11;
@@ -168,6 +171,9 @@ function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
   if(!contrato) return { error: `Sin contrato vigente para ${rut}` };
 
   const fechaIngreso = contrato.fecha_inicio || t.fecha_ingreso;
+  // ✅ F6 (paso 4) — antes se aceptaba un término anterior al inicio.
+  if(fechaIngreso && fechaTermino < fechaIngreso.slice(0,10))
+    return { error: `La fecha de término (${fmtFecha(fechaTermino)}) es anterior al inicio del contrato (${fmtFecha(fechaIngreso)})` };
   // ✅ F2 (paso 3) — antigüedad con meses y días, contando el día de
   // término (antes: 01-01-2025 → 31-12-2025 = 11 meses; ahora 12).
   const ant = _antiguedadFeriado(fechaIngreso, fechaTermino);
@@ -257,7 +263,19 @@ function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
   const total_descuentos = descuentos_pendientes.reduce((s,d) => s + (parseFloat(d.monto)||0), 0);
 
   const total_haberes = sueldo_pendiente + monto_vacaciones + monto_aviso_previo + monto_anios_servicio;
-  const total_a_pagar = Math.max(0, total_haberes - descuento_afc - total_descuentos);
+  // ✅ Paso 4 — retención por pensión de alimentos (Ley 21.389). Se
+  // retiene del finiquito y se paga en la cuenta que ordenó el tribunal.
+  const retencion_alimentos = Math.max(0, Math.round(parseFloat(extra.alimentos) || 0));
+  // ✅ F5 (paso 4) — si los descuentos superan lo que hay para pagar, el
+  // total queda en $0 y la diferencia se informa (antes se perdía sin
+  // aviso). Orden: AFC (rebaja la indemnización), alimentos (obligación
+  // legal, prioridad) y luego préstamos/anticipos.
+  const disponible = Math.max(0, total_haberes - descuento_afc);
+  const alimentos_aplicado = Math.min(retencion_alimentos, disponible);
+  const descuentos_aplicados = Math.min(total_descuentos, disponible - alimentos_aplicado);
+  const saldo_descuentos_no_cubierto = total_descuentos - descuentos_aplicados;
+  const alimentos_no_cubierto = retencion_alimentos - alimentos_aplicado;
+  const total_a_pagar = Math.max(0, disponible - alimentos_aplicado - descuentos_aplicados);
 
   return {
     rut, nombre: t.nombre,
@@ -297,6 +315,14 @@ function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
 
     descuentos_pendientes,
     total_descuentos,
+    descuentos_aplicados,
+    saldo_descuentos_no_cubierto,
+    retencion_alimentos,
+    alimentos_aplicado,
+    alimentos_no_cubierto,
+    alimentos_consultado: !!extra.alimentos_consultado,
+    tipo_contrato: contrato.tipo_contrato || contrato.tipo || '',
+    contrato_fecha_termino: contrato.fecha_termino || '',
 
     total_haberes,
     total_a_pagar,
@@ -326,6 +352,37 @@ function generarFiniquito(){
   const fin = calcularFiniquito(rut, fecha, causal, f.fechaAviso, f);
   if(fin.error){ toast(`❌ ${fin.error}`, 'error'); return; }
 
+  // ✅ F6 (paso 4) — validaciones antes de guardar.
+  const avisos = [];
+  // Fecha de término original del contrato (si un finiquito anterior ya
+  // la había cambiado, se usa la que tenía antes).
+  const finQueCambio = finiquitos_guardados.find(x => x.rut === rut && x.contrato_id && x.fecha_termino === (fin.contrato_fecha_termino || '').slice(0,10));
+  const ctoTer = (finQueCambio ? (finQueCambio.fecha_termino_contrato_anterior || '') : (fin.contrato_fecha_termino || '')).slice(0,10);
+  if(causal === 'vencimiento_plazo'){
+    if(!ctoTer) avisos.push('El contrato no tiene fecha de término (¿es indefinido?): "vencimiento del plazo" no corresponde a un contrato sin plazo.');
+    else if(ctoTer !== fecha) avisos.push(`El contrato vence el ${fmtFecha(ctoTer)}, no el ${fmtFecha(fecha)}. Terminarlo antes por "vencimiento del plazo" puede declararse injustificado.`);
+  }
+  if(causal === 'conclusion_obra' && /indefinido/i.test(fin.tipo_contrato))
+    avisos.push('El contrato es indefinido: la conclusión de la obra o faena (Art. 159 N°5) corresponde a contratos por obra o faena.');
+  if(!f.alimentos_consultado)
+    avisos.push('No marcaste que consultaste el Registro Nacional de Deudores de Pensiones de Alimentos (Ley 21.389). Si el trabajador figura y no se retiene, la multa es el doble del monto no retenido.');
+  if(fin.saldo_descuentos_no_cubierto > 0)
+    avisos.push(`Los descuentos superan lo que hay para pagar: quedan $${fin.saldo_descuentos_no_cubierto.toLocaleString('es-CL')} sin cubrir (el finiquito queda en $0 y ese saldo sigue pendiente).`);
+  if(fin.alimentos_no_cubierto > 0)
+    avisos.push(`La retención de alimentos supera lo que hay para pagar: faltan $${fin.alimentos_no_cubierto.toLocaleString('es-CL')} — infórmalo al tribunal.`);
+  // Otro finiquito del mismo trabajador para el mismo contrato
+  const inicioCto = (fin.fecha_ingreso || '').slice(0,10);
+  const previo = finiquitos_guardados.find(x => x.rut === rut && x.fecha_termino !== fecha && (x.fecha_termino || '') >= inicioCto);
+  if(previo){
+    if(previo.estado === 'ratificado'){
+      toast(`❌ ${fin.nombre} ya tiene un finiquito ratificado (folio ${previo.folio}, término ${fmtFecha(previo.fecha_termino)}) para este contrato`, 'error');
+      return;
+    }
+    avisos.push(`Ya existe el finiquito folio ${previo.folio} con término ${fmtFecha(previo.fecha_termino)} para este contrato: se reemplazará por este.`);
+  }
+  if(avisos.length && !confirm('⚠️ Revisa antes de generar:\n\n• ' + avisos.join('\n\n• ') + '\n\n¿Generar el finiquito igual?')) return;
+  if(previo) finiquitos_guardados = finiquitos_guardados.filter(x => x !== previo);
+
   // ✅ F7 — la liquidación del mes de término debe pagar solo hasta esa
   // fecha: se registra en el contrato (antes quedaba sin fecha de
   // término y la liquidación pagaba el mes completo). Se guarda la fecha
@@ -338,7 +395,9 @@ function generarFiniquito(){
     if(typeof guardarContratos === 'function') guardarContratos();
   }
 
-  fin.folio = 'FIN-' + Date.now().toString().slice(-8);
+  // Regenerar el finiquito del mismo contrato conserva el folio.
+  const anterior = previo || finiquitos_guardados.find(x => x.rut === rut && x.fecha_termino === fecha);
+  fin.folio = anterior?.folio || ('FIN-' + Date.now().toString().slice(-8));
   fin.fecha_emision = hoyISO();
   fin.estado = 'generado'; // generado → ratificado
 
@@ -354,6 +413,7 @@ function generarFiniquito(){
     subtipo: causal,
     folio: fin.folio,
     fecha_firma: fecha,
+    ref_id: fin.folio, // un documento por finiquito (regenerar actualiza, no duplica)
     descripcion: `Finiquito — ${fin.causal_label} — Total $${fin.total_a_pagar.toLocaleString('es-CL')}`,
   });
 
@@ -461,7 +521,8 @@ function _generarHTMLFiniquito(fin){
         ${fin.monto_aviso_previo > 0 ? `<tr><td>Indemnización sustitutiva del aviso previo (Art. 162 CT)${fin.base_indemnizacion ? ` — base ${fmtM(fin.base_indemnizacion)}${fin.base_con_tope ? ' (tope 90 UF)' : ''}` : ''}</td><td>${fmtM(fin.monto_aviso_previo)}</td></tr>` : ''}
         ${fin.monto_anios_servicio > 0 ? `<tr><td>Indemnización por años de servicio — ${fin.anios_indemnizables} año${fin.anios_indemnizables!==1?'s':''} × ${fmtM(fin.base_indemnizacion || (fin.monto_anios_servicio/fin.anios_indemnizables))} (Art. 163 CT, tope ${fin.tope_uf_aplicado} UF)</td><td>${fmtM(fin.monto_anios_servicio)}</td></tr>` : ''}
         ${fin.descuento_afc > 0 ? `<tr><td>Menos aporte del empleador al Seguro de Cesantía (Art. 13 Ley 19.728)</td><td>-${fmtM(fin.descuento_afc)}</td></tr>` : ''}
-        ${fin.total_descuentos > 0 ? `<tr><td>Descuentos pendientes (anticipos / préstamos)</td><td>-${fmtM(fin.total_descuentos)}</td></tr>` : ''}
+        ${fin.alimentos_aplicado > 0 ? `<tr><td>Retención pensión de alimentos (Ley 21.389) — se paga en la cuenta ordenada por el tribunal</td><td>-${fmtM(fin.alimentos_aplicado)}</td></tr>` : ''}
+        ${fin.total_descuentos > 0 ? `<tr><td>Saldo de préstamos / anticipos (${(fin.descuentos_pendientes||[]).length} cuota${(fin.descuentos_pendientes||[]).length!==1?'s':''} posteriores al término)${fin.saldo_descuentos_no_cubierto > 0 ? ` — quedan ${fmtM(fin.saldo_descuentos_no_cubierto)} sin cubrir` : ''}</td><td>-${fmtM(fin.descuentos_aplicados ?? fin.total_descuentos)}</td></tr>` : ''}
         <tr class="fq-total"><td>Total líquido a pagar</td><td>${fmtM(fin.total_a_pagar)}</td></tr>
       </table>
 
