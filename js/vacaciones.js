@@ -111,7 +111,7 @@ function _contratoFeriado(rut, corte){
    días (lo ganado por día × 30) para no castigar el promedio. Si no hay
    ningún mes anterior (contrato que empezó este mes), se usa lo ganado en
    el mes en curso hasta la fecha de corte, llevado a 30 días. */
-function _promedioVariablesArt71(rut, corte, inicioContrato){
+function _promedioVariablesArt71(rut, corte, inicioContrato, opciones = {}){
   const habs = (typeof haberes_variables !== 'undefined' ? haberes_variables : []) || [];
   const novs = (novedades||[]).filter(n => n.trabajador_rut === rut && n.aprobado !== false &&
     (n.tipo === 'licencia_medica' || n.tipo === 'permiso_sin_goce'));
@@ -120,9 +120,16 @@ function _promedioVariablesArt71(rut, corte, inicioContrato){
                                          Date.UTC(+a.slice(0,4), +a.slice(5,7)-1, +a.slice(8,10))) / 86400000) + 1;
   const ganadoMes = (per, hasta) => {
     const lista = habs.filter(h => h.trabajador_rut === rut && h.periodo === per && (!hasta || !h.fecha || h.fecha <= hasta));
-    return typeof _clasificarHaberes === 'function'
+    const imp = typeof _clasificarHaberes === 'function'
       ? _clasificarHaberes(lista).imponibles_total
       : lista.reduce((s,h) => s + (parseFloat(h.monto)||0), 0);
+    // ✅ Art. 172 (finiquito): también colación y movilización mensuales
+    // (Dictamen DT 4466/308; Corte Suprema, unificación Rol 32.609-2014).
+    const extra = (opciones.incluirAsignaciones || []).length
+      ? lista.filter(h => opciones.incluirAsignaciones.some(t => (h.tipo||'').toLowerCase().includes(t)))
+             .reduce((s,h) => s + (parseFloat(h.monto)||0), 0)
+      : 0;
+    return imp + extra;
   };
   const meses = [];
   let [a, m] = corte.slice(0,7).split('-').map(Number);

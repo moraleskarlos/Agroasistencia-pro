@@ -57,6 +57,35 @@ function onCambioCausalFiniquito(){
   const gL = document.getElementById('fin-grupo-letra160');
   if(gH) gH.style.display = c.requiereHechos ? '' : 'none';
   if(gL) gL.style.display = c.requiereLetra ? '' : 'none';
+  // ✅ Paso 3 — aporte AFC del empleador (solo Art. 161)
+  const gA = document.getElementById('fin-grupo-afc');
+  if(gA) gA.style.display = c.indemniza ? '' : 'none';
+  const sug = document.getElementById('fin-afc-sugerencia');
+  const rut = document.getElementById('fin-sel-trabajador')?.value;
+  const fecha = document.getElementById('fin-fecha-termino')?.value;
+  if(sug && c.indemniza && rut && fecha){
+    const est = _estimarAporteAFCEmpleador(rut, fecha);
+    sug.textContent = `Art. 13 Ley 19.728: se descuenta de la indemnización por años de servicio. Estimación según liquidaciones guardadas: $${est.toLocaleString('es-CL')} (sin rentabilidad — usa el monto del certificado de la AFC). Vacío = no se descuenta.`;
+  }
+}
+
+/* ✅ Paso 3 — Estimación del aporte del empleador a la cuenta individual
+   de cesantía durante el contrato vigente, con las liquidaciones
+   guardadas: del 2,4% (indefinido) van 1,6 puntos a la cuenta individual;
+   del 3% (plazo fijo / obra), 2,8; con más de 11 años (0,8%), 0. No
+   incluye rentabilidad: el monto real está en el certificado de la AFC. */
+function _estimarAporteAFCEmpleador(rut, fechaTermino){
+  const c = _getContratoVigente(rut, fechaTermino.slice(0,7));
+  const desde = (c?.fecha_inicio || '').slice(0,7);
+  return Math.round((typeof liquidaciones_guardadas !== 'undefined' ? liquidaciones_guardadas : [])
+    .filter(l => l.rut === rut && (!desde || l.periodo >= desde) && l.periodo <= fechaTermino.slice(0,7))
+    .reduce((s,l) => {
+      const base = l.base_afc || 0, emp = l.monto_afc_emp || 0;
+      if(!base || !emp) return s;
+      const pct = emp / base * 100;
+      const cuenta = pct > 2.7 ? 2.8 : pct > 1.2 ? 1.6 : 0;
+      return s + base * cuenta / 100;
+    }, 0));
 }
 
 /* Días corridos entre dos fechas ISO (b − a), sin zona horaria. */
@@ -73,6 +102,7 @@ function _leerFormularioFiniquito(){
   const fechaAviso= document.getElementById('fin-fecha-aviso')?.value || '';
   const hechos    = (document.getElementById('fin-hechos')?.value || '').trim();
   const letra     = document.getElementById('fin-letra160')?.value || '';
+  const afc_cuenta = document.getElementById('fin-afc-cuenta')?.value || '';
 
   if(!rut)    { toast('⚠️ Selecciona un trabajador', 'error'); return null; }
   if(!fecha)  { toast('⚠️ Ingresa la fecha de término', 'error'); return null; }
@@ -83,7 +113,7 @@ function _leerFormularioFiniquito(){
     toast('⚠️ Describe los hechos en que se funda el despido (con fechas). Sin hechos concretos en la carta, el despido puede declararse injustificado', 'error');
     return null;
   }
-  return { rut, fecha, causal, fechaAviso, hechos, letra };
+  return { rut, fecha, causal, fechaAviso, hechos, letra, afc_cuenta: ci.indemniza ? afc_cuenta : '' };
 }
 
 const TOPE_ANIOS_INDEMNIZACION = 11;
@@ -138,7 +168,10 @@ function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
   if(!contrato) return { error: `Sin contrato vigente para ${rut}` };
 
   const fechaIngreso = contrato.fecha_inicio || t.fecha_ingreso;
-  const antiguedadMeses = _mesesCompletos(fechaIngreso, fechaTermino);
+  // ✅ F2 (paso 3) — antigüedad con meses y días, contando el día de
+  // término (antes: 01-01-2025 → 31-12-2025 = 11 meses; ahora 12).
+  const ant = _antiguedadFeriado(fechaIngreso, fechaTermino);
+  const antiguedadMeses = ant.meses;
   const antiguedadAnios = antiguedadMeses / 12;
 
   // ── 1. Remuneración del último mes ──
@@ -175,22 +208,45 @@ function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
   const dias_anticipacion_aviso = fecha_aviso ? _diasEntreISO(fecha_aviso, fechaTermino) : null;
   const avisoPrevioDado = typeof aviso === 'boolean' ? aviso
     : (dias_anticipacion_aviso != null && dias_anticipacion_aviso >= DIAS_AVISO_PREVIO);
+  // ✅ F3 (paso 3) — base del Art. 172 ("última remuneración mensual"):
+  // sueldo + promedio de los últimos 3 meses calendario de bonos y
+  // demás haberes, incluidas colación y movilización mensuales
+  // (Dictamen DT 4466/308; CS unificación Rol 32.609-2014). Se excluyen
+  // horas extra, asignación familiar, viático y beneficios esporádicos.
+  // Meses con licencia o permiso sin goce se saltan. Tope 90 UF. Antes
+  // era solo el sueldo base.
+  const var172 = _promedioVariablesArt71(rut, fechaTermino, fechaIngreso, { incluirAsignaciones: ['colacion','movilizacion'] });
+  const remuneracion_art172 = sueldo_base + var172.promedio;
+  const base_indemnizacion = Math.round(Math.min(remuneracion_art172, ind.uf * TOPE_UF_INDEMNIZACION));
+  const base_con_tope = remuneracion_art172 > ind.uf * TOPE_UF_INDEMNIZACION;
+
   let monto_aviso_previo = 0;
   if(causalInfo.indemniza && !avisoPrevioDado){
-    monto_aviso_previo = Math.round(Math.min(sueldo_base, ind.uf * TOPE_UF_INDEMNIZACION));
+    monto_aviso_previo = base_indemnizacion;
   }
 
   // ── 4. Indemnización por años de servicio (Art. 163) ──
   // 1 mes de remuneración por año y fracción superior a 6 meses, tope 11 años
   let monto_anios_servicio = 0;
   let anios_indemnizables = 0;
-  if(causalInfo.indemniza){
-    const aniosCompletos  = Math.floor(antiguedadAnios);
+  // ✅ F2 (paso 3) — solo si el contrato duró 1 año o más (antes, con 7
+  // meses pagaba 1 año). "Fracción superior a seis meses" cuenta los
+  // días: 6 meses y 1 día ya es superior (antes 1 año, 6 meses y 15
+  // días pagaba 1 año en vez de 2).
+  if(causalInfo.indemniza && antiguedadMeses >= 12){
+    const aniosCompletos  = Math.floor(antiguedadMeses / 12);
     const mesesResto      = antiguedadMeses - (aniosCompletos * 12);
-    anios_indemnizables   = Math.min(TOPE_ANIOS_INDEMNIZACION, aniosCompletos + (mesesResto > 6 ? 1 : 0));
-    const base_indemnizacion = Math.min(sueldo_base, ind.uf * TOPE_UF_INDEMNIZACION);
+    const fraccionMayor6  = mesesResto > 6 || (mesesResto === 6 && ant.dias > 0);
+    anios_indemnizables   = Math.min(TOPE_ANIOS_INDEMNIZACION, aniosCompletos + (fraccionMayor6 ? 1 : 0));
     monto_anios_servicio  = Math.round(base_indemnizacion * anios_indemnizables);
   }
+
+  // ✅ Paso 3 — Art. 13 Ley 19.728: en la causal Art. 161 se imputa a la
+  // indemnización por años de servicio el aporte del empleador a la
+  // cuenta individual de cesantía (+ rentabilidad), según certificado de
+  // la AFC. Nunca más que la propia indemnización.
+  const aporte_afc_informado = Math.max(0, Math.round(parseFloat(extra.afc_cuenta) || 0));
+  const descuento_afc = monto_anios_servicio > 0 ? Math.min(aporte_afc_informado, monto_anios_servicio) : 0;
 
   // ── 5. Descuentos pendientes ──
   // ✅ F1 — los descuentos del mes de término ya se aplican en la
@@ -201,7 +257,7 @@ function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
   const total_descuentos = descuentos_pendientes.reduce((s,d) => s + (parseFloat(d.monto)||0), 0);
 
   const total_haberes = sueldo_pendiente + monto_vacaciones + monto_aviso_previo + monto_anios_servicio;
-  const total_a_pagar = Math.max(0, total_haberes - total_descuentos);
+  const total_a_pagar = Math.max(0, total_haberes - descuento_afc - total_descuentos);
 
   return {
     rut, nombre: t.nombre,
@@ -227,8 +283,15 @@ function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
     dias_vacaciones_corridos: vac.error ? 0 : (vac.dias_corridos_pago || 0), // ✅ V5
     monto_vacaciones,
 
+    antiguedad_dias_fraccion: ant.dias,
     anios_indemnizables,
     tope_uf_aplicado: TOPE_UF_INDEMNIZACION,
+    remuneracion_art172,
+    promedio_variables_art172: var172.promedio,
+    meses_promedio_art172: var172.meses,
+    base_indemnizacion,
+    base_con_tope,
+    descuento_afc,
     monto_aviso_previo,
     monto_anios_servicio,
 
@@ -395,8 +458,9 @@ function _generarHTMLFiniquito(fin){
       <table>
         ${fin.sueldo_pendiente > 0 ? `<tr><td>Remuneración pendiente del mes (${fin.dia_termino} día${fin.dia_termino>1?'s':''} trabajados)</td><td>${fmtM(fin.sueldo_pendiente)}</td></tr>` : ''}
         <tr><td>Feriado proporcional — ${fin.dias_vacaciones_saldo} días hábiles pendientes${fin.dias_vacaciones_corridos ? ` (${fin.dias_vacaciones_corridos} días a pagar, Art. 73)` : ''}</td><td>${fmtM(fin.monto_vacaciones)}</td></tr>
-        ${fin.monto_aviso_previo > 0 ? `<tr><td>Indemnización sustitutiva del aviso previo (Art. 162 CT)</td><td>${fmtM(fin.monto_aviso_previo)}</td></tr>` : ''}
-        ${fin.monto_anios_servicio > 0 ? `<tr><td>Indemnización por años de servicio — ${fin.anios_indemnizables} año${fin.anios_indemnizables!==1?'s':''} (Art. 163 CT, tope ${fin.tope_uf_aplicado} UF)</td><td>${fmtM(fin.monto_anios_servicio)}</td></tr>` : ''}
+        ${fin.monto_aviso_previo > 0 ? `<tr><td>Indemnización sustitutiva del aviso previo (Art. 162 CT)${fin.base_indemnizacion ? ` — base ${fmtM(fin.base_indemnizacion)}${fin.base_con_tope ? ' (tope 90 UF)' : ''}` : ''}</td><td>${fmtM(fin.monto_aviso_previo)}</td></tr>` : ''}
+        ${fin.monto_anios_servicio > 0 ? `<tr><td>Indemnización por años de servicio — ${fin.anios_indemnizables} año${fin.anios_indemnizables!==1?'s':''} × ${fmtM(fin.base_indemnizacion || (fin.monto_anios_servicio/fin.anios_indemnizables))} (Art. 163 CT, tope ${fin.tope_uf_aplicado} UF)</td><td>${fmtM(fin.monto_anios_servicio)}</td></tr>` : ''}
+        ${fin.descuento_afc > 0 ? `<tr><td>Menos aporte del empleador al Seguro de Cesantía (Art. 13 Ley 19.728)</td><td>-${fmtM(fin.descuento_afc)}</td></tr>` : ''}
         ${fin.total_descuentos > 0 ? `<tr><td>Descuentos pendientes (anticipos / préstamos)</td><td>-${fmtM(fin.total_descuentos)}</td></tr>` : ''}
         <tr class="fq-total"><td>Total líquido a pagar</td><td>${fmtM(fin.total_a_pagar)}</td></tr>
       </table>
