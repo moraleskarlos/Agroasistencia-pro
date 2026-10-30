@@ -2347,6 +2347,14 @@
                 <input type="number" id="fin-afc-cuenta" min="0" step="1" placeholder="Según certificado de la AFC">
                 <div id="fin-afc-sugerencia" style="font-size:11px;color:var(--texto3);margin-top:3px;">Art. 13 Ley 19.728: se descuenta de la indemnización por años de servicio. Vacío = no se descuenta.</div>
               </div>
+              <div class="form-group">
+                <label>Retención por pensión de alimentos ($)</label>
+                <input type="number" id="fin-alimentos" min="0" step="1" placeholder="0 si no corresponde">
+                <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:400;font-size:12px;">
+                  <input type="checkbox" id="fin-alimentos-consultado" style="width:auto;"> Consulté el Registro Nacional de Deudores de Pensiones de Alimentos
+                </label>
+                <div style="font-size:11px;color:var(--texto3);margin-top:3px;">Ley 21.389: si el trabajador está en el Registro, se retiene y se paga en la cuenta que ordenó el tribunal. No retener se multa con el doble.</div>
+              </div>
               <div class="form-group" id="fin-grupo-letra160" style="display:none;">
                 <label>Conducta (Art. 160 N°1)</label>
                 <select id="fin-letra160">
