@@ -2316,11 +2316,11 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>Trabajador</label>
-                <select id="fin-sel-trabajador"><option value="">— Seleccionar trabajador —</option></select>
+                <select id="fin-sel-trabajador" onchange="onCambioCausalFiniquito()"><option value="">— Seleccionar trabajador —</option></select>
               </div>
               <div class="form-group">
                 <label>Fecha de término</label>
-                <input type="date" id="fin-fecha-termino">
+                <input type="date" id="fin-fecha-termino" onchange="onCambioCausalFiniquito()">
               </div>
               <div class="form-group">
                 <label>Causal de término</label>
@@ -2341,6 +2341,11 @@
                 <label>Fecha de aviso al trabajador</label>
                 <input type="date" id="fin-fecha-aviso">
                 <div style="font-size:11px;color:var(--texto3);margin-top:3px;">Día en que se entregó la carta de aviso. En necesidades de la empresa, con 30 días o más de anticipación no se paga aviso previo.</div>
+              </div>
+              <div class="form-group" id="fin-grupo-afc" style="display:none;">
+                <label>Aporte del empleador a la cuenta individual AFC</label>
+                <input type="number" id="fin-afc-cuenta" min="0" step="1" placeholder="Según certificado de la AFC">
+                <div id="fin-afc-sugerencia" style="font-size:11px;color:var(--texto3);margin-top:3px;">Art. 13 Ley 19.728: se descuenta de la indemnización por años de servicio. Vacío = no se descuenta.</div>
               </div>
               <div class="form-group" id="fin-grupo-letra160" style="display:none;">
                 <label>Conducta (Art. 160 N°1)</label>
