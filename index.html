@@ -2324,17 +2324,39 @@
               </div>
               <div class="form-group">
                 <label>Causal de término</label>
-                <select id="fin-causal">
+                <select id="fin-causal" onchange="onCambioCausalFiniquito()">
                   <option value="">— Selecciona causal —</option>
                   <option value="mutuo_acuerdo">Mutuo acuerdo de las partes (Art. 159 N°1)</option>
                   <option value="renuncia">Renuncia voluntaria (Art. 159 N°2)</option>
                   <option value="vencimiento_plazo">Vencimiento del plazo convenido (Art. 159 N°4)</option>
+                  <option value="conclusion_obra">Conclusión de la obra o faena (Art. 159 N°5)</option>
+                  <option value="art160_1">Conductas indebidas graves (Art. 160 N°1)</option>
+                  <option value="art160_3">Inasistencia injustificada (Art. 160 N°3)</option>
+                  <option value="art160_4">Abandono del trabajo (Art. 160 N°4)</option>
+                  <option value="art160_7">Incumplimiento grave del contrato (Art. 160 N°7)</option>
                   <option value="necesidades_empresa">Necesidades de la empresa (Art. 161)</option>
                 </select>
               </div>
-              <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:22px;">
-                <input type="checkbox" id="fin-aviso-previo" style="width:auto;">
-                <label style="margin:0;">Se dio aviso previo con 30 días de anticipación</label>
+              <div class="form-group">
+                <label>Fecha de aviso al trabajador</label>
+                <input type="date" id="fin-fecha-aviso">
+                <div style="font-size:11px;color:var(--texto3);margin-top:3px;">Día en que se entregó la carta de aviso. En necesidades de la empresa, con 30 días o más de anticipación no se paga aviso previo.</div>
+              </div>
+              <div class="form-group" id="fin-grupo-letra160" style="display:none;">
+                <label>Conducta (Art. 160 N°1)</label>
+                <select id="fin-letra160">
+                  <option value="">— Selecciona —</option>
+                  <option value="a">a) Falta de probidad</option>
+                  <option value="b">b) Acoso sexual</option>
+                  <option value="c">c) Vías de hecho contra el empleador u otro trabajador</option>
+                  <option value="d">d) Injurias al empleador</option>
+                  <option value="e">e) Conducta inmoral que afecte a la empresa</option>
+                  <option value="f">f) Acoso laboral</option>
+                </select>
+              </div>
+              <div class="form-group" id="fin-grupo-hechos" style="display:none;grid-column:1/-1;">
+                <label>Hechos en que se funda el despido</label>
+                <textarea id="fin-hechos" rows="3" placeholder="Describe con fechas concretas lo ocurrido (ej.: no se presentó a trabajar los días 2, 3 y 4 de septiembre, sin aviso ni justificación)."></textarea>
               </div>
             </div>
             <div style="display:flex;gap:8px;margin-top:10px;">
@@ -2342,8 +2364,9 @@
               <button class="btn btn-primary btn-sm" onclick="generarFiniquito()"><i class="ti ti-file-check"></i> Generar finiquito</button>
             </div>
             <div style="font-size:11px;color:var(--texto3);margin-top:8px;">
-              <i class="ti ti-info-circle"></i> Cubre las causales más frecuentes. Casos con causales del Art. 160,
-              fuero laboral, o pactos especiales deben revisarse con un abogado laboral antes de firmar.
+              <i class="ti ti-info-circle"></i> Cubre las causales más frecuentes. Un despido por Art. 160 debe
+              poder probarse (los hechos deben constar en la carta); casos con fuero laboral o pactos especiales
+              deben revisarse con un abogado laboral antes de firmar.
             </div>
           </div>
 
