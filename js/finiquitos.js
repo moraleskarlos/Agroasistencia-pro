@@ -79,12 +79,28 @@ function calcularFiniquito(rut, fechaTermino, causal, avisoPrevioDado){
   const antiguedadMeses = _mesesCompletos(fechaIngreso, fechaTermino);
   const antiguedadAnios = antiguedadMeses / 12;
 
-  // ── 1. Sueldo pendiente del mes de término (proporcional a días trabajados) ──
+  // ── 1. Remuneración del último mes ──
+  // ✅ F1 + F7 (auditoría Finiquitos, 29-10-2026) — antes el finiquito
+  // pagaba valor día × día del mes de término: sin descontar AFP, salud
+  // ni AFC, sin faltas ni bonos, con errores (término el 31 → 31 días;
+  // ingreso el 15 → mes completo) y además la liquidación del mes volvía
+  // a pagar ese sueldo. Ahora (opción A, igual que Buk) los días
+  // trabajados del último mes se pagan en la LIQUIDACIÓN de ese período,
+  // que los prorratea hasta la fecha de término (H3) y los informa a
+  // PreviRed y al Libro. El finiquito solo la referencia.
   const sueldoInfo = _getSueldoBase(rut, periodo);
   const sueldo_base = sueldoInfo?.monto || parseFloat(contrato.sueldo_monto) || 0;
   const valor_dia = Math.round(sueldo_base / DIVISOR_MES);
-  const diaTermino = new Date(fechaTermino+'T12:00:00').getDate();
-  const sueldo_pendiente = Math.round(valor_dia * diaTermino);
+  const diaTermino = +fechaTermino.slice(8,10);
+  const dias_ultimo_mes = _diasContratoEnMes({ ...contrato, fecha_termino: fechaTermino }, periodo);
+  const liqUltimoMes = (typeof liquidaciones_guardadas !== 'undefined' ? liquidaciones_guardadas : [])
+    .find(l => l.rut === rut && l.periodo === periodo);
+  const liquidacion_ultimo_mes = liqUltimoMes
+    ? { periodo, folio: liqUltimoMes.folio || '', liquido: liqUltimoMes.liquido || 0,
+        dias: Math.max(0, DIVISOR_MES - (liqUltimoMes.dias_a_descontar||0)),
+        prorrateada: (liqUltimoMes.dias_contrato_mes ?? DIVISOR_MES) === dias_ultimo_mes }
+    : null;
+  const sueldo_pendiente = 0; // se paga en la liquidación del mes
 
   // ── 2. Vacaciones proporcionales (reutiliza vacaciones.js) ──
   const vac = calcularSaldoVacaciones(rut, fechaTermino);
@@ -109,8 +125,12 @@ function calcularFiniquito(rut, fechaTermino, causal, avisoPrevioDado){
     monto_anios_servicio  = Math.round(base_indemnizacion * anios_indemnizables);
   }
 
-  // ── 5. Descuentos pendientes (anticipos, préstamos no saldados) del período ──
-  const descuentos_pendientes = getDescuentosPorRut(rut, periodo);
+  // ── 5. Descuentos pendientes ──
+  // ✅ F1 — los descuentos del mes de término ya se aplican en la
+  // liquidación de ese mes (antes se descontaban dos veces). En el
+  // finiquito van las cuotas de meses POSTERIORES al término (saldo de
+  // préstamos — F4).
+  const descuentos_pendientes = (descuentos || []).filter(d => d.trabajador_rut === rut && d.periodo > periodo);
   const total_descuentos = descuentos_pendientes.reduce((s,d) => s + (parseFloat(d.monto)||0), 0);
 
   const total_haberes = sueldo_pendiente + monto_vacaciones + monto_aviso_previo + monto_anios_servicio;
@@ -127,6 +147,8 @@ function calcularFiniquito(rut, fechaTermino, causal, avisoPrevioDado){
 
     sueldo_base, valor_dia, dia_termino: diaTermino,
     sueldo_pendiente,
+    dias_ultimo_mes,
+    liquidacion_ultimo_mes,
 
     dias_vacaciones_saldo: vac.error ? 0 : vac.dias_saldo,
     dias_vacaciones_corridos: vac.error ? 0 : (vac.dias_corridos_pago || 0), // ✅ V5
@@ -178,6 +200,18 @@ function generarFiniquito(){
   const fin = calcularFiniquito(rut, fecha, causal, avisoDado);
   if(fin.error){ toast(`❌ ${fin.error}`, 'error'); return; }
 
+  // ✅ F7 — la liquidación del mes de término debe pagar solo hasta esa
+  // fecha: se registra en el contrato (antes quedaba sin fecha de
+  // término y la liquidación pagaba el mes completo). Se guarda la fecha
+  // anterior por trazabilidad.
+  const cto = _getContratoVigente(rut, fecha.slice(0,7));
+  if(cto && cto.fecha_termino !== fecha){
+    fin.contrato_id = cto.id;
+    fin.fecha_termino_contrato_anterior = cto.fecha_termino || null;
+    cto.fecha_termino = fecha;
+    if(typeof guardarContratos === 'function') guardarContratos();
+  }
+
   fin.folio = 'FIN-' + Date.now().toString().slice(-8);
   fin.fecha_emision = hoyISO();
   fin.estado = 'generado'; // generado → ratificado
@@ -198,6 +232,11 @@ function generarFiniquito(){
   });
 
   toast(`✅ Finiquito generado — Folio ${fin.folio}`, 'exito');
+  if(!fin.liquidacion_ultimo_mes){
+    toast(`⚠️ Falta generar la liquidación de ${getNombreMes(fecha.slice(0,7))} de ${fin.nombre} (paga ${fin.dias_ultimo_mes} día${fin.dias_ultimo_mes!==1?'s':''} hasta el término)`, 'error');
+  } else if(!fin.liquidacion_ultimo_mes.prorrateada){
+    toast(`⚠️ La liquidación de ${getNombreMes(fecha.slice(0,7))} de ${fin.nombre} se generó antes del finiquito — recalcúlala para que pague solo hasta el término`, 'error');
+  }
   renderListaFiniquitos();
   _mostrarModalFiniquito(fin, true);
 }
@@ -290,13 +329,15 @@ function _generarHTMLFiniquito(fin){
       fecha de término ${fmtFecha(fin.fecha_termino)}.</p>
 
       <table>
-        <tr><td>Remuneración pendiente del mes (${fin.dia_termino} día${fin.dia_termino>1?'s':''} trabajados)</td><td>${fmtM(fin.sueldo_pendiente)}</td></tr>
+        ${fin.sueldo_pendiente > 0 ? `<tr><td>Remuneración pendiente del mes (${fin.dia_termino} día${fin.dia_termino>1?'s':''} trabajados)</td><td>${fmtM(fin.sueldo_pendiente)}</td></tr>` : ''}
         <tr><td>Feriado proporcional — ${fin.dias_vacaciones_saldo} días hábiles pendientes${fin.dias_vacaciones_corridos ? ` (${fin.dias_vacaciones_corridos} días a pagar, Art. 73)` : ''}</td><td>${fmtM(fin.monto_vacaciones)}</td></tr>
         ${fin.monto_aviso_previo > 0 ? `<tr><td>Indemnización sustitutiva del aviso previo (Art. 162 CT)</td><td>${fmtM(fin.monto_aviso_previo)}</td></tr>` : ''}
         ${fin.monto_anios_servicio > 0 ? `<tr><td>Indemnización por años de servicio — ${fin.anios_indemnizables} año${fin.anios_indemnizables!==1?'s':''} (Art. 163 CT, tope ${fin.tope_uf_aplicado} UF)</td><td>${fmtM(fin.monto_anios_servicio)}</td></tr>` : ''}
         ${fin.total_descuentos > 0 ? `<tr><td>Descuentos pendientes (anticipos / préstamos)</td><td>-${fmtM(fin.total_descuentos)}</td></tr>` : ''}
         <tr class="fq-total"><td>Total líquido a pagar</td><td>${fmtM(fin.total_a_pagar)}</td></tr>
       </table>
+
+      ${fin.sueldo_pendiente ? '' : `<p style="font-size:12px;">La remuneración de ${getNombreMes(fin.fecha_termino.slice(0,7))}${fin.dias_ultimo_mes != null ? ` (${fin.dias_ultimo_mes} día${fin.dias_ultimo_mes!==1?'s':''})` : ''} se paga en la liquidación de sueldo de ese período${fin.liquidacion_ultimo_mes ? `, folio ${fin.liquidacion_ultimo_mes.folio}, por un líquido de ${fmtM(fin.liquidacion_ultimo_mes.liquido)}` : ''}, con sus cotizaciones previsionales.</p>`}
 
       <p>El trabajador declara recibir en este acto, a su entera satisfacción, la suma antes indicada,
       no teniendo cargo ni cobro alguno pendiente en contra del empleador por concepto de remuneraciones,

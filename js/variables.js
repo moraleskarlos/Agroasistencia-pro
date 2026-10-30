@@ -73,11 +73,20 @@ function construirVariablesRemuneracion(rut, periodo){
   // Asistencia y sin novedad) se tratan igual que una falta
   // injustificada por defecto — ver _leerAsistenciaMes() más abajo.
   // Tope: nunca más de 30 días (mes comercial).
-  const dias_ausencia     = Math.min(DIVISOR_MES, dias_permiso_sin_goce + dias_ausencia_injust + dias_sin_clasificar + dias_otro_reclasificar);
-  const dias_a_descontar  = Math.min(DIVISOR_MES, dias_ausencia + dias_licencia_medica);
+  // ✅ H3 (auditoría Finiquitos, 29-10-2026) — días del mes fuera del
+  // contrato (ingreso o término a mitad de mes). Antes se pagaba el mes
+  // completo: ingreso 17-08 → $600.000 en vez de $300.000. Base de 30
+  // días (Art. 44 CT), convención acordada con el usuario: ver
+  // _diasContratoEnMes. Los días fuera del contrato se descuentan
+  // primero; así "días trabajados" (30 − días a descontar) queda bien en
+  // la liquidación, el Libro y PreviRed sin tocarlos.
+  const dias_contrato_mes   = _diasContratoEnMes(contrato, periodo);
+  const dias_fuera_contrato = DIVISOR_MES - dias_contrato_mes;
+  const dias_ausencia     = Math.min(dias_contrato_mes, dias_permiso_sin_goce + dias_ausencia_injust + dias_sin_clasificar + dias_otro_reclasificar);
+  const dias_a_descontar  = Math.min(DIVISOR_MES, dias_fuera_contrato + dias_ausencia + dias_licencia_medica);
   // Días de licencia que efectivamente entran al descuento (si ausencias
   // + licencia superan 30, la licencia se recorta para no pasar el tope).
-  const dias_licencia_descontados = dias_a_descontar - dias_ausencia;
+  const dias_licencia_descontados = dias_a_descontar - dias_ausencia - dias_fuera_contrato;
 
   // ── 6. Sueldo proporcional ───────────────────────────
   // Mes completo descontado → $0 exacto (sin residuo por redondeo del
@@ -86,8 +95,9 @@ function construirVariablesRemuneracion(rut, periodo){
   const sueldo_proporcional = dias_a_descontar >= DIVISOR_MES
     ? 0
     : Math.max(0, sueldo_base - dias_a_descontar * valor_dia);
-  const descuento_ausencias = Math.min(sueldo_base, dias_ausencia * valor_dia);
-  const descuento_licencia  = (sueldo_base - sueldo_proporcional) - descuento_ausencias;
+  const descuento_fuera_contrato = Math.min(sueldo_base, dias_fuera_contrato * valor_dia);
+  const descuento_ausencias = Math.min(sueldo_base - descuento_fuera_contrato, dias_ausencia * valor_dia);
+  const descuento_licencia  = (sueldo_base - sueldo_proporcional) - descuento_fuera_contrato - descuento_ausencias;
 
   // ── 7. Haberes variables desde Gestión Laboral ───────
   const haberes_raw = getHaberesPorRut(rut, periodo);
@@ -151,8 +161,11 @@ function construirVariablesRemuneracion(rut, periodo){
     dias_vacaciones,
     dias_otro_reclasificar,
     dias_a_descontar,
+    dias_contrato_mes,              // ✅ H3 — días del mes con contrato (base 30)
+    dias_fuera_contrato,
 
     // Sueldo proporcional
+    descuento_fuera_contrato,       // ✅ H3 — días antes del ingreso / después del término
     descuento_ausencias,   // solo ausencias (sin goce / injustificadas / sin clasificar)
     descuento_licencia,    // ✅ H2 — días de licencia médica
     sueldo_proporcional,   // base real para cotizaciones
@@ -214,6 +227,48 @@ function _getSueldoBase(rut, periodo){
     monto:  sueldoContrato,
     fuente: 'Contrato de trabajo',
   };
+}
+
+/* ✅ H3 — Días del mes cubiertos por el contrato, en base 30 (Art. 44 CT).
+   Convención acordada con el usuario (29-10-2026, igual que Buk):
+   · Mes completo → 30 (también febrero).
+   · Ingreso a mitad de mes → desde el ingreso hasta fin de mes, máx. 30
+     (17-08 → 15; 17-02 → 12; 02-08 → 30).
+   · Término a mitad de mes → desde el día 1 hasta el término (10-09 → 10).
+     Término el último día del mes → 30 (31-08 → 30; 28-02 → 30).
+   · Ingreso y término el mismo mes → días entre ambas fechas (24 al 28 → 5).
+   · Contrato que no toca el mes → 0.
+   Comparación de fechas como texto ISO (sin zona horaria). */
+function _diasContratoEnMes(contrato, periodo){
+  if(!contrato) return DIVISOR_MES;
+  const [a, m] = periodo.split('-').map(Number);
+  const ultimoDia = new Date(Date.UTC(a, m, 0)).getUTCDate();
+  const primero = `${periodo}-01`;
+  const ultimo  = `${periodo}-${String(ultimoDia).padStart(2,'0')}`;
+  const ini = (contrato.fecha_inicio  || '').slice(0,10);
+  const ter = (contrato.fecha_termino || '').slice(0,10);
+  const desde = ini && ini > primero ? ini : primero;
+  const hasta = ter && ter < ultimo  ? ter : ultimo;
+  if(hasta < desde) return 0;
+  const dDesde = +desde.slice(8,10), dHasta = +hasta.slice(8,10);
+  if(desde === primero && hasta === ultimo) return DIVISOR_MES;
+  if(desde === primero) return Math.min(DIVISOR_MES, dHasta);
+  if(hasta === ultimo)  return Math.min(DIVISOR_MES, ultimoDia - dDesde + 1);
+  return Math.min(DIVISOR_MES, dHasta - dDesde + 1);
+}
+
+/* ✅ H6 — Trabajadores a liquidar en un período: los activos (como
+   antes) más los ya finiquitados (inactivos) cuyo contrato tuvo días en
+   ese mes. Antes, al ratificar el finiquito el trabajador quedaba fuera
+   y su último mes no tenía liquidación (ni PreviRed ni Libro). */
+function _trabajadoresDelPeriodo(empresaId, periodo){
+  return trabajadores.filter(t => {
+    if(empresaId && t.empresa_propia_id !== empresaId) return false;
+    if(t.estado === 'activo') return true;
+    const c = _getContratoVigente(t.rut, periodo);
+    if(!c || !c.fecha_termino) return false;
+    return _diasContratoEnMes(c, periodo) > 0;
+  });
 }
 
 /* ── Contrato vigente para el período ──────────────────── */

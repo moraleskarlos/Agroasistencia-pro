@@ -156,7 +156,7 @@ function cerrarMes(){
 
   if(esMesCerrado(periodo, empresa)){ toast('Este mes ya está cerrado para esta empresa','error'); return; }
 
-  const activos = trabajadores.filter(t => t.estado === 'activo' && t.empresa_propia_id === empresa);
+  const activos = _trabajadoresDelPeriodo(empresa, periodo); // ✅ H6 — incluye finiquitados con días en el mes
   const problemas = [];
 
   activos.forEach(t => {
@@ -326,7 +326,7 @@ function renderReporteLiquidaciones(){
     return;
   }
 
-  const lista = trabajadores.filter(t => t.estado==='activo' && t.empresa_propia_id===empresa);
+  const lista = _trabajadoresDelPeriodo(empresa, periodo); // ✅ H6 — incluye finiquitados con días en el mes
   if(!lista.length){
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:28px;color:var(--texto3);">No hay trabajadores activos en esta empresa</td></tr>';
     return;
@@ -816,20 +816,25 @@ function _generarHTMLLiquidacion(liq, guardada){
 
   // Haberes imponibles detalle
   let habImpRows = `<tr><td class="ld-sub">Sueldo base mensual</td><td class="ld-amt">${fmtM(liq.sueldo_base)}</td><td></td></tr>`;
+  // ✅ H3 — días del mes sin contrato (ingreso o término a mitad de mes)
+  if((liq.descuento_fuera_contrato||0) > 0){
+    const dFuera = liq.dias_fuera_contrato || 0;
+    habImpRows += `<tr><td class="ld-sub" style="color:#dc2626;">Proporcional: contrato ${liq.dias_contrato_mes} de 30 días del mes (${dFuera} día${dFuera!==1?'s':''} sin contrato × ${fmtM(Math.round(liq.sueldo_base/30))})</td><td class="ld-amt" style="color:#dc2626;">-${fmtM(liq.descuento_fuera_contrato)}</td><td></td></tr>`;
+  }
   // ✅ H2 — dos líneas separadas: ausencias (sin goce / injustificadas /
   // sin clasificar) y licencia médica. Liquidaciones guardadas antes del
   // cambio no traen dias_ausencia → se usa dias_a_descontar (mismo valor
   // que tenían entonces, cuando la licencia no descontaba).
   const valorDiaTxt  = fmtM(Math.round(liq.sueldo_base/30));
   const diasAus      = liq.dias_ausencia != null ? liq.dias_ausencia : (liq.dias_a_descontar||0);
-  const diasLicDesc  = (liq.dias_a_descontar||0) - diasAus;
+  const diasLicDesc  = (liq.dias_a_descontar||0) - diasAus - (liq.dias_fuera_contrato||0);
   if(liq.descuento_ausencias > 0){
     habImpRows += `<tr><td class="ld-sub" style="color:#dc2626;">Descuento ${diasAus} día${diasAus>1?'s':''} ausencia${liq.dias_permiso_sin_goce>0?' sin goce':' injustificada'} (× ${valorDiaTxt})</td><td class="ld-amt" style="color:#dc2626;">-${fmtM(liq.descuento_ausencias)}</td><td></td></tr>`;
   }
   if(liq.descuento_licencia > 0){
     habImpRows += `<tr><td class="ld-sub" style="color:#dc2626;">Descuento ${diasLicDesc} día${diasLicDesc>1?'s':''} licencia médica — cubiertos por subsidio (× ${valorDiaTxt})</td><td class="ld-amt" style="color:#dc2626;">-${fmtM(liq.descuento_licencia)}</td><td></td></tr>`;
   }
-  if(liq.descuento_ausencias > 0 || liq.descuento_licencia > 0){
+  if(liq.descuento_ausencias > 0 || liq.descuento_licencia > 0 || (liq.descuento_fuera_contrato||0) > 0){
     habImpRows += `<tr><td class="ld-sub">Sueldo proporcional</td><td class="ld-amt">${fmtM(liq.sueldo_proporcional)}</td><td></td></tr>`;
   }
   (liq.haberes_variables||[]).filter(h=>h.imponible!==false).forEach(h => {
