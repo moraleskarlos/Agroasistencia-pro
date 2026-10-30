@@ -19,12 +19,72 @@
 const LOCAL_FINIQUITOS = 'agro_finiquitos';
 let finiquitos_guardados = [];
 
+/* ✅ Paso 2 (auditoría Finiquitos, 29-10-2026) — causales para
+   contratistas pymes, acordadas con el usuario. Se agregan Art. 159 N°5
+   (conclusión de la obra o faena, muy usada en contratos por faena) y
+   Art. 160 (despido disciplinario, sin indemnizaciones; exige describir
+   los hechos). `carta`: requiere carta de aviso del Art. 162 (3 días
+   hábiles desde la separación, copia a la Inspección del Trabajo).
+   Quedan fuera por uso muy raro: 159 N°3 (muerte), 159 N°6 (caso
+   fortuito) y desahucio (161 inc. 2, solo gerentes y casa particular). */
 const CAUSALES_FINIQUITO = {
-  mutuo_acuerdo:      { label: 'Mutuo acuerdo de las partes',   articulo: 'Art. 159 N°1 CT', indemniza: false },
-  renuncia:            { label: 'Renuncia voluntaria',           articulo: 'Art. 159 N°2 CT', indemniza: false },
-  vencimiento_plazo:   { label: 'Vencimiento del plazo convenido', articulo: 'Art. 159 N°4 CT', indemniza: false },
-  necesidades_empresa: { label: 'Necesidades de la empresa',     articulo: 'Art. 161 CT',     indemniza: true  },
+  mutuo_acuerdo:       { label: 'Mutuo acuerdo de las partes',     articulo: 'Art. 159 N°1 CT', indemniza: false, carta: false },
+  renuncia:            { label: 'Renuncia voluntaria',             articulo: 'Art. 159 N°2 CT', indemniza: false, carta: false },
+  vencimiento_plazo:   { label: 'Vencimiento del plazo convenido', articulo: 'Art. 159 N°4 CT', indemniza: false, carta: true },
+  conclusion_obra:     { label: 'Conclusión del trabajo o servicio que dio origen al contrato', articulo: 'Art. 159 N°5 CT', indemniza: false, carta: true },
+  art160_1:            { label: 'Conductas indebidas de carácter grave, debidamente comprobadas', articulo: 'Art. 160 N°1 CT', indemniza: false, carta: true, requiereHechos: true, requiereLetra: true },
+  art160_3:            { label: 'No concurrencia a sus labores sin causa justificada', articulo: 'Art. 160 N°3 CT', indemniza: false, carta: true, requiereHechos: true },
+  art160_4:            { label: 'Abandono del trabajo', articulo: 'Art. 160 N°4 CT', indemniza: false, carta: true, requiereHechos: true },
+  art160_7:            { label: 'Incumplimiento grave de las obligaciones que impone el contrato', articulo: 'Art. 160 N°7 CT', indemniza: false, carta: true, requiereHechos: true },
+  necesidades_empresa: { label: 'Necesidades de la empresa',       articulo: 'Art. 161 CT',     indemniza: true,  carta: true },
 };
+
+const LETRAS_160_1 = {
+  a: 'Falta de probidad del trabajador en el desempeño de sus funciones',
+  b: 'Conductas de acoso sexual',
+  c: 'Vías de hecho ejercidas por el trabajador en contra del empleador o de cualquier trabajador que se desempeñe en la misma empresa',
+  d: 'Injurias proferidas por el trabajador al empleador',
+  e: 'Conducta inmoral del trabajador que afecte a la empresa donde se desempeña',
+  f: 'Conductas de acoso laboral',
+};
+
+const DIAS_AVISO_PREVIO = 30; // Art. 161 inc. 1 / 162 inc. 4
+
+/* Muestra u oculta los campos propios de cada causal (Art. 160). */
+function onCambioCausalFiniquito(){
+  const c = CAUSALES_FINIQUITO[document.getElementById('fin-causal')?.value] || {};
+  const gH = document.getElementById('fin-grupo-hechos');
+  const gL = document.getElementById('fin-grupo-letra160');
+  if(gH) gH.style.display = c.requiereHechos ? '' : 'none';
+  if(gL) gL.style.display = c.requiereLetra ? '' : 'none';
+}
+
+/* Días corridos entre dos fechas ISO (b − a), sin zona horaria. */
+function _diasEntreISO(a, b){
+  const u = f => Date.UTC(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10));
+  return Math.round((u(b) - u(a)) / 86400000);
+}
+
+/* Lee y valida el formulario. Devuelve los datos o null (con toast). */
+function _leerFormularioFiniquito(){
+  const rut       = document.getElementById('fin-sel-trabajador')?.value;
+  const fecha     = document.getElementById('fin-fecha-termino')?.value;
+  const causal    = document.getElementById('fin-causal')?.value;
+  const fechaAviso= document.getElementById('fin-fecha-aviso')?.value || '';
+  const hechos    = (document.getElementById('fin-hechos')?.value || '').trim();
+  const letra     = document.getElementById('fin-letra160')?.value || '';
+
+  if(!rut)    { toast('⚠️ Selecciona un trabajador', 'error'); return null; }
+  if(!fecha)  { toast('⚠️ Ingresa la fecha de término', 'error'); return null; }
+  if(!causal) { toast('⚠️ Selecciona la causal de término', 'error'); return null; }
+  const ci = CAUSALES_FINIQUITO[causal] || {};
+  if(ci.requiereLetra && !letra){ toast('⚠️ Indica cuál conducta del Art. 160 N°1 se invoca', 'error'); return null; }
+  if(ci.requiereHechos && hechos.length < 20){
+    toast('⚠️ Describe los hechos en que se funda el despido (con fechas). Sin hechos concretos en la carta, el despido puede declararse injustificado', 'error');
+    return null;
+  }
+  return { rut, fecha, causal, fechaAviso, hechos, letra };
+}
 
 const TOPE_ANIOS_INDEMNIZACION = 11;
 const TOPE_UF_INDEMNIZACION    = 90;
@@ -61,7 +121,9 @@ function _poblarSelectTrabajadorFiniquito(){
 /* ════════════════════════════════════════════════════════
    MOTOR DE CÁLCULO
    ════════════════════════════════════════════════════════ */
-function calcularFiniquito(rut, fechaTermino, causal, avisoPrevioDado){
+/* `aviso`: fecha ISO en que se avisó al trabajador ('' si no hubo), o
+   un booleano (formato antiguo: true = se avisó con 30 días). */
+function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
   const t = trabajadores.find(x => x.rut === rut);
   if(!t) return { error: `Trabajador ${rut} no encontrado` };
 
@@ -107,7 +169,12 @@ function calcularFiniquito(rut, fechaTermino, causal, avisoPrevioDado){
   const monto_vacaciones = vac.error ? 0 : Math.max(0, vac.monto_saldo_pendiente);
 
   // ── 3. Indemnización sustitutiva de aviso previo (Art. 162) ──
-  // Solo aplica en necesidades de la empresa, y solo si NO se avisó con 30 días de anticipación
+  // Solo aplica en necesidades de la empresa, y solo si NO se avisó con 30 días de anticipación.
+  // ✅ Paso 2 — se calcula desde la fecha de aviso (antes, una casilla).
+  const fecha_aviso = typeof aviso === 'string' ? aviso : '';
+  const dias_anticipacion_aviso = fecha_aviso ? _diasEntreISO(fecha_aviso, fechaTermino) : null;
+  const avisoPrevioDado = typeof aviso === 'boolean' ? aviso
+    : (dias_anticipacion_aviso != null && dias_anticipacion_aviso >= DIAS_AVISO_PREVIO);
   let monto_aviso_previo = 0;
   if(causalInfo.indemniza && !avisoPrevioDado){
     monto_aviso_previo = Math.round(Math.min(sueldo_base, ind.uf * TOPE_UF_INDEMNIZACION));
@@ -141,6 +208,12 @@ function calcularFiniquito(rut, fechaTermino, causal, avisoPrevioDado){
     fecha_ingreso: fechaIngreso,
     fecha_termino: fechaTermino,
     causal, causal_label: causalInfo.label, causal_articulo: causalInfo.articulo,
+    causal_letra: extra.letra || '',
+    causal_letra_texto: extra.letra ? (LETRAS_160_1[extra.letra] || '') : '',
+    hechos: extra.hechos || '',
+    requiere_carta: !!causalInfo.carta,
+    fecha_aviso,
+    dias_anticipacion_aviso,
     aviso_previo_dado: !!avisoPrevioDado,
     antiguedad_anios: +antiguedadAnios.toFixed(2),
     antiguedad_meses: antiguedadMeses,
@@ -169,16 +242,11 @@ function calcularFiniquito(rut, fechaTermino, causal, avisoPrevioDado){
 
 /* ── VISTA PREVIA ───────────────────────────────────────── */
 function previsualizarFiniquito(){
-  const rut       = document.getElementById('fin-sel-trabajador')?.value;
-  const fecha     = document.getElementById('fin-fecha-termino')?.value;
-  const causal    = document.getElementById('fin-causal')?.value;
-  const avisoDado = document.getElementById('fin-aviso-previo')?.checked;
+  const f = _leerFormularioFiniquito();
+  if(!f) return;
+  const { rut, fecha, causal } = f;
 
-  if(!rut)    { toast('⚠️ Selecciona un trabajador', 'error'); return; }
-  if(!fecha)  { toast('⚠️ Ingresa la fecha de término', 'error'); return; }
-  if(!causal) { toast('⚠️ Selecciona la causal de término', 'error'); return; }
-
-  const fin = calcularFiniquito(rut, fecha, causal, avisoDado);
+  const fin = calcularFiniquito(rut, fecha, causal, f.fechaAviso, f);
   if(fin.error){ toast(`❌ ${fin.error}`, 'error'); return; }
 
   _mostrarModalFiniquito(fin, false);
@@ -186,18 +254,13 @@ function previsualizarFiniquito(){
 
 /* ── GENERAR Y GUARDAR ──────────────────────────────────── */
 function generarFiniquito(){
-  const rut       = document.getElementById('fin-sel-trabajador')?.value;
-  const fecha     = document.getElementById('fin-fecha-termino')?.value;
-  const causal    = document.getElementById('fin-causal')?.value;
-  const avisoDado = document.getElementById('fin-aviso-previo')?.checked;
-
-  if(!rut)    { toast('⚠️ Selecciona un trabajador', 'error'); return; }
-  if(!fecha)  { toast('⚠️ Ingresa la fecha de término', 'error'); return; }
-  if(!causal) { toast('⚠️ Selecciona la causal de término', 'error'); return; }
+  const f = _leerFormularioFiniquito();
+  if(!f) return;
+  const { rut, fecha, causal } = f;
 
   if(typeof _bloqueaPorMesCerrado === 'function' && _bloqueaPorMesCerrado(rut, fecha)) return;
 
-  const fin = calcularFiniquito(rut, fecha, causal, avisoDado);
+  const fin = calcularFiniquito(rut, fecha, causal, f.fechaAviso, f);
   if(fin.error){ toast(`❌ ${fin.error}`, 'error'); return; }
 
   // ✅ F7 — la liquidación del mes de término debe pagar solo hasta esa
@@ -325,8 +388,9 @@ function _generarHTMLFiniquito(fin){
       ${ep?.representante||ep?.nombre_representante||'—'}, en adelante "el empleador", y don(ña)
       <strong>${fin.nombre}</strong>, RUT ${fin.rut}, en adelante "el trabajador", se deja constancia
       del finiquito del contrato de trabajo celebrado entre ambas partes con fecha ${fmtFecha(fin.fecha_ingreso)},
-      cuya causal de término es <strong>${fin.causal_label}</strong> (${fin.causal_articulo}), con
+      cuya causal de término es <strong>${fin.causal_label}${fin.causal_letra ? `, letra ${fin.causal_letra}) ${fin.causal_letra_texto}` : ''}</strong> (${fin.causal_articulo}), con
       fecha de término ${fmtFecha(fin.fecha_termino)}.</p>
+      ${fin.hechos ? `<p><strong>Hechos en que se funda:</strong> ${String(fin.hechos).replace(/</g,'&lt;')}</p>` : ''}
 
       <table>
         ${fin.sueldo_pendiente > 0 ? `<tr><td>Remuneración pendiente del mes (${fin.dia_termino} día${fin.dia_termino>1?'s':''} trabajados)</td><td>${fmtM(fin.sueldo_pendiente)}</td></tr>` : ''}

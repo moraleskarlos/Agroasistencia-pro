@@ -156,9 +156,15 @@ function _promedioVariablesArt71(rut, corte, inicioContrato){
    habría correspondido"). Se imagina que el trabajador sale de vacaciones
    el día siguiente al término: se cuentan sus días hábiles pendientes
    (lunes a viernes sin feriados) y se suman los sábados, domingos y
-   festivos que caen entre medio. La fracción de día se agrega al final.
-   Ej.: término jueves, 5 días hábiles → vie, sáb, dom, lun, mar, mié,
-   jue = 7 días a pagar. Con 1 día → solo el viernes = 1. */
+   festivos que caen entre medio. Ej.: término jueves, 5 días hábiles →
+   vie, sáb, dom, lun, mar, mié, jue = 7 días a pagar. Con 1 día → solo
+   el viernes = 1.
+   ✅ Fracción de día (auditoría Finiquitos, 29-10-2026): se ubica en el
+   día HÁBIL siguiente al último día entero, como en el ejemplo de la
+   DT (10,08 días desde el 18-11-2021 llegan "hasta el 02.12.2021"); los
+   sábados, domingos y festivos que quedan antes de ese día están dentro
+   del período y se suman. Ej.: término lunes, 4,29 días → mar–vie (4),
+   sáb y dom (+2), fracción el lunes → 6,29 (antes 4,29). */
 function _diasCorridosFeriado(fechaTermino, diasHabiles){
   if(!(diasHabiles > 0)) return 0;
   const enteros = Math.floor(diasHabiles + 1e-9);
@@ -168,6 +174,10 @@ function _diasCorridosFeriado(fechaTermino, diasHabiles){
     f = _diaSiguienteISO(f);
     corridos++;
     if(_diasHabilesFeriado(f, f) === 1) habiles++;
+  }
+  if(fraccion > 0){
+    // inhábiles entre el último día entero y el día hábil de la fracción
+    for(let g = _diaSiguienteISO(f), n = 0; _diasHabilesFeriado(g, g) === 0 && n < 15; g = _diaSiguienteISO(g), n++) corridos++;
   }
   return +(corridos + fraccion).toFixed(2);
 }
