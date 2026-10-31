@@ -2316,7 +2316,7 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>Trabajador</label>
-                <select id="fin-sel-trabajador" onchange="onCambioCausalFiniquito()"><option value="">— Seleccionar trabajador —</option></select>
+                <select id="fin-sel-trabajador" onchange="onCambioTrabajadorFiniquito()"><option value="">— Seleccionar trabajador —</option></select>
               </div>
               <div class="form-group">
                 <label>Fecha de término</label>
@@ -2355,6 +2355,15 @@
                 </label>
                 <div style="font-size:11px;color:var(--texto3);margin-top:3px;">Ley 21.389: si el trabajador está en el Registro, se retiene y se paga en la cuenta que ordenó el tribunal. No retener se multa con el doble.</div>
               </div>
+              <div class="form-group">
+                <label>Forma de pago del finiquito</label>
+                <select id="fin-forma-pago">
+                  <option value="transferencia">Transferencia electrónica</option>
+                  <option value="vale_vista">Vale vista</option>
+                  <option value="cheque">Cheque nominativo</option>
+                  <option value="efectivo">Efectivo</option>
+                </select>
+              </div>
               <div class="form-group" id="fin-grupo-letra160" style="display:none;">
                 <label>Conducta (Art. 160 N°1)</label>
                 <select id="fin-letra160">
@@ -2368,7 +2377,7 @@
                 </select>
               </div>
               <div class="form-group" id="fin-grupo-hechos" style="display:none;grid-column:1/-1;">
-                <label>Hechos en que se funda el despido</label>
+                <label id="fin-label-hechos">Hechos en que se funda el término</label>
                 <textarea id="fin-hechos" rows="3" placeholder="Describe con fechas concretas lo ocurrido (ej.: no se presentó a trabajar los días 2, 3 y 4 de septiembre, sin aviso ni justificación)."></textarea>
               </div>
             </div>
