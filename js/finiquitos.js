@@ -36,7 +36,7 @@ const CAUSALES_FINIQUITO = {
   art160_3:            { label: 'No concurrencia a sus labores sin causa justificada', articulo: 'Art. 160 N°3 CT', indemniza: false, carta: true, requiereHechos: true },
   art160_4:            { label: 'Abandono del trabajo', articulo: 'Art. 160 N°4 CT', indemniza: false, carta: true, requiereHechos: true },
   art160_7:            { label: 'Incumplimiento grave de las obligaciones que impone el contrato', articulo: 'Art. 160 N°7 CT', indemniza: false, carta: true, requiereHechos: true },
-  necesidades_empresa: { label: 'Necesidades de la empresa',       articulo: 'Art. 161 CT',     indemniza: true,  carta: true },
+  necesidades_empresa: { label: 'Necesidades de la empresa',       articulo: 'Art. 161 CT',     indemniza: true,  carta: true, requiereHechos: true },
 };
 
 const LETRAS_160_1 = {
@@ -50,12 +50,38 @@ const LETRAS_160_1 = {
 
 const DIAS_AVISO_PREVIO = 30; // Art. 161 inc. 1 / 162 inc. 4
 
+/* ✅ Paso 5 — Al elegir al trabajador: si su contrato es a PLAZO FIJO y
+   tiene fecha de término, se proponen esa fecha, la causal "Vencimiento
+   del plazo" (Art. 159 N°4) y la fecha de aviso = término (todo
+   editable). Solo plazo fijo, por decisión del usuario: un contrato de
+   temporada puede terminar antes o después de la fecha estimada. Lo
+   propuesto se marca (data-auto) para limpiarlo si se cambia a otro
+   trabajador; lo que el usuario escribió no se toca. */
+function onCambioTrabajadorFiniquito(){
+  const rut = document.getElementById('fin-sel-trabajador')?.value;
+  const elF = document.getElementById('fin-fecha-termino');
+  const elC = document.getElementById('fin-causal');
+  const elA = document.getElementById('fin-fecha-aviso');
+  [elF, elC, elA].forEach(el => { if(el && el.dataset.auto === '1'){ el.value = ''; delete el.dataset.auto; } });
+  const c = rut ? _getContratoVigente(rut, hoyISO().slice(0,7)) : null;
+  const tipo = (c?.tipo_contrato || c?.tipo || '').toLowerCase();
+  if(c && /plazo/.test(tipo) && c.fecha_termino){
+    const ter = c.fecha_termino.slice(0,10);
+    if(elF && !elF.value){ elF.value = ter; elF.dataset.auto = '1'; }
+    if(elC && !elC.value){ elC.value = 'vencimiento_plazo'; elC.dataset.auto = '1'; }
+    if(elA && !elA.value){ elA.value = ter; elA.dataset.auto = '1'; }
+  }
+  onCambioCausalFiniquito();
+}
+
 /* Muestra u oculta los campos propios de cada causal (Art. 160). */
 function onCambioCausalFiniquito(){
   const c = CAUSALES_FINIQUITO[document.getElementById('fin-causal')?.value] || {};
   const gH = document.getElementById('fin-grupo-hechos');
   const gL = document.getElementById('fin-grupo-letra160');
-  if(gH) gH.style.display = c.requiereHechos ? '' : 'none';
+  if(gH) gH.style.display = c.carta ? '' : 'none';
+  const lH = document.getElementById('fin-label-hechos');
+  if(lH) lH.textContent = c.requiereHechos ? 'Hechos en que se funda el término (obligatorio)' : 'Hechos en que se funda el término (opcional — si se deja vacío, la carta usa un texto estándar)';
   if(gL) gL.style.display = c.requiereLetra ? '' : 'none';
   // ✅ Paso 3 — aporte AFC del empleador (solo Art. 161)
   const gA = document.getElementById('fin-grupo-afc');
@@ -105,6 +131,7 @@ function _leerFormularioFiniquito(){
   const afc_cuenta = document.getElementById('fin-afc-cuenta')?.value || '';
   const alimentos  = document.getElementById('fin-alimentos')?.value || '';
   const alimentos_consultado = !!document.getElementById('fin-alimentos-consultado')?.checked;
+  const forma_pago = document.getElementById('fin-forma-pago')?.value || '';
 
   if(!rut)    { toast('⚠️ Selecciona un trabajador', 'error'); return null; }
   if(!fecha)  { toast('⚠️ Ingresa la fecha de término', 'error'); return null; }
@@ -112,11 +139,11 @@ function _leerFormularioFiniquito(){
   const ci = CAUSALES_FINIQUITO[causal] || {};
   if(ci.requiereLetra && !letra){ toast('⚠️ Indica cuál conducta del Art. 160 N°1 se invoca', 'error'); return null; }
   if(ci.requiereHechos && hechos.length < 20){
-    toast('⚠️ Describe los hechos en que se funda el despido (con fechas). Sin hechos concretos en la carta, el despido puede declararse injustificado', 'error');
+    toast('⚠️ Describe los hechos en que se funda el término (con fechas y datos concretos). La carta del Art. 162 debe indicarlos; sin ellos, el despido puede declararse injustificado', 'error');
     return null;
   }
   if(parseFloat(alimentos) < 0){ toast('⚠️ La retención por pensión de alimentos no puede ser negativa', 'error'); return null; }
-  return { rut, fecha, causal, fechaAviso, hechos, letra, afc_cuenta: ci.indemniza ? afc_cuenta : '', alimentos, alimentos_consultado };
+  return { rut, fecha, causal, fechaAviso, hechos: ci.carta ? hechos : '', letra: ci.requiereLetra ? letra : '', afc_cuenta: ci.indemniza ? afc_cuenta : '', alimentos, alimentos_consultado, forma_pago };
 }
 
 const TOPE_ANIOS_INDEMNIZACION = 11;
@@ -321,6 +348,7 @@ function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
     alimentos_aplicado,
     alimentos_no_cubierto,
     alimentos_consultado: !!extra.alimentos_consultado,
+    forma_pago: extra.forma_pago || '',
     tipo_contrato: contrato.tipo_contrato || contrato.tipo || '',
     contrato_fecha_termino: contrato.fecha_termino || '',
 
@@ -470,93 +498,302 @@ function renderListaFiniquitos(){
       </span>
     </td>
     <td style="display:flex;gap:5px;">
-      <button class="btn btn-secondary btn-sm" onclick="imprimirFiniquito('${f.folio}')" title="Imprimir"><i class="ti ti-printer"></i></button>
+      <button class="btn btn-secondary btn-sm" onclick="imprimirFiniquito('${f.folio}')" title="Imprimir finiquito"><i class="ti ti-printer"></i></button>
+      ${(f.requiere_carta ?? (CAUSALES_FINIQUITO[f.causal]?.carta)) ? `<button class="btn btn-secondary btn-sm" onclick="imprimirCartaAviso('${f.folio}')" title="Carta de aviso de término (Art. 162)"><i class="ti ti-mail"></i></button>` : ''}
+      ${f.causal === 'renuncia' ? `<button class="btn btn-secondary btn-sm" onclick="imprimirCartaRenuncia('${f.folio}')" title="Formato de carta de renuncia"><i class="ti ti-file-signature"></i></button>` : ''}
       ${f.estado!=='ratificado' ? `<button class="btn btn-primary btn-sm" onclick="marcarFiniquitoRatificado('${f.folio}')" title="Marcar ratificado"><i class="ti ti-check"></i></button>` : ''}
     </td>
   </tr>`).join('');
 }
 
 /* ════════════════════════════════════════════════════════
-   DOCUMENTO IMPRIMIBLE
+   DOCUMENTOS — finiquito, carta de aviso (Art. 162) y carta de renuncia
+   ✅ Paso 5 (auditoría Finiquitos, 30-10-2026). Estructura tomada de los
+   modelos que usa el usuario (finiquito ratificado ante notario y carta
+   de aviso con acuse de recibo), ajustada a la DT:
+   · Reserva de derechos: el trabajador puede hacerla al firmar (Art. 177)
+     — se deja el espacio, no se niega de antemano.
+   · Poder liberatorio limitado a lo expresamente consignado (Art. 177).
+   · Declaraciones de hechos (accidente, fuero), sin renuncia anticipada
+     a acciones de tutela.
+   · Sin cláusulas de confidencialidad ni de computador (no aplican a
+     trabajadores de campo — decisión del usuario).
+   · Sin recuadro de ratificación: al final queda un espacio en blanco
+     que usan el notario o inspector para su timbre y firma, y el
+     trabajador para una reserva de derechos (criterio del usuario).
+   · Ley 21.389: retención o declaración jurada de no haber retenciones.
    ════════════════════════════════════════════════════════ */
+
+const FORMAS_PAGO_FINIQUITO = {
+  transferencia: 'transferencia electrónica a la cuenta del trabajador',
+  vale_vista:    'vale vista nominativo a nombre del trabajador',
+  cheque:        'cheque nominativo a nombre del trabajador',
+  efectivo:      'dinero en efectivo',
+};
+
+function _escFin(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function _fmtMFin(v){ return '$' + Math.round(v||0).toLocaleString('es-CL'); }
+function _fmtDiasFin(v){ return String(+(+v||0).toFixed(2)).replace('.', ','); }
+
+/* Fecha + N días hábiles (lunes a viernes sin feriados). Art. 177: el
+   finiquito se otorga y paga dentro de 10 días hábiles desde la
+   separación. */
+function _sumarDiasHabilesFin(fecha, n){
+  let f = fecha.slice(0,10), k = 0;
+  while(k < n){ f = _diaSiguienteISO(f); if(_diasHabilesFeriado(f, f) === 1) k++; }
+  return f;
+}
+
+/* Fecha larga: "31 de agosto de 2026" */
+function _fechaLargaFin(f){
+  if(!f) return '____ de __________ de 20__';
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return `${+f.slice(8,10)} de ${meses[+f.slice(5,7)-1]} de ${f.slice(0,4)}`;
+}
+
+/* Datos comunes de los documentos */
+function _datosDocFin(fin){
+  const t   = trabajadores.find(x => x.rut === fin.rut) || {};
+  const ep  = getEmpresaEmpleadora(t.empresa_propia_id);
+  const cto = (contratos||[]).find(c => c.id === fin.contrato_id)
+           || _getContratoVigente(fin.rut, (fin.fecha_termino||'').slice(0,7)) || {};
+  const causalTxt = `${fin.causal_label}${fin.causal_letra ? `, letra ${fin.causal_letra}) ${fin.causal_letra_texto}` : ''}`;
+  return {
+    t, ep, cto, causalTxt,
+    ciudad: ep.ciudad || ep.comuna || '__________',
+    empresa: ep.razon_social || '—',
+    rutEmp: ep.rut || '—',
+    repr: ep.representante || '______________________',
+    rutRepr: ep.rut_representante || '______________',
+    domEmp: [ep.direccion, ep.comuna].filter(Boolean).join(', ') || '______________________',
+    nombre: fin.nombre, rut: fin.rut,
+    domTrab: t.domicilio || '______________________',
+    cargo: cto.funcion_cargo || t.funcion_cargo || '______________',
+    afp: t.afiliacion_afp || 'AFP', salud: t.sistema_salud || 'Fonasa',
+    contactoEmp: [ep.correo, ep.telefono].filter(Boolean).join(' / '),
+    fechaPago: fin.fecha_termino ? _sumarDiasHabilesFin(fin.fecha_termino, 10) : '',
+  };
+}
+
+/* Tabla de prestaciones (compartida por finiquito y carta) */
+function _tablaPrestacionesFin(fin){
+  const m = _fmtMFin;
+  const filas = [];
+  if(fin.sueldo_pendiente > 0) filas.push([`Remuneración pendiente del mes (${fin.dia_termino} días)`, m(fin.sueldo_pendiente)]);
+  filas.push([`Feriado proporcional: ${_fmtDiasFin(fin.dias_vacaciones_saldo)} días hábiles${fin.dias_vacaciones_corridos ? ` = ${_fmtDiasFin(fin.dias_vacaciones_corridos)} días a pagar (Art. 73 CT)` : ''}`, m(fin.monto_vacaciones)]);
+  if(fin.monto_aviso_previo > 0) filas.push([`Indemnización sustitutiva del aviso previo (Art. 162 CT)`, m(fin.monto_aviso_previo)]);
+  if(fin.monto_anios_servicio > 0) filas.push([`Indemnización por años de servicio: ${fin.anios_indemnizables} año${fin.anios_indemnizables!==1?'s':''} × ${m(fin.base_indemnizacion || fin.monto_anios_servicio/fin.anios_indemnizables)}${fin.base_con_tope ? ' (tope 90 UF)' : ''} (Art. 163 CT)`, m(fin.monto_anios_servicio)]);
+  if(fin.descuento_afc > 0) filas.push([`Menos aporte del empleador al Seguro de Cesantía (Art. 13 Ley 19.728)`, '-' + m(fin.descuento_afc)]);
+  if(fin.alimentos_aplicado > 0) filas.push([`Retención pensión de alimentos (Ley 21.389)`, '-' + m(fin.alimentos_aplicado)]);
+  if(fin.total_descuentos > 0) filas.push([`Saldo de préstamos / anticipos${fin.saldo_descuentos_no_cubierto > 0 ? ` (quedan ${m(fin.saldo_descuentos_no_cubierto)} sin cubrir)` : ''}`, '-' + m(fin.descuentos_aplicados ?? fin.total_descuentos)]);
+  return `<table class="fq-tabla">
+    ${filas.map(([a,b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('')}
+    <tr class="fq-total"><td>Total a pagar</td><td>${m(fin.total_a_pagar)}</td></tr>
+  </table>`;
+}
+
+const _ESTILO_DOC_FIN = `<style>
+  .fq-doc{max-width:760px;margin:0 auto;font-family:'Segoe UI',system-ui,sans-serif;color:#1e293b;font-size:12.5px;line-height:1.5;}
+  .fq-bloque{break-inside:avoid;page-break-inside:avoid;}
+  .fq-doc h1{font-size:18px;text-align:center;margin:0 0 4px;letter-spacing:.5px;}
+  .fq-doc .fq-folio{text-align:center;font-size:11px;color:#64748b;margin-bottom:18px;}
+  .fq-doc p{text-align:justify;margin:0 0 10px;}
+  .fq-doc .fq-cl{font-weight:700;}
+  .fq-tabla{width:100%;border-collapse:collapse;margin:8px 0 14px;}
+  .fq-tabla td{padding:6px 8px;border:1px solid #cbd5e1;}
+  .fq-tabla td:last-child{text-align:right;white-space:nowrap;width:130px;}
+  .fq-tabla .fq-total td{font-weight:700;background:#f1f5f9;}
+  .fq-firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:56px;}
+  .fq-firma{text-align:center;border-top:1px solid #334155;padding-top:6px;font-size:12px;}
+  .fq-huella{width:70px;height:85px;border:1px dashed #94a3b8;margin:0 auto 8px;font-size:9px;color:#94a3b8;display:flex;align-items:flex-end;justify-content:center;}
+  .fq-nota{font-size:11px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;padding:8px 10px;margin-top:18px;}
+  .fq-derecha{text-align:right;}
+  @media print{.fq-no-print{display:none;} body{margin:0;}}
+</style>`;
+
+/* ── FINIQUITO ─────────────────────────────────────────── */
 function _generarHTMLFiniquito(fin){
-  const t  = trabajadores.find(x => x.rut === fin.rut);
-  const ep = getEmpresaEmpleadora(t?.empresa_propia_id);
-  const fmtM = v => '$' + Math.round(v||0).toLocaleString('es-CL');
+  const d = _datosDocFin(fin);
+  const n = `<strong>${_escFin(d.nombre)}</strong>`;
+  const emp = `<strong>${_escFin(d.empresa)}</strong>`;
+  const mesUlt = fin.fecha_termino ? getNombreMes(fin.fecha_termino.slice(0,7)) : '';
+  const formaPago = FORMAS_PAGO_FINIQUITO[fin.forma_pago] || 'transferencia electrónica, vale vista, cheque nominativo o dinero en efectivo';
+  const cl = ['PRIMERO','SEGUNDO','TERCERO','CUARTO','QUINTO','SEXTO','SÉPTIMO','OCTAVO','NOVENO','DÉCIMO'];
+  let i = 0; const C = () => `<span class="fq-cl">${cl[i++]}:</span>`;
 
-  return `
-  <style>
-    .fq-wrap{max-width:760px;margin:0 auto;background:#fff;font-family:'Segoe UI',system-ui,sans-serif;color:#1e293b;}
-    .fq-header{background:#0f2942;color:#fff;padding:18px 24px;border-radius:10px 10px 0 0;}
-    .fq-body{padding:22px 24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;}
-    .fq-titulo{font-size:17px;font-weight:700;margin-bottom:4px;}
-    .fq-sub{font-size:12px;color:#94a3b8;}
-    p{font-size:13px;line-height:1.7;text-align:justify;}
-    table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;}
-    td{padding:6px 8px;border-bottom:1px solid #f1f5f9;}
-    td:last-child{text-align:right;font-weight:500;}
-    .fq-total{background:#0f2942;color:#fff;font-weight:700;font-size:15px;}
-    .fq-firmas{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:50px;}
-    .fq-firma{text-align:center;border-top:1px dashed #cbd5e1;padding-top:8px;font-size:11px;color:#475569;}
-    @media print{.fq-no-print{display:none;}}
-  </style>
-  <div class="fq-wrap">
-    <div class="fq-header">
-      <div class="fq-titulo">Finiquito de Contrato de Trabajo</div>
-      <div class="fq-sub">Folio ${fin.folio||'(borrador)'} · ${fin.causal_articulo}</div>
+  const alimentos = fin.alimentos_aplicado > 0
+    ? `De conformidad con la Ley N° 21.389, que crea el Registro Nacional de Deudores de Pensiones de Alimentos, el empleador retiene del presente finiquito la suma de <strong>${_fmtMFin(fin.alimentos_aplicado)}</strong>, que será pagada en la cuenta ordenada por el tribunal${fin.alimentos_no_cubierto > 0 ? `; el saldo no cubierto de ${_fmtMFin(fin.alimentos_no_cubierto)} será informado al tribunal` : ''}.`
+    : `El empleador declara bajo juramento que consultó el Registro Nacional de Deudores de Pensiones de Alimentos y que no se le han notificado retenciones judiciales por concepto de pensiones de alimentos que afecten a ${n}, de conformidad con la Ley N° 21.389.`;
+
+  return `${_ESTILO_DOC_FIN}
+  <div class="fq-doc">
+    <h1>FINIQUITO DE CONTRATO DE TRABAJO</h1>
+    <div class="fq-folio">Folio ${_escFin(fin.folio || '(borrador)')}</div>
+
+    <p>En ${_escFin(d.ciudad)}, a ${_fechaLargaFin(fin.fecha_emision || fin.fecha_termino)}, entre ${emp}, RUT ${_escFin(d.rutEmp)},
+    representada por don(ña) <strong>${_escFin(d.repr)}</strong>, cédula de identidad N° ${_escFin(d.rutRepr)}, ambos domiciliados en
+    ${_escFin(d.domEmp)}, en adelante "el empleador", y don(ña) ${n}, cédula de identidad N° ${_escFin(d.rut)}, domiciliado(a) en
+    ${_escFin(d.domTrab)}, en adelante "el trabajador", se ha convenido el siguiente finiquito:</p>
+
+    <p>${C()} El trabajador prestó servicios al empleador en calidad de <strong>${_escFin(d.cargo)}</strong> desde el
+    ${_fechaLargaFin(fin.fecha_ingreso)} hasta el ${_fechaLargaFin(fin.fecha_termino)}, fecha esta última en que se puso término a su
+    contrato de trabajo por la causal <strong>${_escFin(fin.causal_articulo)}: ${_escFin(d.causalTxt)}</strong>${fin.requiere_carta ? `,
+    comunicada por escrito${fin.fecha_aviso ? ` el ${_fechaLargaFin(fin.fecha_aviso)}` : ''} conforme al artículo 162 del Código del Trabajo` : ''}.</p>
+    ${fin.hechos ? `<p>Los hechos en que se funda el término son: ${_escFin(fin.hechos)}</p>` : ''}
+
+    <p>${C()} Como consecuencia del término de la relación laboral, el trabajador tiene derecho a las siguientes prestaciones:</p>
+    ${_tablaPrestacionesFin(fin)}
+    ${fin.sueldo_pendiente > 0 ? '' : `<p>La remuneración de ${mesUlt}${fin.dias_ultimo_mes != null ? ` (${fin.dias_ultimo_mes} día${fin.dias_ultimo_mes!==1?'s':''})` : ''} se paga en la liquidación de sueldo de ese período${fin.liquidacion_ultimo_mes ? `, folio ${_escFin(fin.liquidacion_ultimo_mes.folio)}, por un líquido de ${_fmtMFin(fin.liquidacion_ultimo_mes.liquido)}` : ''}, con sus cotizaciones previsionales.</p>`}
+    <p>La suma de <strong>${_fmtMFin(fin.total_a_pagar)}</strong> se paga al trabajador mediante ${formaPago}, quien la recibe en este acto
+    a su entera satisfacción.</p>
+
+    <p>${C()} El trabajador declara haber recibido del empleador, correcta y oportunamente, las remuneraciones, feriados y demás
+    prestaciones convenidas en su contrato de trabajo, y que con el pago indicado en la cláusula anterior nada se le adeuda por
+    los conceptos aquí consignados. De acuerdo con el artículo 177 del Código del Trabajo, el poder liberatorio de este finiquito
+    se limita a lo expresamente pactado en él.</p>
+
+    <p>${C()} El trabajador declara que durante la relación laboral no sufrió accidentes del trabajo ni contrajo enfermedades
+    profesionales que se encuentren pendientes de declaración o de pago de prestaciones, y que no es titular de fuero laboral
+    alguno al término de su contrato.</p>
+
+    <p>${C()} El empleador declara haber pagado íntegramente las cotizaciones previsionales, de salud y del seguro de cesantía del
+    trabajador devengadas hasta el último día del mes anterior al término del contrato, lo que acredita con los certificados de
+    ${_escFin(d.afp)} y ${_escFin(d.salud)} que se entregan al trabajador (artículos 162 y 177 del Código del Trabajo). Las cotizaciones
+    del último mes se pagan en la liquidación de ese período.</p>
+
+    <p>${C()} ${alimentos}</p>
+
+    <p>${C()} El trabajador declara que otorga este finiquito libre y voluntariamente, con pleno conocimiento de sus derechos. Si
+    lo estima necesario, puede dejar constancia de reserva de derechos para demandar al empleador, lo que no impide el pago de las
+    sumas no disputadas (artículo 177 del Código del Trabajo).</p>
+
+    <div class="fq-bloque">
+    <p>${C()} Para constancia, las partes firman el presente finiquito en dos ejemplares, quedando uno en poder de cada parte.</p>
+
+    <div class="fq-firmas">
+      <div><div class="fq-huella">Huella</div><div class="fq-firma">${_escFin(d.nombre)}<br>RUT ${_escFin(d.rut)}<br><strong>TRABAJADOR(A)</strong></div></div>
+      <div><div style="height:93px;"></div><div class="fq-firma">${_escFin(d.empresa)}<br>RUT ${_escFin(d.rutEmp)}<br>p.p. ${_escFin(d.repr)}<br><strong>EMPLEADOR</strong></div></div>
     </div>
-    <div class="fq-body">
-      <p>En ${ep?.ciudad||'—'}, a ${fmtFecha(fin.fecha_emision||fin.fecha_termino)}, entre
-      <strong>${ep?.razon_social||ep?.nombre||'—'}</strong>, RUT ${ep?.rut||'—'}, representada por
-      ${ep?.representante||ep?.nombre_representante||'—'}, en adelante "el empleador", y don(ña)
-      <strong>${fin.nombre}</strong>, RUT ${fin.rut}, en adelante "el trabajador", se deja constancia
-      del finiquito del contrato de trabajo celebrado entre ambas partes con fecha ${fmtFecha(fin.fecha_ingreso)},
-      cuya causal de término es <strong>${fin.causal_label}${fin.causal_letra ? `, letra ${fin.causal_letra}) ${fin.causal_letra_texto}` : ''}</strong> (${fin.causal_articulo}), con
-      fecha de término ${fmtFecha(fin.fecha_termino)}.</p>
-      ${fin.hechos ? `<p><strong>Hechos en que se funda:</strong> ${String(fin.hechos).replace(/</g,'&lt;')}</p>` : ''}
 
-      <table>
-        ${fin.sueldo_pendiente > 0 ? `<tr><td>Remuneración pendiente del mes (${fin.dia_termino} día${fin.dia_termino>1?'s':''} trabajados)</td><td>${fmtM(fin.sueldo_pendiente)}</td></tr>` : ''}
-        <tr><td>Feriado proporcional — ${fin.dias_vacaciones_saldo} días hábiles pendientes${fin.dias_vacaciones_corridos ? ` (${fin.dias_vacaciones_corridos} días a pagar, Art. 73)` : ''}</td><td>${fmtM(fin.monto_vacaciones)}</td></tr>
-        ${fin.monto_aviso_previo > 0 ? `<tr><td>Indemnización sustitutiva del aviso previo (Art. 162 CT)${fin.base_indemnizacion ? ` — base ${fmtM(fin.base_indemnizacion)}${fin.base_con_tope ? ' (tope 90 UF)' : ''}` : ''}</td><td>${fmtM(fin.monto_aviso_previo)}</td></tr>` : ''}
-        ${fin.monto_anios_servicio > 0 ? `<tr><td>Indemnización por años de servicio — ${fin.anios_indemnizables} año${fin.anios_indemnizables!==1?'s':''} × ${fmtM(fin.base_indemnizacion || (fin.monto_anios_servicio/fin.anios_indemnizables))} (Art. 163 CT, tope ${fin.tope_uf_aplicado} UF)</td><td>${fmtM(fin.monto_anios_servicio)}</td></tr>` : ''}
-        ${fin.descuento_afc > 0 ? `<tr><td>Menos aporte del empleador al Seguro de Cesantía (Art. 13 Ley 19.728)</td><td>-${fmtM(fin.descuento_afc)}</td></tr>` : ''}
-        ${fin.alimentos_aplicado > 0 ? `<tr><td>Retención pensión de alimentos (Ley 21.389) — se paga en la cuenta ordenada por el tribunal</td><td>-${fmtM(fin.alimentos_aplicado)}</td></tr>` : ''}
-        ${fin.total_descuentos > 0 ? `<tr><td>Saldo de préstamos / anticipos (${(fin.descuentos_pendientes||[]).length} cuota${(fin.descuentos_pendientes||[]).length!==1?'s':''} posteriores al término)${fin.saldo_descuentos_no_cubierto > 0 ? ` — quedan ${fmtM(fin.saldo_descuentos_no_cubierto)} sin cubrir` : ''}</td><td>-${fmtM(fin.descuentos_aplicados ?? fin.total_descuentos)}</td></tr>` : ''}
-        <tr class="fq-total"><td>Total líquido a pagar</td><td>${fmtM(fin.total_a_pagar)}</td></tr>
-      </table>
-
-      ${fin.sueldo_pendiente ? '' : `<p style="font-size:12px;">La remuneración de ${getNombreMes(fin.fecha_termino.slice(0,7))}${fin.dias_ultimo_mes != null ? ` (${fin.dias_ultimo_mes} día${fin.dias_ultimo_mes!==1?'s':''})` : ''} se paga en la liquidación de sueldo de ese período${fin.liquidacion_ultimo_mes ? `, folio ${fin.liquidacion_ultimo_mes.folio}, por un líquido de ${fmtM(fin.liquidacion_ultimo_mes.liquido)}` : ''}, con sus cotizaciones previsionales.</p>`}
-
-      <p>El trabajador declara recibir en este acto, a su entera satisfacción, la suma antes indicada,
-      no teniendo cargo ni cobro alguno pendiente en contra del empleador por concepto de remuneraciones,
-      feriados, indemnizaciones, o cualquier otra prestación derivada de la relación laboral o de su
-      término, dando en consecuencia el más amplio y total finiquito.</p>
-
-      ${fin.causal === 'necesidades_empresa' ? `<p style="font-size:11px;color:#94a3b8;">Este finiquito debe ser ratificado ante notario público, inspector del trabajo, o
-      ministro de fe autorizado, conforme al Art. 177 CT, para que produzca pleno efecto liberatorio.</p>` : ''}
-
-      <div class="fq-firmas">
-        <div class="fq-firma">Firma empleador<br><strong>${ep?.razon_social||ep?.nombre||'—'}</strong></div>
-        <div class="fq-firma">Firma trabajador<br><strong>${fin.nombre}</strong><br>RUT ${fin.rut}</div>
-      </div>
+    <!-- ✅ Espacio en blanco, sin recuadro (pedido del usuario): lo usan el
+         notario o inspector para su timbre y firma de ratificación, y el
+         trabajador si quiere escribir una reserva de derechos. -->
+    <div style="height:200px;"></div>
     </div>
   </div>`;
 }
 
-function _mostrarModalFiniquito(fin, guardado){
-  const html = _generarHTMLFiniquito(fin);
+/* ── CARTA DE AVISO DE TÉRMINO (Art. 162) ──────────────── */
+function _generarHTMLCartaAviso(fin){
+  const d = _datosDocFin(fin);
+  const fechaCarta = fin.fecha_aviso || fin.fecha_emision || fin.fecha_termino;
+  const esFortuito = /159 N°6/.test(fin.causal_articulo);
+  const plazoDias = esFortuito ? 6 : 3;
+  const limite = _sumarDiasHabilesFin(fin.fecha_termino, plazoDias);
+  const hechos = fin.hechos
+    || (fin.causal === 'vencimiento_plazo' ? `Se cumplió el plazo convenido en su contrato de trabajo, que vence el ${_fechaLargaFin(fin.fecha_termino)}.` : '')
+    || (fin.causal === 'conclusion_obra' ? `Concluyó la obra o faena para la cual fue contratado(a)${d.cto.faena ? ` (${_escFin(d.cto.faena)})` : ''}.` : '');
+  return `${_ESTILO_DOC_FIN}
+  <div class="fq-doc">
+    <p class="fq-derecha">${_escFin(d.ciudad)}, ${_fechaLargaFin(fechaCarta)}</p>
+    <p>Señor(a)<br><strong>${_escFin(d.nombre)}</strong><br>RUT ${_escFin(d.rut)}<br>${_escFin(d.domTrab)}<br><u>PRESENTE</u></p>
+    <p class="fq-derecha"><strong>Ref.:</strong> Comunica término de contrato de trabajo.</p>
+
+    <p>Por medio de la presente, comunicamos a usted que ${_escFin(d.empresa)} ha resuelto poner término al contrato de trabajo que lo(a)
+    vincula con la empresa a contar del <strong>${_fechaLargaFin(fin.fecha_termino)}</strong>, por la causal del
+    <strong>${_escFin(fin.causal_articulo)}: "${_escFin(d.causalTxt)}"</strong>.</p>
+    ${hechos ? `<p>Los hechos en que se funda esta decisión son los siguientes: ${_escFin(hechos)}</p>` : ''}
+
+    <p>El monto que corresponde pagarle por el término de la relación laboral se desglosa de la siguiente forma:</p>
+    ${_tablaPrestacionesFin(fin)}
+    <p>A estos montos se aplicarán los descuentos legales que correspondan. La remuneración de los días trabajados en
+    ${fin.fecha_termino ? getNombreMes(fin.fecha_termino.slice(0,7)) : 'el último mes'} se pagará en la liquidación de sueldo de ese período.</p>
+
+    <p>Conforme al inciso 5° del artículo 162 del Código del Trabajo, le informamos que sus cotizaciones previsionales se encuentran
+    pagadas hasta el último día del mes anterior al término de su contrato, y se adjuntan a esta carta los certificados de pago de
+    ${_escFin(d.afp)} y ${_escFin(d.salud)} que lo acreditan.</p>
+
+    <p>Su finiquito estará disponible a contar del <strong>${_fechaLargaFin(d.fechaPago)}</strong> para ser firmado y recibir el pago
+    indicado${d.domEmp ? `, en ${_escFin(d.domEmp)}` : ''}. Si prefiere firmarlo de forma electrónica en el portal de la Dirección del
+    Trabajo, avísenos${d.contactoEmp ? ` a ${_escFin(d.contactoEmp)}` : ''}; esta opción es voluntaria y puede siempre optar por firmarlo
+    presencialmente ante un ministro de fe. Le recordamos que al firmar el finiquito puede formular reserva de derechos.</p>
+
+    <div class="fq-bloque">
+    <p>Sin otro particular, saluda atentamente,</p>
+    <div style="width:280px;margin-top:56px;" class="fq-firma">${_escFin(d.empresa)}<br>RUT ${_escFin(d.rutEmp)}<br>p.p. ${_escFin(d.repr)}</div>
+
+    <div style="margin-top:40px;border-top:1px dashed #94a3b8;padding-top:12px;">
+      <p>Declaro que hoy ____ / ____ / ________ he recibido una comunicación idéntica a la que consta en esta carta, además de los
+      certificados de cotizaciones previsionales pagadas.</p>
+      <div style="width:280px;margin-top:46px;" class="fq-firma">${_escFin(d.nombre)}<br>RUT ${_escFin(d.rut)}</div>
+    </div>
+    </div>
+
+    <div class="fq-nota fq-no-print">
+      <strong>Recordatorio (no se imprime):</strong> entregar personalmente o por carta certificada al domicilio señalado en el contrato,
+      a más tardar el <strong>${_fechaLargaFin(limite)}</strong> (${plazoDias} días hábiles desde la separación${fin.causal === 'necesidades_empresa' ? '; en necesidades de la empresa, idealmente con 30 días de anticipación para no pagar aviso previo' : ''}).
+      Enviar copia a la Inspección del Trabajo en el mismo plazo (puede hacerse en línea en el sitio de la DT).
+      Si hay cotizaciones impagas, el despido no pone término al contrato (Ley Bustos, art. 162 inc. 5°).
+    </div>
+  </div>`;
+}
+
+/* ── CARTA DE RENUNCIA (formato para el trabajador) ────── */
+function _generarHTMLCartaRenuncia(fin){
+  const d = _datosDocFin(fin);
+  return `${_ESTILO_DOC_FIN}
+  <div class="fq-doc">
+    <p class="fq-derecha">${_escFin(d.ciudad)}, ____ de ______________ de ________</p>
+    <p>Señores<br><strong>${_escFin(d.empresa)}</strong><br>RUT ${_escFin(d.rutEmp)}<br>${_escFin(d.domEmp)}<br><u>PRESENTE</u></p>
+    <p class="fq-derecha"><strong>Ref.:</strong> Renuncia voluntaria.</p>
+
+    <p>Yo, <strong>${_escFin(d.nombre)}</strong>, cédula de identidad N° ${_escFin(d.rut)}, que me desempeño como
+    ${_escFin(d.cargo)}, por medio de la presente comunico mi <strong>renuncia voluntaria</strong> a mi cargo, conforme al
+    artículo 159 N°2 del Código del Trabajo, a contar del <strong>${_fechaLargaFin(fin.fecha_termino)}</strong>.</p>
+    <p>Declaro que esta decisión es libre y voluntaria.</p>
+
+    <p>Sin otro particular, saluda atentamente,</p>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:end;margin-top:46px;">
+      <div class="fq-huella">Huella</div>
+      <div style="width:280px;" class="fq-firma">${_escFin(d.nombre)}<br>RUT ${_escFin(d.rut)}</div>
+    </div>
+
+    <div style="height:160px;"></div><!-- espacio para timbre y firma del ministro de fe -->
+    <div class="fq-nota fq-no-print"><strong>Recordatorio (no se imprime):</strong> el trabajador debe dar aviso con al menos
+    30 días de anticipación (art. 159 N°2), aunque el empleador puede aceptar una fecha anterior. Para que el empleador
+    pueda invocarla, debe firmarse ante ministro de fe (notario, inspector del trabajo, oficial del Registro Civil o
+    secretario municipal) o electrónicamente en el sitio de la DT (art. 177).</div>
+  </div>`;
+}
+
+function _abrirDocumentoFin(titulo, html, imprimir){
   const win = window.open('', '_blank', 'width=900,height=700');
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-    <title>Finiquito ${fin.nombre}</title></head><body style="margin:20px;">
+    <title>${_escFin(titulo)}</title></head><body style="margin:24px;">
     ${html}
-    ${guardado ? '<script>setTimeout(()=>window.print(),700);<\/script>' : ''}
+    ${imprimir ? '<script>setTimeout(()=>window.print(),700);<\/script>' : ''}
   </body></html>`);
   win.document.close();
+}
+
+function _mostrarModalFiniquito(fin, guardado){
+  _abrirDocumentoFin(`Finiquito ${fin.nombre}`, _generarHTMLFiniquito(fin), guardado);
 }
 
 function imprimirFiniquito(folio){
   const fin = finiquitos_guardados.find(f => f.folio === folio);
   if(!fin){ toast('⚠️ Finiquito no encontrado', 'error'); return; }
   _mostrarModalFiniquito(fin, true);
+}
+
+function imprimirCartaAviso(folio){
+  const fin = finiquitos_guardados.find(f => f.folio === folio);
+  if(!fin){ toast('⚠️ Finiquito no encontrado', 'error'); return; }
+  _abrirDocumentoFin(`Carta de aviso ${fin.nombre}`, _generarHTMLCartaAviso(fin), true);
+}
+
+function imprimirCartaRenuncia(folio){
+  const fin = finiquitos_guardados.find(f => f.folio === folio);
+  if(!fin){ toast('⚠️ Finiquito no encontrado', 'error'); return; }
+  _abrirDocumentoFin(`Carta de renuncia ${fin.nombre}`, _generarHTMLCartaRenuncia(fin), true);
 }
