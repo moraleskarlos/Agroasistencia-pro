@@ -449,7 +449,7 @@ function generarFiniquito(){
   if(!fin.liquidacion_ultimo_mes){
     toast(`⚠️ Falta generar la liquidación de ${getNombreMes(fecha.slice(0,7))} de ${fin.nombre} (paga ${fin.dias_ultimo_mes} día${fin.dias_ultimo_mes!==1?'s':''} hasta el término)`, 'error');
   } else if(!fin.liquidacion_ultimo_mes.prorrateada){
-    toast(`⚠️ La liquidación de ${getNombreMes(fecha.slice(0,7))} de ${fin.nombre} se generó antes del finiquito — recalcúlala para que pague solo hasta el término`, 'error');
+    toast(`⚠️ La liquidación de ${getNombreMes(fecha.slice(0,7))} de ${fin.nombre} se generó antes del finiquito — reábrela ("Reabrir para corregir" en Generar Liquidaciones) para que pague solo hasta el término`, 'error');
   }
   renderListaFiniquitos();
   _mostrarModalFiniquito(fin, true);

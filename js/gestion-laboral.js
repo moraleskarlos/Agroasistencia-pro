@@ -725,6 +725,7 @@ function _guardarNovedadCore({ rut, tipo, inicio, fin, obs }){
 
   novedades.push(nov);
   guardarNovedades();
+  if(typeof _avisoLiquidacionGenerada === 'function') _avisoLiquidacionGenerada(rut, [inicio, fin || inicio]);
   registrarDocumentoCarpeta({
     trabajador_rut: rut,
     empresa_propia_id: trabajadores.find(x => x.rut === rut)?.empresa_propia_id || '',
@@ -912,6 +913,7 @@ function guardarHaber(){
   haberes_variables.push(h);
   guardarHaberes();
   toast('✅ Bonificación registrada','exito');
+  if(typeof _avisoLiquidacionGenerada === 'function') _avisoLiquidacionGenerada(rut, h.periodo);
   _resetForm('form-haber');
   _buscadoresGL['hab-reg']?.reset();
   document.getElementById('gl-hab-form-wrap').style.display='none';
@@ -1181,6 +1183,7 @@ function guardarDescuento(){
     });
   }
   guardarDescuentos();
+  if(typeof _avisoLiquidacionGenerada === 'function') _avisoLiquidacionGenerada(rut, Array.from({length:nCuotas}, (_,i) => _sumarMeses(mesInicio, i)));
 
   const mesFin = _sumarMeses(mesInicio, nCuotas - 1);
   toast(nCuotas > 1
@@ -1500,6 +1503,7 @@ function guardarJornada(){
   jornada_especial.push(j);
   guardarJornadaEspecial();
   toast('✅ Registro de horas extras guardado','exito');
+  if(typeof _avisoLiquidacionGenerada === 'function') _avisoLiquidacionGenerada(rut, j.periodo);
   _resetForm('form-jornada');
   _buscadoresGL['jor-reg']?.reset();
   document.getElementById('gl-jor-form-wrap').style.display='none';

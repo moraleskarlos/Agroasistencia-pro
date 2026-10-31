@@ -50,11 +50,17 @@ function esMesCerrado(periodo, empresaId){
    Se resuelve la empresa a partir del RUT (mismo campo que ya usan
    estos módulos desde antes — trabajador_rut — no es una dependencia
    nueva). Devuelve true si hay que bloquear (y ya mostró el toast). */
+/* ✅ H9 (auditoría Remuneraciones, 30-10-2026) — empresa del CONTRATO
+   vigente en ese período (antes, la empresa actual del trabajador: si
+   cambió de empresa, se podían cargar datos en un mes ya cerrado). */
+function _empresaDelPeriodo(rut, periodo){
+  const c = (typeof _getContratoVigente === 'function') ? _getContratoVigente(rut, periodo) : null;
+  return c?.empresa_propia_id || trabajadores.find(x => x.rut === rut)?.empresa_propia_id || '';
+}
 function _bloqueaPorMesCerrado(rut, fecha){
   if(!fecha) return false; // sin fecha no hay período que chequear (validaciones de campo obligatorio se encargan aparte)
-  const t = trabajadores.find(x => x.rut === rut);
   const periodo = fecha.slice(0,7);
-  if(esMesCerrado(periodo, t?.empresa_propia_id)){
+  if(esMesCerrado(periodo, _empresaDelPeriodo(rut, periodo))){
     toast(`🔒 ${getNombreMes(periodo)} ya está cerrado para esta empresa — usa "Corrección" en Libro de Remuneraciones`, 'error');
     return true;
   }
@@ -81,12 +87,22 @@ function _bloqueaPorMesCerradoRango(rut, inicio, fin){
    siguiente al corregido). El mes cerrado queda intacto para siempre. */
 let _corPeriodoCorregido = null;
 
+/* ✅ H5-A — primer mes ABIERTO después del corregido (antes, siempre el
+   mes siguiente: si ya estaba cerrado, el ajuste nunca se aplicaba). */
+function _primerMesAbierto(periodo, empresaId){
+  let p = _mesSiguiente(periodo);
+  for(let i = 0; i < 24 && esMesCerrado(p, empresaId); i++) p = _mesSiguiente(p);
+  return p;
+}
+let _corEmpresaId = '';
 function abrirModalCorreccion(periodo, empresaId){
   _corPeriodoCorregido = periodo;
-  const periodoAplicado = _mesSiguiente(periodo);
+  _corEmpresaId = empresaId || '';
+  const periodoAplicado = _primerMesAbierto(periodo, empresaId);
 
   const sel = document.getElementById('cor-trabajador');
-  const activos = trabajadores.filter(t => t.estado === 'activo' && t.empresa_propia_id === empresaId);
+  // ✅ H5 — también los ya finiquitados que tuvieron contrato ese mes
+  const activos = _trabajadoresDelPeriodo(empresaId, periodo);
   sel.innerHTML = '<option value="">— Seleccionar trabajador —</option>'
     + activos.map(t => `<option value="${t.rut}">${t.nombre} · ${t.rut}</option>`).join('');
 
@@ -112,7 +128,7 @@ function guardarAjuste(){
   if(!motivo){ toast('⚠️ El motivo es obligatorio','error'); return; }
   if(!_corPeriodoCorregido){ toast('⚠️ Error interno — vuelve a abrir el formulario','error'); return; }
 
-  const periodoAplicado = _mesSiguiente(_corPeriodoCorregido);
+  const periodoAplicado = _primerMesAbierto(_corPeriodoCorregido, _corEmpresaId || _empresaDelPeriodo(rut, _corPeriodoCorregido));
   const t = trabajadores.find(x => x.rut === rut);
 
   ajustes.push({
@@ -127,7 +143,10 @@ function guardarAjuste(){
   });
   guardarAjustes();
 
-  toast(`✅ Ajuste registrado — se va a aplicar en la liquidación de ${getNombreMes(periodoAplicado)} de ${t?.nombre||rut}`, 'exito');
+  const saltados = periodoAplicado !== _mesSiguiente(_corPeriodoCorregido);
+  toast(`✅ Ajuste registrado — se va a aplicar en la liquidación de ${getNombreMes(periodoAplicado)} de ${t?.nombre||rut}${saltados ? ' (los meses intermedios ya están cerrados)' : ''}`, 'exito');
+  if(liquidaciones_guardadas.some(l => l.rut === rut && l.periodo === periodoAplicado))
+    toast(`⚠️ La liquidación de ${getNombreMes(periodoAplicado)} ya estaba generada — queda marcada "Datos cambiaron": reábrela para incluir el ajuste`, 'error');
   cerrarModalCorreccion();
 }
 
@@ -164,6 +183,13 @@ function cerrarMes(){
     if(!tieneLiq){
       problemas.push(`${t.nombre} — sin liquidación generada`);
       return; // si no tiene liquidación, no tiene sentido chequear asistencia todavía
+    }
+    // ✅ H5-B — la liquidación guardada debe coincidir con los datos
+    // actuales (antes se cerraba con una liquidación desactualizada).
+    const est = _estadoLiquidacion(t.rut, periodo);
+    if(est.estado === 'desactualizada'){
+      problemas.push(`${t.nombre} — los datos cambiaron desde que se generó (${est.textoDiferencia}); reábrela para corregir`);
+      return;
     }
     const asist = (typeof _leerAsistenciaMes === 'function') ? _leerAsistenciaMes(t.rut, periodo) : { dias_sin_clasificar: 0 };
     if(asist.dias_sin_clasificar > 0){
@@ -258,14 +284,23 @@ function _mesAdyacente(periodo, delta){
    mes anterior o siguiente al que se está viendo? No es un error — solo
    un aviso, para que un dato mal fechado por accidente no pase
    desapercibido como "no tiene nada" (el caso real que encontramos). */
+/* ✅ R2 (auditoría Remuneraciones, 30-10-2026) — antes contaba
+   cualquier registro del mes anterior o siguiente, incluidas las cuotas
+   de préstamos y los bonos mensuales: el aviso salía casi siempre y
+   perdía valor. Ahora solo avisa cuando el trabajador tiene bonos (u
+   horas extra) en el mes anterior o siguiente pero NINGUNO en este mes
+   — señal de que alguno pudo quedar con la fecha equivocada. Las cuotas
+   de descuentos no cuentan (se reparten por mes a propósito). */
 function _tieneDatosFueraDePeriodo(rut, periodo){
   const antes   = _mesAdyacente(periodo, -1);
   const despues = _mesAdyacente(periodo, 1);
   const cerca   = p => p === antes || p === despues;
-  const enHaberes  = haberes_variables.filter(h => h.trabajador_rut===rut && cerca(h.periodo)).length;
-  const enJornada  = jornada_especial.filter(j => j.trabajador_rut===rut && cerca(j.periodo)).length;
-  const enDescuentos = descuentos.filter(d => d.trabajador_rut===rut && cerca(d.periodo)).length;
-  return enHaberes + enJornada + enDescuentos;
+  const revisar = lista => {
+    const delTrab = lista.filter(x => x.trabajador_rut === rut);
+    if(delTrab.some(x => x.periodo === periodo)) return 0;
+    return delTrab.filter(x => cerca(x.periodo)).length;
+  };
+  return revisar(haberes_variables) + revisar(jornada_especial);
 }
 
 /* ✅ El aviso "⚠️ N" de datos fuera de período era solo un contador con
@@ -398,23 +433,32 @@ function renderReporteLiquidaciones(){
     // no lo que se está calculando en vivo acá arriba). Si ya existe,
     // el botón "Generar" se reemplaza por "Recalcular" (con
     // confirmación) para no volver a pisarla en silencio.
-    const yaGenerada = (liquidaciones_guardadas||[]).some(l => l.rut === t.rut && l.periodo === periodo);
+    const est = _estadoLiquidacion(t.rut, periodo, liq);
+    const yaGenerada = est.estado !== 'pendiente';
     // ✅ Cierre de mes — si esta empresa+período ya está cerrada, nada
     // de generar/recalcular acá — se reemplaza por un candado.
     const mesCerrado = (typeof esMesCerrado === 'function') && esMesCerrado(periodo, empresa);
+    // ✅ R1 — una liquidación generada queda BLOQUEADA 🔒: no se reemplaza
+    // desde aquí. Si los datos cambiaron, 🟡 con la diferencia y el botón
+    // "Reabrir para corregir" (con motivo e historial).
+    const vTxt = est.guardada?.version > 1 ? ` v${est.guardada.version}` : '';
     const semaforo = mesCerrado
-      ? `<span class="badge badge-gris" title="Mes cerrado — usa el botón Corrección en Libro de Remuneraciones para ajustar" style="margin-left:6px;">🔒 Cerrado</span>`
+      ? `<span class="badge badge-gris" title="Mes cerrado — usa el botón Corrección en Libro de Remuneraciones para ajustar" style="margin-left:6px;">🔒 Mes cerrado</span>`
+      : est.estado === 'desactualizada'
+      ? `<span class="badge badge-amarillo" title="Generada ${_fmtPesos(est.guardada.liquido)} — con los datos actuales ${_fmtPesos(liq.liquido)}. Reábrela para corregir." style="margin-left:6px;">🟡 Datos cambiaron (${est.textoDiferencia})</span>`
       : yaGenerada
-      ? `<span class="badge badge-verde" title="Ya generada — folio ${(liquidaciones_guardadas.find(l=>l.rut===t.rut&&l.periodo===periodo)||{}).folio||''}" style="margin-left:6px;">🟢 Generada</span>`
+      ? `<span class="badge badge-verde" title="Generada y bloqueada — folio ${est.guardada.folio||''}${vTxt}" style="margin-left:6px;">🔒 Generada${vTxt}</span>`
       : `<span class="badge badge-gris" title="Todavía no se generó la liquidación de este período" style="margin-left:6px;">🔴 Pendiente</span>`;
     const botonAccion = mesCerrado
       ? `<span class="badge badge-gris" title="Mes cerrado — no se puede generar ni recalcular"><i class="ti ti-lock"></i></span>`
+      : est.estado === 'desactualizada'
+      ? `<button class="btn btn-sm" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;" onclick="reabrirLiquidacion('${t.rut}','${periodo}')" title="Reabrir para corregir (pide motivo y guarda historial)"><i class="ti ti-lock-open"></i> Reabrir</button>`
       : yaGenerada
-      ? `<button class="btn btn-secondary btn-sm" onclick="recalcularLiquidacion('${t.rut}','${periodo}')" title="Recalcular (reemplaza la ya generada)"><i class="ti ti-refresh"></i></button>`
+      ? `<button class="btn btn-secondary btn-sm" onclick="verLiquidacion('${t.rut}','${periodo}')" title="Ver la liquidación generada"><i class="ti ti-file-text"></i></button>`
       : `<button class="btn btn-secondary btn-sm" onclick="generarLiquidacionIndividualFila('${t.rut}')" title="Generar solo esta"><i class="ti ti-file-invoice"></i></button>`;
 
     return `<tr>
-      <td><input type="checkbox" class="chk-rep-liq" data-rut="${t.rut}" onchange="toggleCheckRepLiq('${t.rut}', this.checked)" style="accent-color:var(--verde);width:16px;height:16px;"></td>
+      <td><input type="checkbox" class="chk-rep-liq" data-rut="${t.rut}" ${yaGenerada || mesCerrado ? 'disabled title="Ya generada — no se vuelve a generar"' : ''} onchange="toggleCheckRepLiq('${t.rut}', this.checked)" style="accent-color:var(--verde);width:16px;height:16px;"></td>
       <td style="font-weight:500;">${t.nombre}${semaforo}${avisoSueldoMinimo}<div style="font-size:11px;color:var(--texto3);">${t.rut}</div></td>
       <td style="text-align:right;">$${liq.sueldo_base.toLocaleString('es-CL')}</td>
       <td style="text-align:right;">${bonos>0 ? '$'+bonos.toLocaleString('es-CL') : '—'}</td>
@@ -483,9 +527,12 @@ function verSeleccionadas(){
 function generarLiquidacionIndividualFila(rut){
   const periodo = document.getElementById('rep-liq-periodo')?.value;
   if(!periodo || !_verificarPreCondiciones(periodo)) return;
-  const t = trabajadores.find(x => x.rut === rut);
-  if((typeof esMesCerrado === 'function') && esMesCerrado(periodo, t?.empresa_propia_id)){
+  if((typeof esMesCerrado === 'function') && esMesCerrado(periodo, _empresaDelPeriodo(rut, periodo))){
     toast('🔒 Este mes ya está cerrado para esta empresa — usa "Corrección" en Libro de Remuneraciones','error'); return;
+  }
+  // ✅ R1 — nunca reemplaza una ya generada
+  if(liquidaciones_guardadas.some(l => l.rut === rut && l.periodo === periodo)){
+    toast('🔒 Esta liquidación ya está generada. Si los datos cambiaron, usa "Reabrir para corregir"', 'error'); renderReporteLiquidaciones(); return;
   }
   const liq = calcularYGuardarLiquidacion(rut, periodo);
   if(liq.error){ toast(`❌ ${liq.error}`, 'error'); return; }
@@ -504,23 +551,97 @@ function generarLiquidacionIndividualFila(rut){
    que ya existía, en vez de que pase en silencio. Bloqueado si el mes
    ya está cerrado — la corrección de un mes cerrado se hace vía
    "Corrección" (ajuste al mes siguiente), nunca recalculando el viejo. */
-function recalcularLiquidacion(rut, periodo){
-  const t = trabajadores.find(x => x.rut === rut);
-  const nombre = t?.nombre || rut;
+/* ✅ R1 + H5-B — Estado de la liquidación de un trabajador en un período:
+   'pendiente' (no generada), 'generada' (bloqueada, coincide con los
+   datos) o 'desactualizada' (los datos cambiaron desde que se generó:
+   bono, falta, descuento, licencia, ajuste…). `vivo` es el cálculo
+   actual si ya se tiene a mano. */
+function _estadoLiquidacion(rut, periodo, vivo){
+  const guardada = (liquidaciones_guardadas || []).find(l => l.rut === rut && l.periodo === periodo);
+  if(!guardada) return { estado: 'pendiente' };
+  let actual = vivo;
+  if(!actual){
+    const vars = construirVariablesRemuneracion(rut, periodo);
+    if(vars.error) return { estado: 'generada', guardada };
+    actual = calcularLiquidacion(vars, periodo);
+  }
+  const campos = ['liquido','total_haberes','total_descuentos','total_haberes_imponibles'];
+  const cambio = campos.some(c => Math.round(actual[c] || 0) !== Math.round(guardada[c] || 0));
+  if(!cambio) return { estado: 'generada', guardada };
+  const dif = Math.round((actual.liquido || 0) - (guardada.liquido || 0));
+  return { estado: 'desactualizada', guardada, actual, diferencia: dif,
+           textoDiferencia: dif === 0 ? 'mismo líquido, cambió el detalle' : `${dif > 0 ? '+' : '−'}${_fmtPesos(Math.abs(dif))} líquido` };
+}
+function _fmtPesos(v){ return '$' + Math.round(v || 0).toLocaleString('es-CL'); }
 
-  if((typeof esMesCerrado === 'function') && esMesCerrado(periodo, t?.empresa_propia_id)){
+const MOTIVOS_REAPERTURA = {
+  haber:      'Bono o haber (agregado, corregido o eliminado)',
+  asistencia: 'Asistencia o falta',
+  descuento:  'Descuento (anticipo, préstamo u otro)',
+  ausencia:   'Licencia, permiso o vacaciones',
+  ajuste:     'Ajuste por corrección de un mes cerrado',
+  contrato:   'Contrato o anexo (sueldo, fechas, jornada)',
+  otro:       'Otro',
+};
+
+/* ✅ R1 — Reabrir una liquidación generada para corregirla: pide motivo,
+   recalcula con los datos actuales, conserva el folio, sube la versión
+   y guarda el historial (versión anterior, montos, motivo, fecha y
+   usuario). */
+function reabrirLiquidacion(rut, periodo){
+  if((typeof esMesCerrado === 'function') && esMesCerrado(periodo, _empresaDelPeriodo(rut, periodo))){
     toast('🔒 Este mes ya está cerrado — usa "Corrección" en Libro de Remuneraciones para ajustarlo en el mes siguiente','error'); return;
   }
+  const est = _estadoLiquidacion(rut, periodo);
+  if(est.estado === 'pendiente'){ toast('⚠️ Esta liquidación todavía no se genera', 'error'); return; }
+  const nombre = trabajadores.find(x => x.rut === rut)?.nombre || rut;
+  const prev = document.getElementById('modal-reabrir-liq'); if(prev) prev.remove();
+  const ov = document.createElement('div');
+  ov.id = 'modal-reabrir-liq';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:3000;';
+  ov.innerHTML = `<div style="background:#fff;border-radius:10px;max-width:460px;width:92%;padding:20px 22px;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Reabrir liquidación para corregir</div>
+    <div style="font-size:13px;color:var(--texto2);margin-bottom:12px;">${nombre} · ${getNombreMes(periodo)} · folio ${est.guardada.folio || '—'}${est.guardada.version > 1 ? ' v' + est.guardada.version : ''}</div>
+    ${est.estado === 'desactualizada' ? `<div style="font-size:13px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:8px 10px;margin-bottom:12px;">Generada: <b>${_fmtPesos(est.guardada.liquido)}</b> → con los datos actuales: <b>${_fmtPesos(est.actual.liquido)}</b></div>` : ''}
+    <div class="form-group"><label>Motivo</label>
+      <select id="reabrir-motivo-tipo"><option value="">— Selecciona —</option>${Object.entries(MOTIVOS_REAPERTURA).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Detalle</label>
+      <textarea id="reabrir-motivo" rows="2" placeholder="Ej.: bono de producción de la semana 3 no estaba cargado"></textarea></div>
+    <div style="font-size:11.5px;color:var(--texto3);margin-bottom:12px;">Se recalcula con los datos actuales, conserva el folio, sube la versión y guarda la anterior en el historial. Si ya se pagó, entrega la nueva versión al trabajador.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-reabrir-liq').remove()">Cancelar</button>
+      <button class="btn btn-primary btn-sm" onclick="_confirmarReapertura('${rut}','${periodo}')"><i class="ti ti-refresh"></i> Recalcular nueva versión</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+}
 
-  if(!confirm(`⚠️ ${nombre} ya tiene una liquidación generada para este período — esto la va a reemplazar con los datos actuales (folio y monto pueden cambiar). ¿Continuar?`)) return;
-
-  if(!_verificarPreCondiciones(periodo)) return;
-  const liq = calcularYGuardarLiquidacion(rut, periodo);
-  if(liq.error){ toast(`❌ ${liq.error}`, 'error'); return; }
-  toast(`✅ Liquidación recalculada — ${liq.nombre}`, 'exito');
+function _confirmarReapertura(rut, periodo, motivoTipo, motivoTexto){
+  const tipo  = motivoTipo  ?? document.getElementById('reabrir-motivo-tipo')?.value;
+  const texto = (motivoTexto ?? document.getElementById('reabrir-motivo')?.value ?? '').trim();
+  if(!tipo){ toast('⚠️ Selecciona el motivo', 'error'); return false; }
+  if(texto.length < 5){ toast('⚠️ Escribe el detalle de la corrección', 'error'); return false; }
+  if(!_verificarPreCondiciones(periodo)) return false;
+  const liq = calcularYGuardarLiquidacion(rut, periodo, { reapertura: { tipo, motivo: texto } });
+  if(liq.error){ toast(`❌ ${liq.error}`, 'error'); return false; }
+  document.getElementById('modal-reabrir-liq')?.remove();
+  toast(`✅ ${liq.nombre} — liquidación corregida (versión ${liq.version})`, 'exito');
   _actualizarBadgeLiquidacionesEmitidas();
   renderReporteLiquidaciones();
+  return true;
 }
+
+/* Antes "Recalcular" reemplazaba directo; ahora pasa por "Reabrir". */
+function recalcularLiquidacion(rut, periodo){ return reabrirLiquidacion(rut, periodo); }
+
+/* ✅ R1 — aviso al registrar un dato (bono, falta, descuento, horas
+   extra) en un mes cuya liquidación ya está generada. */
+function _avisoLiquidacionGenerada(rut, periodos){
+  const lista = [...new Set([].concat(periodos).filter(Boolean).map(p => String(p).slice(0,7)))];
+  const gen = lista.filter(p => (liquidaciones_guardadas || []).some(l => l.rut === rut && l.periodo === p));
+  if(gen.length)
+    toast(`⚠️ ${gen.map(getNombreMes).join(', ')} ya tiene liquidación generada: para que este cambio se refleje hay que reabrirla ("Reabrir para corregir" en Generar Liquidaciones)`, 'error');
+}
+
 
 function generarLiquidacionesSeleccionadas(){
   const periodo = document.getElementById('rep-liq-periodo')?.value;
@@ -531,13 +652,18 @@ function generarLiquidacionesSeleccionadas(){
     toast('🔒 Este mes ya está cerrado para esta empresa — usa "Corrección" en Libro de Remuneraciones','error'); return;
   }
 
-  let ok = 0, errores = 0;
+  // ✅ R1 (auditoría Remuneraciones, 30-10-2026) — solo genera las
+  // PENDIENTES. Antes reemplazaba sin preguntar las ya generadas (un
+  // finiquitado a mitad de mes podía quedar con otro monto que el ya
+  // pagado). Las generadas quedan bloqueadas; se corrigen con "Reabrir".
+  let ok = 0, errores = 0, saltadas = 0;
   _seleccionadosRepLiq.forEach(rut => {
+    if(liquidaciones_guardadas.some(l => l.rut === rut && l.periodo === periodo)){ saltadas++; return; }
     const liq = calcularYGuardarLiquidacion(rut, periodo);
     if(liq.error) errores++; else ok++;
   });
 
-  toast(`✅ ${ok} liquidación${ok===1?'':'es'} generada${ok===1?'':'s'}${errores?` — ${errores} con error`:''}`, errores ? 'error' : 'exito');
+  toast(`✅ ${ok} liquidación${ok===1?'':'es'} generada${ok===1?'':'s'}${errores?` — ${errores} con error`:''}${saltadas?` — ${saltadas} ya estaba${saltadas===1?'':'n'} generada${saltadas===1?'':'s'} y no se modific${saltadas===1?'ó':'aron'}`:''}`, errores ? 'error' : 'exito');
   _actualizarBadgeLiquidacionesEmitidas();
   const selEmit = document.getElementById('liq-periodo-selector');
   if(selEmit) selEmit.value = periodo;
@@ -607,7 +733,7 @@ function previsualizarLiquidacion(rut){
    ver nota más abajo. */
 
 /* ── CALCULAR Y GUARDAR ─────────────────────────────────── */
-function calcularYGuardarLiquidacion(rut, periodo){
+function calcularYGuardarLiquidacion(rut, periodo, opciones = {}){
   const vars = construirVariablesRemuneracion(rut, periodo);
   if(vars.error) return { error: vars.error };
   const liq  = calcularLiquidacion(vars, periodo);
@@ -623,6 +749,21 @@ function calcularYGuardarLiquidacion(rut, periodo){
   liq.folio          = idx >= 0 ? liquidaciones_guardadas[idx].folio : _generarFolio(periodo);
   liq.fecha_emision  = hoyISO();
   liq.estado         = 'generada';
+  // ✅ R1 — versión e historial de reaperturas
+  if(idx >= 0){
+    const ant = liquidaciones_guardadas[idx];
+    liq.version   = (ant.version || 1) + 1;
+    liq.historial = [...(ant.historial || []), {
+      version: ant.version || 1, fecha_emision: ant.fecha_emision || '',
+      liquido: ant.liquido, total_haberes: ant.total_haberes, total_descuentos: ant.total_descuentos,
+      motivo_tipo: opciones.reapertura?.tipo || '', motivo: opciones.reapertura?.motivo || '',
+      reabierta_el: hoyISO(), reabierta_por: (typeof sesionActiva !== 'undefined' && sesionActiva?.usuario) || 'admin',
+      liquido_nuevo: liq.liquido,
+    }];
+  } else {
+    liq.version = 1;
+    liq.historial = [];
+  }
 
   if(idx >= 0) liquidaciones_guardadas[idx] = liq;
   else liquidaciones_guardadas.push(liq);
@@ -920,7 +1061,7 @@ function _generarHTMLLiquidacion(liq, guardada){
         <div><b>Empleador:</b> ${esc(ep.razon_social || '—')} (${esc(ep.rut || '—')})</div>
         <div><b>Mes:</b> ${esc(nombreMes)}</div>
       </div>
-      <div class="lq-folio">${liq.folio ? `Folio ${esc(liq.folio)}` : '<b style="color:#b45309;">Vista previa — no generada</b>'}</div>
+      <div class="lq-folio">${liq.folio ? `Folio ${esc(liq.folio)}${liq.version > 1 ? ` · versión ${liq.version} (corregida el ${fLarga((liq.historial||[]).slice(-1)[0]?.reabierta_el)})` : ''}` : '<b style="color:#b45309;">Vista previa — no generada</b>'}</div>
     </div>
 
     <div class="lq-ficha">
