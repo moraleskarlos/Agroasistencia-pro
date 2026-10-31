@@ -890,7 +890,7 @@ function _generarHTMLLiquidacion(liq, guardada){
 
   return `
   <style>
-    .lq{-webkit-print-color-adjust:exact;print-color-adjust:exact;max-width:780px;margin:0 auto;background:#fff;color:#1f2937;font-family:'Source Sans 3','Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.5;}
+    .lq{-webkit-print-color-adjust:exact;print-color-adjust:exact;max-width:780px;margin:0 auto;padding:30px 36px 22px;box-sizing:border-box;background:#fff;color:#1f2937;font-family:'Source Sans 3','Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.5;}
     .lq-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;}
     .lq-top h1{font-size:21px;font-weight:400;margin:0 0 2px;color:#111827;}
     .lq-top div{font-size:13.5px;}
@@ -911,7 +911,7 @@ function _generarHTMLLiquidacion(liq, guardada){
     .lq-cert{margin:34px 8px 0;font-size:12.5px;}
     .lq-firma{width:250px;margin:58px 0 0 60px;border-top:1px solid #374151;text-align:center;padding-top:6px;font-size:11px;text-transform:uppercase;}
     .lq-pie{margin-top:36px;text-align:center;font-size:10px;color:#9ca3af;}
-    @media print{body{margin:0;} .ld-no-print{display:none!important;}}
+    @media print{body{margin:0;} .lq{padding:0;} .ld-no-print{display:none!important;}}
   </style>
   <div class="lq">
     <div class="lq-top">
@@ -920,7 +920,7 @@ function _generarHTMLLiquidacion(liq, guardada){
         <div><b>Empleador:</b> ${esc(ep.razon_social || '—')} (${esc(ep.rut || '—')})</div>
         <div><b>Mes:</b> ${esc(nombreMes)}</div>
       </div>
-      <div class="lq-folio">Folio ${esc(liq.folio || '—')}</div>
+      <div class="lq-folio">${liq.folio ? `Folio ${esc(liq.folio)}` : '<b style="color:#b45309;">Vista previa — no generada</b>'}</div>
     </div>
 
     <div class="lq-ficha">
