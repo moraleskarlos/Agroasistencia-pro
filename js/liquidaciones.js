@@ -291,6 +291,36 @@ function _mesAdyacente(periodo, delta){
    horas extra) en el mes anterior o siguiente pero NINGUNO en este mes
    — señal de que alguno pudo quedar con la fecha equivocada. Las cuotas
    de descuentos no cuentan (se reparten por mes a propósito). */
+/* ✅ Art. 71 (auditoría Remuneraciones, 19-11-2026) — aviso, no cálculo
+   automático (decisión del usuario: en el sector casi nadie toma
+   vacaciones estando contratado; el caso frecuente, el feriado en el
+   finiquito, ya incluye el promedio de bonos). Si el trabajador tiene
+   vacaciones en el mes y bonos variables en los 3 meses anteriores,
+   corresponde pagarle el promedio diario de esos bonos por los días
+   CORRIDOS de vacaciones del mes (del primer al último día, con los
+   fines de semana de por medio). El aviso desaparece cuando se registra
+   un bono con "vacaciones" en el detalle. Sin bonos, no aparece. */
+function _avisoVacacionesArt71(rut, periodo){
+  if(typeof _promedioVariablesArt71 !== 'function') return null;
+  const [a, m] = periodo.split('-').map(Number);
+  const primero = `${periodo}-01`, ultimo = `${periodo}-${String(new Date(Date.UTC(a, m, 0)).getUTCDate()).padStart(2,'0')}`;
+  const vacs = (novedades || []).filter(n => n.trabajador_rut === rut && n.tipo === 'vacaciones' && n.aprobado !== false &&
+    n.fecha_inicio <= ultimo && (n.fecha_fin || n.fecha_inicio) >= primero);
+  if(!vacs.length) return null;
+  const u = f => Date.UTC(+f.slice(0,4), +f.slice(5,7)-1, +f.slice(8,10));
+  const dias = vacs.reduce((s, n) => {
+    const d = n.fecha_inicio < primero ? primero : n.fecha_inicio;
+    const h = (n.fecha_fin || n.fecha_inicio) > ultimo ? ultimo : (n.fecha_fin || n.fecha_inicio);
+    return s + Math.round((u(h) - u(d)) / 86400000) + 1;
+  }, 0);
+  const c = _getContratoVigente(rut, periodo);
+  const prom = _promedioVariablesArt71(rut, primero, c?.fecha_inicio || '');
+  if(!(prom.promedio > 0)) return null;
+  const yaPagado = (haberes_variables || []).some(h => h.trabajador_rut === rut && h.periodo === periodo && /vacaci/i.test(h.observacion || ''));
+  if(yaPagado) return null;
+  return { dias, promedio: prom.promedio, monto: Math.round(prom.promedio / DIVISOR_MES * dias) };
+}
+
 function _tieneDatosFueraDePeriodo(rut, periodo){
   const antes   = _mesAdyacente(periodo, -1);
   const despues = _mesAdyacente(periodo, 1);
@@ -424,6 +454,10 @@ function renderReporteLiquidaciones(){
     const avisoExcesoDesc = excesoDesc > 0
       ? `<span class="badge badge-rojo" style="margin-left:4px;cursor:help;" title="Los descuentos ($${Math.round(liq.total_descuentos).toLocaleString('es-CL')}) superan lo que hay para pagar ($${Math.round(disponibleLiq).toLocaleString('es-CL')}). El líquido queda en $0 y $${excesoDesc.toLocaleString('es-CL')} no se descuentan en ninguna parte. Reduce la cuota en Descuentos antes de generar.">⚠️ Descuentos exceden $${excesoDesc.toLocaleString('es-CL')}</span>`
       : '';
+    const v71 = _avisoVacacionesArt71(t.rut, periodo);
+    const avisoVac71 = v71
+      ? `<span class="badge badge-amarillo" style="margin-left:4px;cursor:help;" title="Tiene ${v71.dias} días corridos de vacaciones este mes y bonos variables (promedio ${_fmtPesos(v71.promedio)}/mes en los últimos 3 meses). Art. 71: corresponde pagarle el promedio por los días de vacaciones: ${v71.dias} × ${_fmtPesos(Math.round(v71.promedio/30))} = ${_fmtPesos(v71.monto)}. Regístralo en Bonos y Horas Extras como bono imponible con el detalle 'vacaciones Art. 71' y el aviso desaparece.">🏖️ Vacaciones Art. 71: ${_fmtPesos(v71.monto)}</span>`
+      : '';
     const avisoSinClasificar = sinClasificar > 0
       ? `<span class="badge badge-amarillo" style="margin-left:4px;cursor:pointer;" title="Sin marca de asistencia ni novedad: ${(vars.fechas_sin_clasificar||[]).map(fmtFecha).join(', ')} — se están descontando como falta injustificada por defecto. Click para ir a clasificar el primer día pendiente." onclick="irA('ausencias'); setTimeout(() => { if(typeof clasificarAusencia==='function') clasificarAusencia('${t.rut}','${primeraFechaSinClasificar}'); }, 150);">⚠️ ${sinClasificar} sin clasificar</span>`
       : '';
@@ -459,7 +493,7 @@ function renderReporteLiquidaciones(){
 
     return `<tr>
       <td><input type="checkbox" class="chk-rep-liq" data-rut="${t.rut}" ${yaGenerada || mesCerrado ? 'disabled title="Ya generada — no se vuelve a generar"' : ''} onchange="toggleCheckRepLiq('${t.rut}', this.checked)" style="accent-color:var(--verde);width:16px;height:16px;"></td>
-      <td style="font-weight:500;">${t.nombre}${semaforo}${avisoSueldoMinimo}<div style="font-size:11px;color:var(--texto3);">${t.rut}</div></td>
+      <td style="font-weight:500;">${t.nombre}${semaforo}${avisoSueldoMinimo}${avisoVac71}<div style="font-size:11px;color:var(--texto3);">${t.rut}</div></td>
       <td style="text-align:right;">$${liq.sueldo_base.toLocaleString('es-CL')}</td>
       <td style="text-align:right;">${bonos>0 ? '$'+bonos.toLocaleString('es-CL') : '—'}</td>
       <td style="text-align:right;">${horasExtra>0 ? '$'+horasExtra.toLocaleString('es-CL') : '—'}</td>
