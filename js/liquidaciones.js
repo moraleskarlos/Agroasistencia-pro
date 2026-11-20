@@ -1046,6 +1046,7 @@ function _generarHTMLLiquidacion(liq, guardada){
   }
   (liq.haberes_variables || []).filter(h => h.imponible !== false).forEach(h => habImp.push([esc(_labelHaber(h.tipo)), m(h.monto)]));
   (liq.horas_extra || []).forEach(h => habImp.push([`Horas extra ${String(h.horas).replace('.',',')} h ${h.recargo} (${(h.fecha||'').slice(8,10)}/${(h.fecha||'').slice(5,7)})`, m(h.monto_imponible)]));
+  if((liq.gratificacion || 0) > 0) habImp.push([`Gratificación legal (Art. 50, 25%${liq.gratificacion_tope && liq.gratificacion >= liq.gratificacion_tope ? ', con tope' : ''})`, m(liq.gratificacion)]);
   const habNoImp = (liq.haberes_variables || []).filter(h => h.imponible === false).map(h => [esc(_labelHaber(h.tipo)), m(h.monto)]);
 
   /* Descuentos */

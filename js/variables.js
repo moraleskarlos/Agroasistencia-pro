@@ -109,12 +109,32 @@ function construirVariablesRemuneracion(rut, periodo){
   const jornada_raw    = getJornadaEspecialPorRut(rut, periodo);
   const horas_extra    = _calcularHorasExtra(jornada_raw, sueldo_base, contrato, periodo, rut);
 
+  // ── 8b. Gratificación legal (opcional) ───────────────
+  // ✅ Auditoría Remuneraciones (19-11-2026) — solo si el contrato la
+  // pacta como "Art. 50 mensual" (decisión del usuario: la mayoría de
+  // los contratistas no la paga; no va por defecto). Art. 50 CT: 25% de
+  // lo devengado en el mes (sueldo + bonos imponibles + horas extra),
+  // con tope de 4,75 ingresos mínimos mensuales al año → tope mensual
+  // 4,75 × IMM ÷ 12, proporcional a los días pagados del mes.
+  let gratificacion = 0, gratificacion_tope = 0;
+  if(contrato.gratificacion === 'art50'){
+    const indG = getIndicadoresPorPeriodo(periodo);
+    const imm = indG?.renta_minima || indG?.imm || 0;
+    const baseG = sueldo_proporcional
+      + haberes_clasificados.imponibles.reduce((s,h) => s + (parseFloat(h.monto)||0), 0)
+      + horas_extra.total_imponible;
+    const diasPag = Math.max(0, DIVISOR_MES - dias_a_descontar);
+    gratificacion_tope = Math.round(4.75 * imm / 12 * diasPag / DIVISOR_MES);
+    gratificacion = Math.round(Math.min(baseG * 0.25, gratificacion_tope || Infinity));
+    if(!imm) gratificacion = Math.round(baseG * 0.25);
+  }
+
   // ── 9. Totales ───────────────────────────────────────
   const total_imponible = _calcularTotalImponible(
     sueldo_proporcional,
     haberes_clasificados.imponibles,
     horas_extra.total_imponible
-  );
+  ) + gratificacion;
   const total_no_imponible = haberes_clasificados.no_imponibles_total;
   const total_haberes = total_imponible + total_no_imponible;
 
@@ -149,6 +169,8 @@ function construirVariablesRemuneracion(rut, periodo){
     sueldo_fuente,         // 'Contrato' o 'Anexo cambio remuneración...'
     valor_dia,             // sueldo_base / 30
     sueldo_tramos,         // ✅ H7 — tramos del mes si hubo anexo de sueldo a mitad de mes
+    gratificacion,         // ✅ Art. 50 mensual (opcional)
+    gratificacion_tope,
 
     // Asistencia
     dias_trabajados:        asistencia.dias_trabajados,

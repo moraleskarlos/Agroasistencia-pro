@@ -399,6 +399,7 @@ function cargarContratoEnFormulario(c){
   const _formasValidas = ['mensual','diaria'];
   document.getElementById('c-tipo-rem').value = _formasValidas.includes(c.tipo_remuneracion) ? c.tipo_remuneracion : 'mensual';
   document.getElementById('c-sueldo').value        = c.sueldo_monto || '';
+  const elGrat = document.getElementById('c-gratificacion'); if(elGrat) elGrat.value = c.gratificacion || '';
   document.getElementById('c-sueldo-escrito').value= c.sueldo_escrito || '';
   const bens = c.beneficios || [];
   document.getElementById('ben-alojamiento').checked = bens.includes('alojamiento');
@@ -474,6 +475,7 @@ const t = trabajadores.find(
     colacion:            document.getElementById('c-colacion').value.trim(),
     tipo_remuneracion:   document.getElementById('c-tipo-rem').value,
     sueldo_monto:        document.getElementById('c-sueldo').value,
+    gratificacion:       document.getElementById('c-gratificacion')?.value || '', // ✅ opcional (Art. 50 mensual)
     sueldo_escrito:      document.getElementById('c-sueldo-escrito').value.trim(),
     beneficios,
     estado:             'activo',
