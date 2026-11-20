@@ -24,8 +24,10 @@ function construirVariablesRemuneracion(rut, periodo){
   const sueldoInfo = _getSueldoBase(rut, periodo);
   if(!sueldoInfo) return { error: `Sin sueldo base definido para ${rut}` };
 
-  const sueldo_base = sueldoInfo.monto;
+  // ✅ H7 — sueldo del mes prorrateado si hay un anexo a mitad de mes
+  const sueldo_base = sueldoInfo.monto_mes ?? sueldoInfo.monto;
   const sueldo_fuente = sueldoInfo.fuente;
+  const sueldo_tramos = sueldoInfo.tramos || null;
 
   if(sueldo_base <= 0) return { error: `Sueldo base inválido para ${rut} — revisa el contrato o anexo` };
 
@@ -105,7 +107,7 @@ function construirVariablesRemuneracion(rut, periodo){
 
   // ── 8. Horas extra (Art. 32 CT — recargo 50% o 100%) ─
   const jornada_raw    = getJornadaEspecialPorRut(rut, periodo);
-  const horas_extra    = _calcularHorasExtra(jornada_raw, sueldo_base, contrato, periodo);
+  const horas_extra    = _calcularHorasExtra(jornada_raw, sueldo_base, contrato, periodo, rut);
 
   // ── 9. Totales ───────────────────────────────────────
   const total_imponible = _calcularTotalImponible(
@@ -146,6 +148,7 @@ function construirVariablesRemuneracion(rut, periodo){
     sueldo_base,
     sueldo_fuente,         // 'Contrato' o 'Anexo cambio remuneración...'
     valor_dia,             // sueldo_base / 30
+    sueldo_tramos,         // ✅ H7 — tramos del mes si hubo anexo de sueldo a mitad de mes
 
     // Asistencia
     dias_trabajados:        asistencia.dias_trabajados,
@@ -196,36 +199,75 @@ function construirVariablesRemuneracion(rut, periodo){
    ════════════════════════════════════════════════════════ */
 
 /* ── Sueldo base: contrato vigente + último anexo cambio_remuneracion ── */
+/* ✅ H7 (auditoría Remuneraciones, 19-11-2026) — Anexos de cambio de
+   remuneración del CONTRATO VIGENTE (vigencia desde su inicio; antes un
+   anexo de un contrato anterior seguía mandando sobre el contrato
+   nuevo), por RUT o por ID del trabajador, ordenados por fecha. */
+function _anexosSueldo(rut, contrato){
+  const tid = trabajadores.find(t => t.rut === rut)?.id;
+  const ini = (contrato?.fecha_inicio || '').slice(0,10);
+  return (anexos || [])
+    .filter(a => (a.trabajador_rut === rut || (tid && a.trabajador_id === tid)) &&
+                 a.tipo === 'cambio_remuneracion' && a.nuevo_sueldo > 0 && a.fecha_vigencia &&
+                 (!ini || a.fecha_vigencia.slice(0,10) >= ini))
+    .sort((a,b) => a.fecha_vigencia.localeCompare(b.fecha_vigencia));
+}
+
+/* Sueldo vigente en una fecha (contrato o último anexo vigente a esa fecha). */
+function _sueldoEnFecha(rut, fecha){
+  const contrato = _getContratoVigente(rut, fecha.slice(0,7));
+  if(!contrato) return null;
+  const an = _anexosSueldo(rut, contrato).filter(a => a.fecha_vigencia.slice(0,10) <= fecha.slice(0,10)).pop();
+  return an ? +an.nuevo_sueldo : (parseFloat(contrato.sueldo_monto) || 0);
+}
+
+/* Sueldo base del período.
+   · monto: sueldo vigente el día 1 del mes (como antes; lo usan otros
+     módulos como referencia).
+   · monto_mes: ✅ H7 — sueldo del mes PRORRATEADO cuando un anexo entra
+     a regir a mitad de mes (base 30): días antes del anexo con el sueldo
+     anterior (máx. 29) y el resto con el nuevo. Ej.: anexo a $900.000
+     desde el 15-09 con sueldo $600.000 → 14 × $20.000 + 16 × $30.000 =
+     $760.000 (antes $600.000).
+   · tramos: detalle para la liquidación. */
 function _getSueldoBase(rut, periodo){
   const contrato = _getContratoVigente(rut, periodo);
   if(!contrato) return null;
 
   const sueldoContrato = parseFloat(contrato.sueldo_monto) || 0;
+  const primero = `${periodo}-01`;
+  const lista = _anexosSueldo(rut, contrato);
+  const previos = lista.filter(a => a.fecha_vigencia.slice(0,10) <= primero);
+  const anexoRem = previos[previos.length - 1];
+  const montoDia1 = anexoRem ? +anexoRem.nuevo_sueldo : sueldoContrato;
+  const fuente = anexoRem
+    ? `Anexo cambio remuneración vigente desde ${fmtFecha(anexoRem.fecha_vigencia.slice(0,10))}`
+    : 'Contrato de trabajo';
 
-  // Buscar último anexo de cambio_remuneracion vigente para el período
-  const [anio, mes] = periodo.split('-').map(Number);
-  const fechaPeriodo = new Date(anio, mes-1, 1, 12); // mismo ancla de mediodía que el resto
+  // Anexos que entran a regir DENTRO del mes (después del día 1)
+  const enMes = lista.filter(a => a.fecha_vigencia.slice(0,7) === periodo && a.fecha_vigencia.slice(0,10) > primero);
+  if(!enMes.length) return { monto: montoDia1, monto_mes: montoDia1, fuente, tramos: null };
 
-  const anexoRem = (anexos || [])
-    .filter(a =>
-      (a.trabajador_rut === rut) &&
-      a.tipo === 'cambio_remuneracion' &&
-      a.nuevo_sueldo > 0 &&
-      fechaLocal(a.fecha_vigencia) <= fechaPeriodo
-    )
-    .sort((a,b) => fechaLocal(b.fecha_vigencia) - fechaLocal(a.fecha_vigencia))[0];
-
-  // El anexo más reciente vigente prevalece sobre el contrato
-  if(anexoRem?.nuevo_sueldo){
-    return {
-      monto:  anexoRem.nuevo_sueldo,
-      fuente: `Anexo cambio remuneración vigente desde ${new Date(anexoRem.fecha_vigencia).toLocaleDateString('es-CL')}`,
-    };
-  }
-
+  const tramos = [];
+  let desdeDia = 1, monto = montoDia1;
+  enMes.forEach(a => {
+    const dia = +a.fecha_vigencia.slice(8,10);
+    tramos.push({ desde: desdeDia, hasta: dia - 1, monto });
+    desdeDia = dia; monto = +a.nuevo_sueldo;
+  });
+  tramos.push({ desde: desdeDia, hasta: null, monto });
+  // Días en base 30: cada tramo cuenta sus días reales, salvo el último,
+  // que completa 30 (un mes de 31 o de 28 días también suma 30).
+  let usados = 0;
+  tramos.forEach((t, i) => {
+    t.dias = i < tramos.length - 1 ? Math.min(t.hasta - t.desde + 1, 29 - usados) : DIVISOR_MES - usados;
+    t.dias = Math.max(0, t.dias); usados += t.dias;
+  });
+  const monto_mes = Math.round(tramos.reduce((s, t) => s + t.monto * t.dias / DIVISOR_MES, 0));
+  const ult = enMes[enMes.length - 1];
   return {
-    monto:  sueldoContrato,
-    fuente: 'Contrato de trabajo',
+    monto: montoDia1, monto_mes, tramos,
+    fuente: `Anexo cambio remuneración desde ${fmtFecha(ult.fecha_vigencia.slice(0,10))} (mes prorrateado)`,
   };
 }
 
@@ -693,8 +735,8 @@ function _horasSemanalesVigentes(rut, fecha, contrato){
   return _jornadaEfectiva(horas, fecha);
 }
 
-function _calcularHorasExtra(jornada, sueldo_base, contrato, periodo){
-  const rutTrab = jornada[0]?.trabajador_rut;
+function _calcularHorasExtra(jornada, sueldo_base, contrato, periodo, rut){
+  const rutTrab = jornada[0]?.trabajador_rut || rut;
 
   const detalle = jornada
     .filter(j => j.tipo === 'hora_extra')
@@ -704,10 +746,12 @@ function _calcularHorasExtra(jornada, sueldo_base, contrato, periodo){
       const horas_semanales = (j.fecha && rutTrab)
         ? _horasSemanalesVigentes(rutTrab, j.fecha, contrato)
         : _jornadaEfectiva(contrato?.horas_semanales, periodo);
-      const valor_hora_ord = _valorHoraOrdinaria(sueldo_base, horas_semanales);
+      // ✅ H7 — sueldo vigente en la fecha de ESA hora extra (anexo a mitad de mes)
+      const sueldoHE = (j.fecha && rutTrab && typeof _sueldoEnFecha === 'function') ? (_sueldoEnFecha(rutTrab, j.fecha) || sueldo_base) : sueldo_base;
+      const valor_hora_ord = _valorHoraOrdinaria(sueldoHE, horas_semanales);
       const recargo     = _factorRecargoHE(j.recargo);
       const horas       = parseFloat(j.horas) || 0;
-      const monto       = _montoHorasExtra(sueldo_base, horas_semanales, horas, j.recargo);
+      const monto       = _montoHorasExtra(sueldoHE, horas_semanales, horas, j.recargo);
       return {
         fecha:   j.fecha,
         horas,

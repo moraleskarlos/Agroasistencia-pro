@@ -1360,7 +1360,8 @@ function _montoHoraExtra(j){
   const hs = (j.fecha && typeof _horasSemanalesVigentes === 'function')
     ? _horasSemanalesVigentes(j.trabajador_rut, j.fecha, contrato)
     : _jornadaEfectiva(contrato.horas_semanales, j.periodo || (j.fecha||'').slice(0,7));
-  return _montoHorasExtra(sueldoInfo.monto, hs, j.horas, j.recargo);
+  const sueldoHE = (j.fecha && typeof _sueldoEnFecha === 'function') ? (_sueldoEnFecha(j.trabajador_rut, j.fecha) || sueldoInfo.monto) : sueldoInfo.monto;
+  return _montoHorasExtra(sueldoHE, hs, j.horas, j.recargo);
 }
 
 function toggleFormJornada(forzar){

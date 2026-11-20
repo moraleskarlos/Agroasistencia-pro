@@ -216,8 +216,9 @@ function calcularFiniquito(rut, fechaTermino, causal, aviso, extra = {}){
   // trabajados del último mes se pagan en la LIQUIDACIÓN de ese período,
   // que los prorratea hasta la fecha de término (H3) y los informa a
   // PreviRed y al Libro. El finiquito solo la referencia.
+  // ✅ H7 — sueldo vigente a la fecha de término (anexo a mitad de mes)
   const sueldoInfo = _getSueldoBase(rut, periodo);
-  const sueldo_base = sueldoInfo?.monto || parseFloat(contrato.sueldo_monto) || 0;
+  const sueldo_base = (typeof _sueldoEnFecha === 'function' ? _sueldoEnFecha(rut, fechaTermino) : 0) || sueldoInfo?.monto || parseFloat(contrato.sueldo_monto) || 0;
   const valor_dia = Math.round(sueldo_base / DIVISOR_MES);
   const diaTermino = +fechaTermino.slice(8,10);
   const dias_ultimo_mes = _diasContratoEnMes({ ...contrato, fecha_termino: fechaTermino }, periodo);

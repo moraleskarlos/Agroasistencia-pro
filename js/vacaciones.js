@@ -246,7 +246,8 @@ function calcularSaldoVacaciones(rut, fechaCorte){
   // era solo el sueldo base (con $200.000 de bono de producción mensual,
   // $20.000 en vez de $26.667).
   const sueldoInfo = _getSueldoBase(rut, corte.slice(0,7));
-  const sueldo_base = sueldoInfo?.monto || parseFloat(contrato?.sueldo_monto) || 0;
+  // ✅ H7 — sueldo vigente a la fecha de corte
+  const sueldo_base = (typeof _sueldoEnFecha === 'function' ? _sueldoEnFecha(rut, corte) : 0) || sueldoInfo?.monto || parseFloat(contrato?.sueldo_monto) || 0;
   const varInfo = _promedioVariablesArt71(rut, corte, fechaIngreso);
   const promedio_variables = varInfo.promedio;
   const remuneracion_integra = sueldo_base + promedio_variables;

@@ -1001,7 +1001,9 @@ function _generarHTMLLiquidacion(liq, guardada){
   const sinGoce  = _diasNovedadLiq(liq, ['permiso_sin_goce'], 'laboral');
   const licencia = _diasNovedadLiq(liq, ['licencia_medica']);
   const fCorta = l => l.length ? ` (${_fechasLiq(l)})` : '';
-  const habImp = [['Sueldo base', m(liq.sueldo_base)]];
+  // ✅ H7 — si hubo anexo de sueldo a mitad de mes, se muestra el prorrateo
+  const tramosTxt = (liq.sueldo_tramos || []).filter(t => t.dias > 0).map(t => `${t.dias} días × ${m(Math.round(t.monto/30))}`).join(' + ');
+  const habImp = [[tramosTxt ? `Sueldo base (${tramosTxt})` : 'Sueldo base', m(liq.sueldo_base)]];
   if((liq.descuento_fuera_contrato || 0) > 0) habImp.push([`Días sin contrato en el mes (${liq.dias_fuera_contrato} × ${m(valorDia)})`, '-' + m(liq.descuento_fuera_contrato)]);
   if(liq.descuento_ausencias > 0) habImp.push([`Inasistencia ${liq.dias_ausencia} día${liq.dias_ausencia!==1?'s':''}${fCorta([...faltas, ...sinGoce])}`, '-' + m(liq.descuento_ausencias)]);
   if(liq.descuento_licencia > 0){
