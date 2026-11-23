@@ -55,7 +55,7 @@ function renderLibro(){
   if(!cont) return;
   _marcarPestanaLibro(vista);
 
-  if(!lista.length){
+  if(!lista.length && vista !== 'lre'){
     cont.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--texto3);">
       Sin liquidaciones generadas para este período.<br><br>
       <button class="btn btn-primary btn-sm" onclick="irA('remuneraciones')">
@@ -71,6 +71,8 @@ function renderLibro(){
 
   if(vista === 'dt'){
     cont.innerHTML = aviso + _renderLibroDT(lista, periodo);
+  } else if(vista === 'lre' && typeof _renderLRE === 'function'){
+    cont.innerHTML = _renderLRE(periodo);   // trae sus propios avisos y validaciones
   } else {
     cont.innerHTML = aviso + _renderResumenContador(lista, periodo);
   }
