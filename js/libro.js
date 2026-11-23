@@ -53,6 +53,7 @@ function renderLibro(){
   const lista = _getLiquidacionesPeriodo(periodo, empresa);
   const cont  = document.getElementById('libro-contenido');
   if(!cont) return;
+  _marcarPestanaLibro(vista);
 
   if(!lista.length){
     cont.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--texto3);">
@@ -66,12 +67,54 @@ function renderLibro(){
   }
 
   _renderKPIsLibro(lista);
+  const aviso = _avisoLiquidacionesDesactualizadas(lista, periodo);
 
   if(vista === 'dt'){
-    cont.innerHTML = _renderLibroDT(lista, periodo);
+    cont.innerHTML = aviso + _renderLibroDT(lista, periodo);
   } else {
-    cont.innerHTML = _renderResumenContador(lista, periodo);
+    cont.innerHTML = aviso + _renderResumenContador(lista, periodo);
   }
+}
+
+/* ✅ Auditoría Libro — pestañas de vista con títulos claros */
+function cambiarVistaLibro(vista){
+  const sel = document.getElementById('libro-vista');
+  if(sel) sel.value = vista;
+  renderLibro();
+}
+function _marcarPestanaLibro(vista){
+  document.querySelectorAll('.libro-tab').forEach(b => {
+    const activa = b.dataset.vista === vista;
+    b.classList.toggle('btn-primary', activa);
+    b.classList.toggle('btn-secondary', !activa);
+  });
+}
+
+/* ✅ L2 — Aviso de liquidaciones cuyos datos cambiaron después de
+   generarlas (🟡). El libro muestra lo generado; el aviso dice qué falta
+   reabrir antes de cerrar el mes. */
+function _avisoLiquidacionesDesactualizadas(lista, periodo){
+  if(typeof _estadoLiquidacion !== 'function') return '';
+  const pend = lista.filter(l => {
+    const emp = (typeof _empresaDelPeriodo === 'function') ? _empresaDelPeriodo(l.rut, periodo) : '';
+    if(typeof esMesCerrado === 'function' && esMesCerrado(periodo, emp)) return false;
+    return _estadoLiquidacion(l.rut, periodo).estado === 'desactualizada';
+  });
+  if(!pend.length) return '';
+  return `<div class="card" style="margin-bottom:12px;background:#fffbeb;border:1px solid #fcd34d;color:#92400e;font-size:13px;">
+    <strong>🟡 ${pend.length} liquidación${pend.length!==1?'es':''} con datos cambiados después de generarla${pend.length!==1?'s':''}:</strong>
+    ${pend.map(l => l.nombre).join(', ')}.
+    El libro muestra lo generado. Para corregir, ve a Remuneraciones → "Reabrir"; el mes no se puede cerrar mientras haya alguna en 🟡.
+  </div>`;
+}
+
+/* ✅ L4 — Desglose de haberes imponibles de una liquidación */
+function _desgloseHaberes(l){
+  const sueldo = l.sueldo_proporcional ?? l.sueldo_base ?? 0;
+  const he     = (l.horas_extra || []).reduce((s,h) => s + (h.monto_imponible||0), 0);
+  const grat   = l.gratificacion || 0;
+  const otros  = Math.max(0, (l.total_haberes_imponibles||0) - sueldo - he - grat);
+  return { sueldo, he, grat, otros };
 }
 
 function _renderKPIsLibro(lista){
@@ -116,7 +159,7 @@ function _botonCierreMes(periodo){
   </button>`;
 }
 
-function _renderLibroDT(lista, periodo){
+function _renderLibroDT(lista, periodo, opciones = {}){
   const [anio, mes] = periodo.split('-');
   const nombreMes   = new Date(anio, mes-1, 1)
     .toLocaleDateString('es-CL',{month:'long',year:'numeric'});
@@ -125,6 +168,10 @@ function _renderLibroDT(lista, periodo){
 
   // Totales
   const tot = {
+    sueldo_mes:       lista.reduce((s,l)=>s+_desgloseHaberes(l).sueldo,0),
+    he:               lista.reduce((s,l)=>s+_desgloseHaberes(l).he,0),
+    grat:             lista.reduce((s,l)=>s+_desgloseHaberes(l).grat,0),
+    otros_imp:        lista.reduce((s,l)=>s+_desgloseHaberes(l).otros,0),
     sueldo_base:      lista.reduce((s,l)=>s+(l.sueldo_base||0),0),
     hab_imp:          lista.reduce((s,l)=>s+(l.total_haberes_imponibles||0),0),
     hab_no_imp:       lista.reduce((s,l)=>s+(l.total_haberes_no_imponibles||0),0),
@@ -147,103 +194,73 @@ function _renderLibroDT(lista, periodo){
   };
   const sinTasaMutual = lista.some(l => l.tasa_mutual_configurada === false);
 
+  const td  = (v, extra='') => `<td style="font-size:11px;text-align:right;${extra}">${v}</td>`;
   const filas = lista.map((l,i) => {
-    const t = trabajadores.find(x => x.rut === l.rut);
-    // ✅ Aporte patronal por trabajador (BL — hallazgo Libro punto 3,
-    // confirmado contra el Suplemento LRE de la DT, Categoría 4 "Aportes
-    // del Empleador" — son campos por trabajador, no solo un total
-    // agregado). Se suman los 3 aportes que ya calcula el motor por
-    // persona: AFP empleador + SIS + AFC empleador.
+    const d = _desgloseHaberes(l);
     // ✅ L1 — aporte completo (incluye reforma de pensiones y Mutual)
     const aportePatronal = _aportePatronal(l);
     return `<tr style="${i%2===0?'':'background:#F8FAFC'}">
       <td style="font-size:11px;white-space:nowrap;">${i+1}</td>
       <td class="rut-mono" style="white-space:nowrap;">${l.rut}</td>
-      <td style="font-size:12px;font-weight:500;white-space:nowrap;min-width:160px;">${l.nombre}</td>
+      <td style="font-size:12px;font-weight:500;white-space:nowrap;min-width:160px;">${l.nombre}${l.version > 1 ? ` <span title="Liquidación reabierta y corregida" style="font-size:10px;color:#92400e;background:#fef3c7;padding:1px 5px;border-radius:4px;">v${l.version}</span>` : ''}</td>
       <td style="font-size:11px;text-align:center;">${_tipoContratoLabel(_tipoContratoReal(l))}</td>
       <td style="font-size:11px;text-align:center;">${30-(l.dias_a_descontar||0)}</td>
-      <td style="font-size:11px;text-align:right;">${fmtM(l.sueldo_base)}</td>
-      <td style="font-size:11px;text-align:right;">${fmtM(l.total_haberes_imponibles)}</td>
-      <td style="font-size:11px;text-align:right;">${fmtM(l.total_haberes_no_imponibles)}</td>
-      <td style="font-size:11px;text-align:right;font-weight:500;">${fmtM(l.total_haberes)}</td>
-      <td style="font-size:11px;text-align:right;">${fmtM(l.base_afp)}</td>
+      ${td(fmtM(d.sueldo))}${td(fmtM(d.he))}${td(fmtM(d.grat))}${td(fmtM(d.otros))}
+      ${td(fmtM(l.total_haberes_imponibles),'font-weight:600;')}
+      ${td(fmtM(l.total_haberes_no_imponibles))}
+      ${td(fmtM(l.total_haberes),'font-weight:600;')}
       <td style="font-size:11px;text-align:center;white-space:nowrap;">${_capitalizar(l.afp||'—')}</td>
-      <td style="font-size:11px;text-align:right;">${fmtM(l.monto_afp)}</td>
-      <td style="font-size:11px;text-align:right;">${fmtM(l.monto_salud)}</td>
-      <td style="font-size:11px;text-align:right;">${fmtM(l.monto_afc_trab)}</td>
-      <td style="font-size:11px;text-align:right;">${fmtM(l.iusc)}</td>
-      <td style="font-size:11px;text-align:right;">${fmtM(l.total_desc_adicionales)}</td>
-      <td style="font-size:11px;text-align:right;font-weight:500;color:#dc2626;">${fmtM(l.total_descuentos)}</td>
+      ${td(fmtM(l.monto_afp))}${td(fmtM(l.monto_salud))}${td(fmtM(l.monto_afc_trab))}${td(fmtM(l.iusc))}${td(fmtM(l.total_desc_adicionales))}
+      ${td(fmtM(l.total_descuentos),'font-weight:600;color:#dc2626;')}
       <td style="font-size:12px;text-align:right;font-weight:700;color:#065f46;">${fmtM(l.liquido)}</td>
-      <td style="font-size:11px;text-align:right;color:#6d28d9;">${fmtM(aportePatronal)}</td>
+      ${td(fmtM(aportePatronal),'color:#6d28d9;')}
     </tr>`;
   }).join('');
+
+  const empSel = document.getElementById('libro-filtro-empresa')?.value || '';
+  const ep = empSel ? getEmpresaEmpleadora(empSel) : null;
+  const th = (t, al='right', title='') => `<th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:${al};"${title ? ` title="${title}"` : ''}>${t}</th>`;
+  const tf = v => `<td style="color:#fff;text-align:right;padding:9px 6px;">${v}</td>`;
+  const sinTasaMutual2 = lista.some(l => l.tasa_mutual_configurada === false);
 
   return `
   <div class="card" style="margin-bottom:14px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
       <div>
-        <div style="font-size:14px;font-weight:700;">Libro de Remuneraciones — Formato DT</div>
+        <div style="font-size:15px;font-weight:700;">Libro de Remuneraciones</div>
         <div style="font-size:12px;color:var(--texto2);margin-top:2px;">
-          ${_capitalizar(nombreMes)} · ${lista.length} trabajador${lista.length>1?'es':''}
-          <span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:600;
-            padding:2px 8px;border-radius:99px;margin-left:8px;">Art. 62 CT</span>
+          ${ep ? `${ep.razon_social || ep.nombre} · RUT ${ep.rut || '—'} · ` : ''}${_capitalizar(nombreMes)} · ${lista.length} trabajador${lista.length>1?'es':''}
+          <span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;margin-left:8px;">Art. 62 CT</span>
         </div>
       </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-secondary btn-sm" onclick="imprimirLibroDT()">
-          <i class="ti ti-printer"></i> Imprimir
-        </button>
-        <button class="btn btn-primary btn-sm" onclick="exportarLibroExcel()">
-          <i class="ti ti-table-export"></i> Exportar Excel
-        </button>
+      ${opciones.imprimir ? '' : `<div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="imprimirLibroDT()"><i class="ti ti-printer"></i> Imprimir</button>
+        <button class="btn btn-primary btn-sm" onclick="exportarLibroExcel()"><i class="ti ti-table-export"></i> Exportar Excel</button>
         ${_botonCierreMes(periodo)}
-      </div>
+      </div>`}
     </div>
 
     <div class="tabla-wrap" id="libro-dt-wrap">
-      <table class="tabla" id="tabla-libro-dt" style="min-width:1400px;font-size:11px;">
+      <table class="tabla" id="tabla-libro-dt" style="min-width:1600px;font-size:11px;">
         <thead>
-          <tr style="background:#0f2942;color:#fff;">
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;">#</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;">RUT</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;">Nombre</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:center;">Contrato</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:center;">Días</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Sueldo base</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Hab. imponibles</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">No imponibles</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Total haberes</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Base AFP</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:center;">AFP</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Cot. AFP</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Cot. Salud</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">AFC</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">IUSC</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Otros desc.</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Total desc.</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Líquido</th>
-            <th style="background:#0f2942;color:#fff;padding:8px 6px;text-align:right;">Aporte patronal</th>
+          <tr>
+            ${th('#','left')}${th('RUT','left')}${th('Nombre','left')}${th('Contrato','center')}${th('Días','center','Días pagados del mes (base 30)')}
+            ${th('Sueldo del mes','right','Sueldo pagado: proporcional a los días, después de faltas y licencias')}${th('Horas extra')}${th('Gratificación')}${th('Otros imponibles','right','Bonos de producción, asistencia, etc.')}
+            ${th('Total imponible')}${th('No imponibles','right','Colación, movilización, viático')}${th('Total haberes')}
+            ${th('AFP','center')}${th('Cot. AFP')}${th('Cot. salud')}${th('Seg. cesantía')}${th('Impuesto')}${th('Otros desc.','right','Anticipos, préstamos, etc.')}${th('Total desc.')}
+            ${th('Líquido')}${th('Aporte patronal','right','AFP empleador + SIS + seguro de cesantía + reforma de pensiones + Mutual')}
           </tr>
         </thead>
         <tbody>${filas}</tbody>
         <tfoot>
           <tr style="background:#1e293b;color:#fff;font-weight:600;">
             <td colspan="5" style="color:#fff;padding:9px 8px;font-size:12px;">TOTALES</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.sueldo_base)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.hab_imp)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.hab_no_imp)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.total_haberes)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">—</td>
+            ${tf(fmtM(tot.sueldo_mes))}${tf(fmtM(tot.he))}${tf(fmtM(tot.grat))}${tf(fmtM(tot.otros_imp))}
+            ${tf(fmtM(tot.hab_imp))}${tf(fmtM(tot.hab_no_imp))}${tf(fmtM(tot.total_haberes))}
             <td style="color:#fff;text-align:center;padding:9px 6px;">—</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.afp)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.salud)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.afc_trab)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.iusc)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.otros_desc)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.total_desc)}</td>
+            ${tf(fmtM(tot.afp))}${tf(fmtM(tot.salud))}${tf(fmtM(tot.afc_trab))}${tf(fmtM(tot.iusc))}${tf(fmtM(tot.otros_desc))}${tf(fmtM(tot.total_desc))}
             <td style="text-align:right;padding:9px 6px;color:#10b981;">${fmtM(tot.liquido)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.aporte)}</td>
+            ${tf(fmtM(tot.aporte))}
           </tr>
         </tfoot>
       </table>
@@ -252,13 +269,13 @@ function _renderLibroDT(lista, periodo){
     <!-- Sección cargo empleador -->
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--borde);">
       <div style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;
-        letter-spacing:.4px;margin-bottom:8px;">Cargo empleador (no aparece en liquidaciones individuales)</div>
+        letter-spacing:.4px;margin-bottom:8px;">Cargo empleador (no se descuenta al trabajador)</div>
       <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:12px;">
         <span>AFP empleador: <strong>${fmtM(tot.afp_emp)}</strong></span>
         <span>SIS: <strong>${fmtM(tot.sis)}</strong></span>
         <span>AFC empleador: <strong>${fmtM(tot.afc_emp)}</strong></span>
         <span>Reforma de pensiones: <strong>${fmtM(tot.reforma)}</strong></span>
-        <span>Mutual / ISL: <strong>${fmtM(tot.mutual)}</strong>${sinTasaMutual ? ' <span style="color:#b45309;" title="Configura la tasa de tu Mutual en Previsión → Configuración de la empresa">(tasa básica 0,93% — configúrala en Previsión)</span>' : ''}</span>
+        <span>Mutual / ISL: <strong>${fmtM(tot.mutual)}</strong>${sinTasaMutual2 ? ' <span style="color:#b45309;" title="Configura la tasa de tu Mutual en Previsión → Configuración de la empresa">(tasa básica 0,93% — configúrala en Previsión)</span>' : ''}</span>
         <span style="background:#f0fdf4;color:#065f46;padding:4px 12px;border-radius:6px;font-weight:700;">
           Costo total empresa: ${fmtM(tot.costo_empresa)}
         </span>
@@ -271,7 +288,7 @@ function _renderLibroDT(lista, periodo){
    FORMATO 2 — RESUMEN CONTADOR
    Totales por institución para declaración Previred
    ════════════════════════════════════════════════════════ */
-function _renderResumenContador(lista, periodo){
+function _renderResumenContador(lista, periodo, opciones = {}){
   const [anio, mes] = periodo.split('-');
   const nombreMes   = new Date(anio, mes-1, 1)
     .toLocaleDateString('es-CL',{month:'long',year:'numeric'});
@@ -319,12 +336,12 @@ function _renderResumenContador(lista, periodo){
     <!-- Encabezado -->
     <div class="card" style="grid-column:span 2;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
       <div>
-        <div style="font-size:14px;font-weight:700;">Resumen para Contador</div>
+        <div style="font-size:15px;font-weight:700;">Resumen para el Contador</div>
         <div style="font-size:12px;color:var(--texto2);margin-top:2px;">
           ${_capitalizar(nombreMes)} · ${lista.length} trabajador${lista.length>1?'es':''}
         </div>
       </div>
-      <div style="display:flex;gap:8px;">
+      ${opciones.imprimir ? '' : `<div style="display:flex;gap:8px;">
         <button class="btn btn-secondary btn-sm" onclick="imprimirResumenContador()">
           <i class="ti ti-printer"></i> Imprimir
         </button>
@@ -332,7 +349,7 @@ function _renderResumenContador(lista, periodo){
           <i class="ti ti-table-export"></i> Exportar Excel
         </button>
         ${_botonCierreMes(periodo)}
-      </div>
+      </div>`}
     </div>
 
     <!-- AFP por institución -->
@@ -425,7 +442,7 @@ function _renderResumenContador(lista, periodo){
           <span>Total líquido a pagar</span><strong style="color:#065f46;">${fmtM(total_liquido)}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--borde);padding:4px 0;">
-          <span>Total cargo empleador</span><strong>${fmtM(total_prev_emp)}</strong>
+          <span>Total cargo empleador (incluye reforma de pensiones y Mutual)</span><strong>${fmtM(total_prev_emp)}</strong>
         </div>
         <div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:700;
           background:#f0fdf4;margin:0 -4px;padding:8px 4px;border-radius:6px;">
@@ -447,19 +464,17 @@ function imprimirLibroDT(){
   const win = window.open('','_blank','width=1100,height=700');
   win.document.write(`<!DOCTYPE html><html lang="es"><head>
     <meta charset="UTF-8"><title>Libro Remuneraciones ${periodo}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
     <style>
       body{font-family:'Segoe UI',system-ui,sans-serif;margin:20px;font-size:11px;}
       table{width:100%;border-collapse:collapse;}
       th,td{padding:5px 6px;border:1px solid #e2e8f0;}
-      th{background:#0f2942;color:#fff;font-size:10px;text-transform:uppercase;}
-      tfoot td{background:#1e293b;color:#fff;font-weight:600;}
-      @media print{@page{size:landscape;margin:10mm;}}
+      th{background:#f1f5f9!important;color:#0f172a!important;font-size:9.5px;text-transform:uppercase;}
+      tfoot td{background:#e2e8f0!important;color:#0f172a!important;font-weight:700;}
+      .card{border:none;padding:0;} .tabla-wrap{overflow:visible;}
+      @media print{@page{size:landscape;margin:8mm;}}
     </style>
   </head><body>
-    <h2 style="color:#0f2942;margin-bottom:4px;">Libro de Remuneraciones — Formato DT</h2>
-    <p style="color:#64748b;margin-bottom:12px;">Período: ${periodo} · ${lista.length} trabajadores</p>
-    ${_renderLibroDT(lista, periodo)}
+    ${_renderLibroDT(lista, periodo, { imprimir: true })}
     <script>setTimeout(()=>window.print(),600);<\/script>
   </body></html>`);
   win.document.close();
@@ -471,7 +486,7 @@ function imprimirResumenContador(){
   const lista   = _getLiquidacionesPeriodo(periodo, empresa);
   if(!lista.length){ toast('⚠️ Sin liquidaciones para imprimir','error'); return; }
 
-  const win = window.open('','_blank','width=900,height:700');
+  const win = window.open('','_blank','width=900,height=700');
   win.document.write(`<!DOCTYPE html><html lang="es"><head>
     <meta charset="UTF-8"><title>Resumen Contador ${periodo}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
@@ -483,9 +498,7 @@ function imprimirResumenContador(){
       th{background:#f8fafc;font-size:10px;text-transform:uppercase;color:#94a3b8;}
     </style>
   </head><body>
-    <h2 style="color:#0f2942;margin-bottom:4px;">Resumen para Contador</h2>
-    <p style="color:#64748b;margin-bottom:12px;">Período: ${periodo} · ${lista.length} trabajadores</p>
-    ${_renderResumenContador(lista, periodo)}
+    ${_renderResumenContador(lista, periodo, { imprimir: true })}
     <script>setTimeout(()=>window.print(),600);<\/script>
   </body></html>`);
   win.document.close();
@@ -504,8 +517,12 @@ function exportarLibroExcel(){
     'Nombre':                l.nombre,
     'Tipo contrato':         _tipoContratoLabel(_tipoContratoReal(l)),
     'Días trabajados':       30-(l.dias_a_descontar||0),
-    'Sueldo base':           l.sueldo_base||0,
-    'Hab. imponibles':       l.total_haberes_imponibles||0,
+    'Sueldo base (contrato)':l.sueldo_base||0,
+    'Sueldo del mes':        _desgloseHaberes(l).sueldo,
+    'Horas extra':           _desgloseHaberes(l).he,
+    'Gratificación':         _desgloseHaberes(l).grat,
+    'Otros imponibles':      _desgloseHaberes(l).otros,
+    'Total imponible':       l.total_haberes_imponibles||0,
     'Hab. no imponibles':    l.total_haberes_no_imponibles||0,
     'Total haberes':         l.total_haberes||0,
     'Base AFP':              l.base_afp||0,
@@ -516,6 +533,9 @@ function exportarLibroExcel(){
     'Cot. Salud':            l.monto_salud||0,
     'AFC trabajador':        l.monto_afc_trab||0,
     'AFC empleador':         l.monto_afc_emp||0,
+    'Reforma pensiones':     (l.monto_exp_vida||0) + (l.monto_rentabilidad_protegida||0),
+    'Mutual':                Math.max(0, _aportePatronal(l) - (l.monto_afp_emp||0) - (l.monto_sis||0) - (l.monto_afc_emp||0) - (l.monto_exp_vida||0) - (l.monto_rentabilidad_protegida||0)),
+    'Versión':               l.version || 1,
     'IUSC':                  l.iusc||0,
     'Otros descuentos':      l.total_desc_adicionales||0,
     'Total descuentos':      l.total_descuentos||0,
