@@ -140,8 +140,12 @@ function _renderLibroDT(lista, periodo){
     afp_emp:          lista.reduce((s,l)=>s+(l.monto_afp_emp||0),0),
     sis:              lista.reduce((s,l)=>s+(l.monto_sis||0),0),
     afc_emp:          lista.reduce((s,l)=>s+(l.monto_afc_emp||0),0),
-    costo_empresa:    lista.reduce((s,l)=>s+(l.costo_empresa||0),0),
+    costo_empresa:    lista.reduce((s,l)=>s+_costoEmpresa(l),0),
+    reforma:          lista.reduce((s,l)=>s+(l.monto_exp_vida||0)+(l.monto_rentabilidad_protegida||0),0),
+    mutual:           lista.reduce((s,l)=>s+(l.monto_mutual||0),0),
+    aporte:           lista.reduce((s,l)=>s+_aportePatronal(l),0),
   };
+  const sinTasaMutual = lista.some(l => l.tasa_mutual_configurada === false);
 
   const filas = lista.map((l,i) => {
     const t = trabajadores.find(x => x.rut === l.rut);
@@ -150,7 +154,8 @@ function _renderLibroDT(lista, periodo){
     // del Empleador" — son campos por trabajador, no solo un total
     // agregado). Se suman los 3 aportes que ya calcula el motor por
     // persona: AFP empleador + SIS + AFC empleador.
-    const aportePatronal = (l.monto_afp_emp||0) + (l.monto_sis||0) + (l.monto_afc_emp||0);
+    // ✅ L1 — aporte completo (incluye reforma de pensiones y Mutual)
+    const aportePatronal = _aportePatronal(l);
     return `<tr style="${i%2===0?'':'background:#F8FAFC'}">
       <td style="font-size:11px;white-space:nowrap;">${i+1}</td>
       <td class="rut-mono" style="white-space:nowrap;">${l.rut}</td>
@@ -238,7 +243,7 @@ function _renderLibroDT(lista, periodo){
             <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.otros_desc)}</td>
             <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.total_desc)}</td>
             <td style="text-align:right;padding:9px 6px;color:#10b981;">${fmtM(tot.liquido)}</td>
-            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.afp_emp + tot.sis + tot.afc_emp)}</td>
+            <td style="color:#fff;text-align:right;padding:9px 6px;">${fmtM(tot.aporte)}</td>
           </tr>
         </tfoot>
       </table>
@@ -252,6 +257,8 @@ function _renderLibroDT(lista, periodo){
         <span>AFP empleador: <strong>${fmtM(tot.afp_emp)}</strong></span>
         <span>SIS: <strong>${fmtM(tot.sis)}</strong></span>
         <span>AFC empleador: <strong>${fmtM(tot.afc_emp)}</strong></span>
+        <span>Reforma de pensiones: <strong>${fmtM(tot.reforma)}</strong></span>
+        <span>Mutual / ISL: <strong>${fmtM(tot.mutual)}</strong>${sinTasaMutual ? ' <span style="color:#b45309;" title="Configura la tasa de tu Mutual en Previsión → Configuración de la empresa">(tasa básica 0,93% — configúrala en Previsión)</span>' : ''}</span>
         <span style="background:#f0fdf4;color:#065f46;padding:4px 12px;border-radius:6px;font-weight:700;">
           Costo total empresa: ${fmtM(tot.costo_empresa)}
         </span>
@@ -300,11 +307,11 @@ function _renderResumenContador(lista, periodo){
   };
 
   const total_prev_trab = lista.reduce((s,l)=>s+(l.total_prev_trab||0),0);
-  const total_prev_emp  = lista.reduce((s,l)=>s+(l.total_cargo_emp||0),0);
+  const total_prev_emp  = lista.reduce((s,l)=>s+_aportePatronal(l),0);
   const total_iusc      = lista.reduce((s,l)=>s+(l.iusc||0),0);
   const total_liquido   = lista.reduce((s,l)=>s+(l.liquido||0),0);
   const total_haberes   = lista.reduce((s,l)=>s+(l.total_haberes||0),0);
-  const costo_empresa   = lista.reduce((s,l)=>s+(l.costo_empresa||0),0);
+  const costo_empresa   = lista.reduce((s,l)=>s+_costoEmpresa(l),0);
 
   return `
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
@@ -513,7 +520,8 @@ function exportarLibroExcel(){
     'Otros descuentos':      l.total_desc_adicionales||0,
     'Total descuentos':      l.total_descuentos||0,
     'Líquido':               l.liquido||0,
-    'Costo empresa':         l.costo_empresa||0,
+    'Aporte patronal':       _aportePatronal(l),
+    'Costo empresa':         _costoEmpresa(l),
   }));
 
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -561,8 +569,8 @@ function exportarResumenExcel(){
     'Cotiz. trabajadores':  lista.reduce((s,l)=>s+(l.total_prev_trab||0),0),
     'IUSC':                 lista.reduce((s,l)=>s+(l.iusc||0),0),
     'Total líquido':        lista.reduce((s,l)=>s+(l.liquido||0),0),
-    'Cargo empleador':      lista.reduce((s,l)=>s+(l.total_cargo_emp||0),0),
-    'Costo total empresa':  lista.reduce((s,l)=>s+(l.costo_empresa||0),0),
+    'Cargo empleador':      lista.reduce((s,l)=>s+_aportePatronal(l),0),
+    'Costo total empresa':  lista.reduce((s,l)=>s+_costoEmpresa(l),0),
   }]);
   XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen');
 
@@ -571,6 +579,21 @@ function exportarResumenExcel(){
 }
 
 /* ── UTILIDADES ─────────────────────────────────────────── */
+/* ✅ L1 — Aporte patronal por trabajador: AFP empleador + SIS + AFC
+   empleador + reforma de pensiones + Mutual. Las liquidaciones
+   generadas antes de este cambio no traen Mutual: se calcula con la
+   tasa actual de la empresa. */
+function _aportePatronal(l){
+  let mutual = l.monto_mutual;
+  if(mutual == null && typeof _tasaMutualEmpresa === 'function'){
+    const c = _getContratoVigente(l.rut, l.periodo);
+    mutual = Math.round((l.base_afp||0) * _tasaMutualEmpresa(c?.empresa_propia_id).tasa / 100);
+  }
+  return (l.monto_afp_emp||0) + (l.monto_sis||0) + (l.monto_afc_emp||0)
+       + (l.monto_exp_vida||0) + (l.monto_rentabilidad_protegida||0) + (mutual||0);
+}
+function _costoEmpresa(l){ return (l.total_haberes||0) + _aportePatronal(l); }
+
 function _tipoContratoLabel(tipo){
   // ✅ Corregido — el mapa no tenía 'plazo_fijo' (el valor real que
   // guarda el contrato), solo 'fijo' (la categoría normalizada para

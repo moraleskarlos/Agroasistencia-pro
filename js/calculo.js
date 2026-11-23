@@ -121,7 +121,21 @@ function calcularLiquidacion(vars, periodo){
     : 0;
 
   const monto_afc_emp  = _calcularAFCEmpleador(vars, ind, base_afc);
-  const total_cargo_emp = monto_afp_emp + monto_sis + monto_afc_emp;
+
+  // ✅ L1 (auditoría Libro, 23-11-2026) — Seguro de accidentes del
+  // trabajo (Ley 16.744): tasa de la Mutual/ISL configurada por empresa
+  // en Previsión (la misma que usa el archivo PreviRed, campo 97, sobre
+  // la base imponible). Sin tasa configurada se usa la cotización básica
+  // 0,93% y se marca para revisar.
+  const mut = _tasaMutualEmpresa(vars.empresa_propia_id);
+  const monto_mutual = Math.round(base_afp * mut.tasa / 100);
+
+  // ✅ L1 — el aporte del empleador incluye también la reforma de
+  // pensiones (expectativa de vida y rentabilidad protegida) y la
+  // Mutual. Antes solo AFP empleador + SIS + AFC: con $600.000 faltaban
+  // $6.000 de reforma y ~$5.580 de Mutual en el costo de la empresa.
+  const total_cargo_emp = monto_afp_emp + monto_sis + monto_afc_emp
+                        + monto_exp_vida + monto_rentabilidad_protegida + monto_mutual;
 
   // ── Costo total empresa ──────────────────────────────
   const costo_empresa  = vars.total_haberes + total_cargo_emp;
@@ -186,6 +200,9 @@ function calcularLiquidacion(vars, periodo){
     monto_rentabilidad_protegida,
     pct_rentabilidad_protegida,
     monto_afc_emp,
+    monto_mutual,
+    tasa_mutual: mut.tasa,
+    tasa_mutual_configurada: mut.configurada,
     total_cargo_emp,
 
     // Resultado
@@ -289,3 +306,13 @@ function _normalizarAfpKey(afp){
    futuro hace falta un resumen de solo-lectura sin guardar, se puede
    reintroducir apuntando a dónde se va a usar. */
 
+
+/* ✅ L1 — Tasa de cotización de accidentes del trabajo (Mutual / ISL)
+   de la empresa empleadora, desde la configuración de Previsión. */
+const TASA_MUTUAL_BASICA = 0.93;
+function _tasaMutualEmpresa(empresaId){
+  let cfg = (typeof previred_cfg !== 'undefined' && previred_cfg && Object.keys(previred_cfg).length) ? previred_cfg : null;
+  if(!cfg){ try{ cfg = JSON.parse(localStorage.getItem('agro_previred_cfg')) || {}; }catch(e){ cfg = {}; } }
+  const t = parseFloat(String(cfg?.[empresaId]?.tasa_mutual || '').replace(',', '.'));
+  return (t > 0) ? { tasa: t, configurada: true } : { tasa: TASA_MUTUAL_BASICA, configurada: false };
+}

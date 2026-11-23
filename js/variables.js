@@ -158,6 +158,7 @@ function construirVariablesRemuneracion(rut, periodo){
 
     // Contrato
     tipo_contrato,
+    empresa_propia_id: contrato.empresa_propia_id || t.empresa_propia_id || '', // ✅ L1 — para la tasa de Mutual
     antiguedad_anios,
     fecha_inicio_contrato: contrato.fecha_inicio || t.fecha_ingreso,
     horas_semanales_contrato: parseFloat(contrato.horas_semanales) || null, // lo que dice el papel
