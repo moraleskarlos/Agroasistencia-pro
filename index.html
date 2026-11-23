@@ -1930,6 +1930,7 @@
               <select id="libro-vista" style="display:none;">
                 <option value="dt">Libro</option>
                 <option value="contador">Resumen</option>
+                <option value="lre">LRE</option>
               </select>
               <button class="btn btn-secondary btn-sm" onclick="renderLibro()" style="align-self:flex-end;">
                 <i class="ti ti-refresh"></i> Actualizar
@@ -1944,6 +1945,10 @@
               <button class="btn btn-sm libro-tab" data-vista="contador" onclick="cambiarVistaLibro('contador')" style="flex:1;min-width:220px;text-align:left;flex-direction:column;align-items:flex-start;padding:9px 12px;">
                 <span style="font-weight:700;"><i class="ti ti-calculator"></i> 2 · Resumen para el Contador</span>
                 <span style="font-size:11px;font-weight:400;opacity:.85;">Totales por AFP, salud, seguro de cesantía y costo empresa</span>
+              </button>
+              <button class="btn btn-sm libro-tab" data-vista="lre" onclick="cambiarVistaLibro('lre')" style="flex:1;min-width:220px;text-align:left;flex-direction:column;align-items:flex-start;padding:9px 12px;">
+                <span style="font-weight:700;"><i class="ti ti-file-upload"></i> 3 · LRE — Archivo para la DT</span>
+                <span style="font-size:11px;font-weight:400;opacity:.85;">Libro electrónico para subir al portal de la Dirección del Trabajo</span>
               </button>
             </div>
           </div>
@@ -3012,6 +3017,7 @@
   <script src="js/calculo.js"></script>
   <script src="js/liquidaciones.js"></script>
   <script src="js/libro.js"></script>
+  <script src="js/lre.js"></script>
   <script src="js/indicadores.js"></script>
   <script src="js/gestion-laboral.js"></script>
   <script src="js/previred.js"></script>
