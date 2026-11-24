@@ -9,7 +9,7 @@ let contratoEditandoId=null, _rutPrecontratoTemp=null;
 let tabEmpresasActivo='mis-empresas', tabContratosActivo='contratos';
 let toastTimer;
 let sesionActiva=null;
-const SUPERADMIN={usuario:'admin',password:'agro2024',rol:'superadmin'};
+// ✅ Seguridad S1 — se eliminó el superadmin con clave escrita en el código (ver auth.js).
 const DIAS_JORNADA=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const TIPOS_ANEXO={
   cambio_labor:'Cambio de Labor',cambio_cargo:'Cambio de Cargo',
@@ -112,6 +112,11 @@ function _resaltarYScroll(id, intentos){
 }
 
 function irA(idPagina, botonEl) {
+  // ✅ Seguridad S3 — el operador solo entra a sus páginas, aunque la escriba a mano.
+  if(typeof _paginaPermitida === 'function' && !_paginaPermitida(idPagina)){
+    if(typeof toast === 'function') toast('🔒 Tu usuario solo tiene acceso a Asistencia', 'error');
+    idPagina = 'asistencia'; botonEl = null;
+  }
 
   document.querySelectorAll('.pagina').forEach(pag => {
     pag.classList.remove('activa');

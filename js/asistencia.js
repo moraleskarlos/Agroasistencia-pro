@@ -46,6 +46,7 @@ function initAsistencia(){
   if(typeof poblarSelectsEmpresaPropia === 'function') poblarSelectsEmpresaPropia();
   switchTabAsistencia('dia');
   cambiarModoManualAsistencia('individual');
+  if(typeof _aplicarFiltroOperadorAsistencia === 'function') _aplicarFiltroOperadorAsistencia(); // ✅ Seguridad S4
   cargarAsistencia();
 }
 
@@ -551,8 +552,7 @@ function guardarMarcacion(rut){
     toast(`⚠️ ${rut} — más de 12 horas, revisar`, 'error');
   }
 
-  const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre)
-    ? cfg.admin_nombre.split(' ')[0] : 'Admin';
+  const registradoPor = _nombreRegistrador(); // ✅ Seguridad S8 — firma con el usuario real
 
   const marcacion = {
     rut,
@@ -715,8 +715,7 @@ function confirmarCierreTurno(){
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
 
-  const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre)
-    ? cfg.admin_nombre.split(' ')[0] : 'Admin';
+  const registradoPor = _nombreRegistrador(); // ✅ Seguridad S8 — firma con el usuario real
 
   // Calcular primero, para poder avisar antes de escribir si la hora elegida
   // dejaría jornadas de más de 12 h (típico error de tipeo: 05:30 en vez de 17:30).
@@ -912,7 +911,7 @@ function guardarMarcacionManual(){
   const horas = salida ? calcularHoras(entrada, salida, colMin) : null;
   const { jornada, valor } = calcularJornada(horas);
 
-  const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre) ? cfg.admin_nombre.split(' ')[0] : 'Admin';
+  const registradoPor = _nombreRegistrador(); // ✅ Seguridad S8
   const clave = 'asistencia_' + fecha;
   const data  = JSON.parse(localStorage.getItem(clave) || '[]');
   const idx   = data.findIndex(x => x.rut === rut);
@@ -1108,8 +1107,7 @@ function subirMasivoAsistencia(){
 
   if(!confirm(`Se cargarán ${_datosExcelAsist.length} marcación${_datosExcelAsist.length!==1?'es':''}. ¿Continuar?`)) return;
 
-  const registradoPor = (typeof cfg !== 'undefined' && cfg.admin_nombre)
-    ? cfg.admin_nombre.split(' ')[0] + ' (carga masiva)' : 'Admin (carga masiva)';
+  const registradoPor = _nombreRegistrador() + ' (carga masiva)'; // ✅ Seguridad S8
 
   // Agrupar por fecha para tocar cada clave de localStorage una sola vez
   const porFecha = {};
