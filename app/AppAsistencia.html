@@ -444,7 +444,47 @@
 ══════════════════════════════════════════ */
 
 /* ── CONSTANTES ── */
-const SUPERADMIN_APP = { usuario:'admin', password:'agro2024' };
+// ✅ Seguridad S1/S2 (23-11-2026) — sin superadmin con clave en el código;
+// las contraseñas se verifican contra el hash que guarda el sistema web.
+function _sha256(ascii){
+  const rotr = (v, a) => (v >>> a) | (v << (32 - a));
+  const utf8 = unescape(encodeURIComponent(ascii));
+  const K = [], H = [];
+  let primo = 2, n = 0;
+  const esPrimo = x => { for(let i=2;i*i<=x;i++) if(x%i===0) return false; return true; };
+  while(n < 64){ if(esPrimo(primo)){ if(n < 8) H[n] = (Math.pow(primo,1/2)*4294967296)|0; K[n++] = (Math.pow(primo,1/3)*4294967296)|0; } primo++; }
+  const bytes = [];
+  for(let i=0;i<utf8.length;i++) bytes.push(utf8.charCodeAt(i));
+  const largoBits = bytes.length * 8;
+  bytes.push(0x80);
+  while(bytes.length % 64 !== 56) bytes.push(0);
+  for(let i=7;i>=0;i--) bytes.push(i >= 4 ? 0 : (largoBits >>> (i*8)) & 0xff);
+  const h = H.slice();
+  for(let j=0;j<bytes.length;j+=64){
+    const w = [];
+    for(let i=0;i<16;i++) w[i] = (bytes[j+i*4]<<24)|(bytes[j+i*4+1]<<16)|(bytes[j+i*4+2]<<8)|bytes[j+i*4+3];
+    for(let i=16;i<64;i++){
+      const s0 = rotr(w[i-15],7) ^ rotr(w[i-15],18) ^ (w[i-15]>>>3);
+      const s1 = rotr(w[i-2],17) ^ rotr(w[i-2],19) ^ (w[i-2]>>>10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1)|0;
+    }
+    let [a,b,c,d,e,f,g,hh] = h;
+    for(let i=0;i<64;i++){
+      const t1 = (hh + (rotr(e,6)^rotr(e,11)^rotr(e,25)) + ((e&f)^(~e&g)) + K[i] + w[i])|0;
+      const t2 = ((rotr(a,2)^rotr(a,13)^rotr(a,22)) + ((a&b)^(a&c)^(b&c)))|0;
+      hh = g; g = f; f = e; e = (d + t1)|0; d = c; c = b; b = a; a = (t1 + t2)|0;
+    }
+    h[0]=(h[0]+a)|0; h[1]=(h[1]+b)|0; h[2]=(h[2]+c)|0; h[3]=(h[3]+d)|0;
+    h[4]=(h[4]+e)|0; h[5]=(h[5]+f)|0; h[6]=(h[6]+g)|0; h[7]=(h[7]+hh)|0;
+  }
+  return h.map(x => (x>>>0).toString(16).padStart(8,'0')).join('');
+}
+function _verificarClaveApp(clave, guardado){
+  const [alg, sal, h] = String(guardado||'').split('$');
+  return alg === 'sha256' && !!sal && _sha256(sal + ':' + clave) === h;
+}
+// Acepta el hash nuevo y, si el sistema web aún no convirtió la clave, la antigua en texto.
+function _claveCorrecta(u, clave){ return u?.hash ? _verificarClaveApp(clave, u.hash) : (!!u?.password && u.password === clave); }
 const LS_CFG         = 'agro_cfg';
 const LS_EMPRESAS    = 'agro_empresas';
 const LS_TRABAJ      = 'agro_trabajadores';
@@ -555,17 +595,9 @@ function hacerLogin(){
 
   let rolValido = null;
 
-  // 1. Superadmin
-  if(user === SUPERADMIN_APP.usuario && pass === SUPERADMIN_APP.password){
-    rolValido = 'superadmin';
-  }
-
-  // 2. Admin — estructura actualizada cfg.usuarios.admin
-  if(!rolValido){
-    const adminUser = (cfg.usuarios?.admin?.usuario || '').toLowerCase();
-    const adminPass = cfg.usuarios?.admin?.password || '';
-    if(adminUser && user === adminUser && pass === adminPass) rolValido = 'admin';
-  }
+  // 1. Admin — cfg.usuarios.admin (clave cifrada)
+  const adminUser = (cfg.usuarios?.admin?.usuario || '').toLowerCase();
+  if(adminUser && user === adminUser && _claveCorrecta(cfg.usuarios.admin, pass)) rolValido = 'admin';
 
   // 3. Operadores — estructura actualizada cfg.usuarios.operadores.
   // El operador queda acotado a su propio mandante_rut (asignado en
@@ -575,8 +607,8 @@ function hacerLogin(){
     const operadores = cfg.usuarios?.operadores || [];
     const empresaSeleccionada = (Array.isArray(empresas) ? empresas : []).find(e => (e.id||e.rut) === mandanteId);
     const op = operadores.find(o =>
-      o.usuario?.toLowerCase() === user && o.password === pass &&
-      o.mandante_rut === empresaSeleccionada?.rut
+      o.usuario?.toLowerCase() === user && _claveCorrecta(o, pass) &&
+      (o.mandante_id ? o.mandante_id === mandanteId : o.mandante_rut === empresaSeleccionada?.rut)
     );
     if(op) rolValido = 'operador';
   }
@@ -612,7 +644,7 @@ function restaurarSesionApp(){
     const raw = localStorage.getItem(SESSION_KEY_APP);
     if(!raw) return false;
     const datos = JSON.parse(raw);
-    if(!datos?.expira || Date.now() > datos.expira){
+    if(!datos?.expira || Date.now() > datos.expira || !['admin','operador'].includes(datos.rol)){
       localStorage.removeItem(SESSION_KEY_APP); return false;
     }
     sesion = { rol: datos.rol, mandante_id: datos.mandante_id, usuario: datos.usuario, nombre_mandante: datos.nombre_mandante||'' };
