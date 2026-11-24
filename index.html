@@ -2045,7 +2045,7 @@
               <div class="form-grid" style="margin-bottom:16px;">
                 <div class="form-group">
                   <label>Valor UF ($)</label>
-                  <input type="text" id="ind-f-uf" placeholder="40.873,77" oninput="formatearUF(this)">
+                  <input type="text" id="ind-f-uf" placeholder="40.873,77" oninput="formatearUFIndicador(this)">
                 </div>
                 <div class="form-group">
                   <label>UTM ($)</label>
@@ -2096,7 +2096,7 @@
                 C — Tasas de Cotización AFP (%)
               </div>
               <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
-                Cargo del trabajador varía por AFP. El cargo del empleador (0,1%) es fijo para todas. El total es la suma de ambos.
+                Cargo del trabajador varía por AFP. El cargo del empleador (0,1% a la cuenta individual, Reforma de Pensiones) es fijo para todas. El total es la suma de ambos.
               </div>
               <div style="overflow-x:auto;margin-bottom:16px;">
                 <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:500px;">
@@ -2126,15 +2126,17 @@
               </div>
               <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
                 De cargo exclusivo del empleador. Se aplica sobre la renta imponible con tope AFP. El SIS no aplica a trabajadores Pensionados por Invalidez Parcial — Rentabilidad Protegida y Expectativa de Vida sí les aplica.
+                <br><strong>Copia estas tasas del PDF "Indicadores Previsionales" que Previred publica cada mes</strong> — cambian en el tiempo
+                (desde agosto 2026, SIS + Expectativa de Vida suman 2,5% y Rentabilidad Protegida es 0,9%).
               </div>
               <div class="form-grid" style="margin-bottom:16px;">
                 <div class="form-group">
                   <label>Tasa SIS — Empleador (%)</label>
-                  <input type="text" id="ind-f-sis" placeholder="1,88" oninput="formatearDecimal(this)">
+                  <input type="text" id="ind-f-sis" placeholder="Según Previred" oninput="formatearDecimal(this)">
                 </div>
                 <div class="form-group">
                   <label>Cotización Expectativa de Vida — Empleador (%)</label>
-                  <input type="text" id="ind-f-exp-vida" placeholder="0,9" oninput="formatearDecimal(this)">
+                  <input type="text" id="ind-f-exp-vida" placeholder="Según Previred" oninput="formatearDecimal(this)">
                 </div>
                 <div class="form-group">
                   <label>Cotización Rentabilidad Protegida — Empleador (%)</label>
@@ -2169,6 +2171,25 @@
                 <div class="form-group">
                   <label>Casa Particular — Empleador (%)</label>
                   <input type="text" id="ind-f-afc-casa-emp" placeholder="3,0" oninput="formatearDecimal(this)">
+                </div>
+              </div>
+
+              <!-- G — Distribución 7% salud con CCAF (Paso 1 auditoría Previsión) -->
+              <div class="form-section">
+                G — Salud: distribución del 7% (solo empresas afiliadas a una CCAF)
+              </div>
+              <div style="font-size:11px;color:var(--texto2);margin:-8px 0 12px;line-height:1.5;">
+                Para trabajadores en Fonasa, si la empresa está afiliada a una Caja de Compensación, el 7% de salud se reparte entre la CCAF y Fonasa.
+                Copia los porcentajes de la tabla "Distribución del 7% Salud" del PDF de Previred del mes. Deben sumar 7%. Si tu empresa no tiene CCAF, déjalo vacío.
+              </div>
+              <div class="form-grid" style="margin-bottom:16px;">
+                <div class="form-group">
+                  <label>CCAF (%)</label>
+                  <input type="text" id="ind-f-salud-ccaf" placeholder="Según Previred" oninput="formatearDecimal(this)">
+                </div>
+                <div class="form-group">
+                  <label>Fonasa (%)</label>
+                  <input type="text" id="ind-f-salud-fonasa" placeholder="Según Previred" oninput="formatearDecimal(this)">
                 </div>
               </div>
 
