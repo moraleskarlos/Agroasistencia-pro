@@ -2679,30 +2679,26 @@
               Gestiona los accesos al sistema según rol.
             </div>
 
-            <!-- Usuario Superadmin (fijo, no editable) -->
-            <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                <span style="background:#15803d;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;">SUPERADMIN</span>
-                <span style="font-size:13px;font-weight:600;">Tú (desarrollador)</span>
-              </div>
-              <div style="font-size:12px;color:var(--texto3);">Acceso total al sistema · Usuario: <strong>admin</strong></div>
-            </div>
-
             <!-- Usuario Admin (contratista) -->
             <div style="background:var(--gris-bg);border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:10px;">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
                 <span style="background:#1d4ed8;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;">ADMIN</span>
                 <span style="font-size:13px;font-weight:600;">Contratista (dueño del sistema)</span>
               </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
                 <div>
                   <label style="font-size:11px;font-weight:600;color:var(--texto3);">Usuario</label>
-                  <input type="text" id="cfg-admin-user" placeholder="Ej: contratista"
+                  <input type="text" id="cfg-admin-user" placeholder="Ej: contratista" autocomplete="username"
                     style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--borde);font-size:13px;box-sizing:border-box;">
                 </div>
                 <div>
-                  <label style="font-size:11px;font-weight:600;color:var(--texto3);">Contraseña</label>
-                  <input type="password" id="cfg-admin-pass" placeholder="Mínimo 6 caracteres"
+                  <label style="font-size:11px;font-weight:600;color:var(--texto3);">Nueva contraseña</label>
+                  <input type="password" id="cfg-admin-pass" placeholder="•••••• (vacío = sin cambios)" autocomplete="new-password"
+                    style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--borde);font-size:13px;box-sizing:border-box;">
+                </div>
+                <div>
+                  <label style="font-size:11px;font-weight:600;color:var(--texto3);">Repetir contraseña</label>
+                  <input type="password" id="cfg-admin-pass2" placeholder="Repite la nueva" autocomplete="new-password"
                     style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--borde);font-size:13px;box-sizing:border-box;">
                 </div>
               </div>
@@ -2982,7 +2978,7 @@
     <div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
       border-radius:16px;padding:28px;backdrop-filter:blur(10px);">
 
-      <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:20px;">Iniciar sesión</div>
+      <div id="login-titulo" style="font-size:15px;font-weight:600;color:#fff;margin-bottom:20px;">Iniciar sesión</div>
 
       <!-- Usuario -->
       <div style="margin-bottom:14px;">
@@ -3014,6 +3010,32 @@
             color:rgba(255,255,255,0.5);font-size:16px;" title="Mostrar/ocultar">
             <i class="ti ti-eye" id="login-eye-icon"></i>
           </button>
+        </div>
+      </div>
+
+      <!-- Primer ingreso: crear administrador (Seguridad S1) -->
+      <div id="login-crear-extra" style="display:none;margin:-6px 0 18px;">
+        <div style="margin-bottom:14px;">
+          <label style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);
+            text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">
+            Repetir contraseña
+          </label>
+          <input type="password" id="login-password2" placeholder="Repite la contraseña" autocomplete="new-password"
+            style="width:100%;padding:11px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);
+              background:rgba(255,255,255,0.08);color:#fff;font-size:14px;outline:none;box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.6);
+            text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">
+            Tu nombre
+          </label>
+          <input type="text" id="login-nombre" placeholder="Nombre del administrador"
+            style="width:100%;padding:11px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.15);
+              background:rgba(255,255,255,0.08);color:#fff;font-size:14px;outline:none;box-sizing:border-box;">
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.5;">
+          Es el primer ingreso: crea el usuario <strong style="color:#fff;">administrador</strong> del sistema.
+          Guarda bien la contraseña — se guarda cifrada y nadie puede verla.
         </div>
       </div>
 
