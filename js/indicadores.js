@@ -72,8 +72,13 @@ function getNombreMes(periodo){
     .toLocaleDateString('es-CL', { month:'long', year:'numeric' });
 }
 
+/* ✅ I1 (auditoría Previsión, 23-11-2026) — la alerta revisa el MES A
+   LIQUIDAR (el anterior al actual, getPeriodoCerrado), no el mes en
+   curso. Antes, el 23-11 pedía los indicadores de noviembre cuando lo que
+   se estaba liquidando era octubre; y si noviembre estaba cargado y
+   octubre no, decía "al día" aunque octubre no se podía calcular. */
 function verificarAlertaIndicadores(){
-  const periodo   = getPeriodoActual();
+  const periodo   = getPeriodoCerrado();
   const existe    = getIndicadoresPorPeriodo(periodo);
   const nombre    = getNombreMes(periodo);
 
@@ -87,19 +92,20 @@ function verificarAlertaIndicadores(){
         <div style="flex:1;">
           <strong>Indicadores previsionales de ${nombre} no registrados</strong>
           <div style="font-size:12px;margin-top:2px;opacity:.85;">
-            Actualiza los valores antes de procesar liquidaciones de este período.
+            Es el mes a liquidar — sin estos valores no se pueden calcular sus liquidaciones.
           </div>
         </div>
         <button onclick="irA('prevision',null)" class="btn btn-sm"
           style="background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);flex-shrink:0;">
           <i class="ti ti-arrow-right"></i> Ir ahora
         </button>`;
+      elDash.style.background = 'linear-gradient(135deg,#92400E,#D97706)';
     } else {
       elDash.style.display = 'flex';
       elDash.innerHTML = `
         <i class="ti ti-circle-check" style="font-size:18px;flex-shrink:0;color:#A7F3D0;"></i>
         <div style="font-size:13px;">
-          <strong>Indicadores de ${nombre} al día</strong>
+          <strong>Indicadores de ${nombre} (mes a liquidar) al día</strong>
           <span style="font-size:11px;opacity:.8;margin-left:8px;">UF $${existe.uf?.toLocaleString('es-CL')||'—'} · UTM $${existe.utm?.toLocaleString('es-CL')||'—'}</span>
         </div>`;
       elDash.style.background = 'linear-gradient(135deg,#065F46,#059669)';
@@ -114,7 +120,7 @@ function verificarAlertaIndicadores(){
       elRem.innerHTML = `
         <i class="ti ti-alert-triangle" style="font-size:16px;flex-shrink:0;color:#D97706;"></i>
         <div style="flex:1;font-size:13px;color:#92400E;">
-          <strong>Faltan los indicadores de ${nombre}.</strong>
+          <strong>Faltan los indicadores de ${nombre} (mes a liquidar).</strong>
           Los indicadores previsionales cambian cada mes. Ingresa los valores antes de calcular liquidaciones.
         </div>`;
     } else {
@@ -157,13 +163,13 @@ function initIndicadores(){
   switchTabPrevision('rem-indicadores');
   verificarAlertaIndicadores();
 
-  // Período por defecto: mes actual
+  // Período por defecto: el mes a liquidar (I1)
   const sel = document.getElementById('ind-periodo-selector');
-  if(sel && !sel.value) sel.value = getPeriodoActual();
+  if(sel && !sel.value) sel.value = getPeriodoCerrado();
 
   renderListaIndicadores();
   renderFeriados(); // ✅ Paso 2b
-  const periodo = document.getElementById('ind-periodo-selector')?.value || getPeriodoActual();
+  const periodo = document.getElementById('ind-periodo-selector')?.value || getPeriodoCerrado();
   renderDetalleIndicador(periodo);
 
   // Ocultar formulario si no hay nada en edición
@@ -185,10 +191,10 @@ function renderListaIndicadores(){
   const ordenados = [...indicadores].sort((a,b) => b.periodo.localeCompare(a.periodo));
   tbody.innerHTML = ordenados.map(ind => {
     const nombre = getNombreMes(ind.periodo);
-    const actual = ind.periodo === getPeriodoActual();
+    const actual = ind.periodo === getPeriodoCerrado();
     return `<tr style="cursor:pointer;" onclick="seleccionarPeriodoIndicador('${ind.periodo}')">
       <td style="font-size:13px;font-weight:600;text-transform:capitalize;">
-        ${nombre}${actual ? ' <span class="badge badge-verde" style="margin-left:6px;">Mes actual</span>' : ''}
+        ${nombre}${actual ? ' <span class="badge badge-verde" style="margin-left:6px;">Mes a liquidar</span>' : ''}
       </td>
       <td style="font-size:12px;">$${ind.uf?.toLocaleString('es-CL')||'—'}</td>
       <td style="font-size:12px;">$${ind.utm?.toLocaleString('es-CL')||'—'}</td>
@@ -215,7 +221,7 @@ function seleccionarPeriodoIndicador(periodo){
 
 /* ── FORMULARIO INGRESO / EDICIÓN ───────────────────────── */
 function nuevoIndicadorManual(){
-  const periodo = document.getElementById('ind-periodo-selector')?.value || getPeriodoActual();
+  const periodo = document.getElementById('ind-periodo-selector')?.value || getPeriodoCerrado();
   const existente = getIndicadoresPorPeriodo(periodo);
   _llenarFormulario(existente || { periodo });
   document.getElementById('ind-form-wrap').style.display = 'block';
@@ -270,7 +276,7 @@ function _llenarFormulario(ind){
     el.value = val ?? '';
   };
 
-  setT('ind-f-periodo', ind.periodo || getPeriodoActual());
+  setT('ind-f-periodo', ind.periodo || getPeriodoCerrado());
 
   // A — Generales
   setM('ind-f-uf',  ind.uf ? Math.round(ind.uf) : null);
@@ -307,6 +313,10 @@ function _llenarFormulario(ind){
   setD('ind-f-afc-11-emp',     ind.afc?.indefinido_11anios?.empleador);
   setD('ind-f-afc-casa-emp',   ind.afc?.casa_particular?.empleador);
 
+  // G — Distribución del 7% de salud con CCAF (Paso 1 Previsión)
+  setD('ind-f-salud-ccaf',   ind.salud_ccaf?.ccaf);
+  setD('ind-f-salud-fonasa', ind.salud_ccaf?.fonasa);
+
   // F — Asignación Familiar
   const af = ind.asignacion_familiar || [];
   ['A','B','C','D'].forEach(tramo => {
@@ -334,8 +344,7 @@ function guardarIndicadorPeriodo(){
 
   // UF tiene formato especial con coma decimal
   const ufRaw = document.getElementById('ind-f-uf')?.value || '';
-  const uf    = parsearMiles(ufRaw.replace(/,(\d{2})$/, '')) +
-                (ufRaw.includes(',') ? parseFloat('0.'+ufRaw.split(',').pop()) : 0);
+  const uf    = _parsearUF(ufRaw);
 
   const afpKeys = ['capital','cuprum','habitat','planvital','provida','modelo','uno'];
   const afp = {};
@@ -349,7 +358,7 @@ function guardarIndicadorPeriodo(){
 
   const nuevoIndicador = {
     periodo,
-    uf:                  getM('ind-f-uf') || uf,
+    uf,
     utm:                 getM('ind-f-utm'),
     uta:                 getM('ind-f-uta'),
     tope_imponible_afp:  getM('ind-f-tope-afp'),
@@ -367,6 +376,7 @@ function guardarIndicadorPeriodo(){
       indefinido_11anios: { empleador: getD('ind-f-afc-11-emp'),    trabajador: 0 },
       casa_particular:    { empleador: getD('ind-f-afc-casa-emp'),  trabajador: 0 },
     },
+    salud_ccaf: { ccaf: getD('ind-f-salud-ccaf'), fonasa: getD('ind-f-salud-fonasa') },
     asignacion_familiar: ['A','B','C','D'].map(tramo => ({
       tramo,
       monto: getM(`ind-f-af-${tramo}-monto`) ?? 0,
@@ -374,6 +384,15 @@ function guardarIndicadorPeriodo(){
     })),
     fecha_registro: hoyISO(),
   };
+
+  // ✅ I2 — no se guarda con datos obligatorios vacíos o fuera de rango
+  const errores = _validarIndicador(nuevoIndicador);
+  _marcarCamposIndicador(errores.map(e => e.id));
+  if(errores.length){
+    const lista = errores.slice(0,4).map(e => e.texto).join(' · ');
+    toast(`⚠️ No se guardó — revisa: ${lista}${errores.length>4?` y ${errores.length-4} más`:''}`, 'error');
+    return;
+  }
 
   const idx = indicadores.findIndex(i => i.periodo === periodo);
   if(idx >= 0) indicadores[idx] = nuevoIndicador;
@@ -385,6 +404,67 @@ function guardarIndicadorPeriodo(){
   renderListaIndicadores();
   renderDetalleIndicador(periodo);
   verificarAlertaIndicadores();
+}
+
+/* ✅ I3 — UF: acepta "41.247,63", "41247,63" y también "41247.63" (punto
+   como decimal). Antes "41247.63" se guardaba como 4.124.763. Regla: si
+   hay coma, la coma es el decimal y los puntos son miles; si no hay coma
+   y el último punto va seguido de 1 o 2 dígitos, ese punto es el decimal. */
+function _parsearUF(raw){
+  const v = String(raw||'').trim().replace(/\s/g,'');
+  if(!v) return null;
+  let num;
+  if(v.includes(',')) num = parseFloat(v.replace(/\./g,'').replace(',','.'));
+  else if(/\.\d{1,2}$/.test(v)) num = parseFloat(v.replace(/\.(?=\d{3}(\.|$))/g,''));
+  else num = parseFloat(v.replace(/\./g,''));
+  return isNaN(num) ? null : num;
+}
+
+/* ✅ I3 — al escribir la UF, un punto usado como decimal ("41247." o un
+   valor pegado "41247.63") se convierte en coma antes de formatear; si no,
+   formatearUF lo borraba y la UF quedaba ×100. */
+function formatearUFIndicador(input){
+  let v = input.value;
+  if(!v.includes(',')){
+    if(/\.$/.test(v)) v = v.slice(0,-1) + ',';
+    else if(/\.\d{1,2}$/.test(v)) v = v.replace(/\.(\d{1,2})$/, ',$1');
+  }
+  input.value = v;
+  formatearUF(input);
+}
+
+/* ✅ I2 — Datos obligatorios y rangos razonables. Devuelve [{id, texto}]. */
+function _validarIndicador(ind){
+  const err = [];
+  const req = (id, val, texto, min, max) => {
+    if(val == null || val === '' || isNaN(val)) err.push({ id, texto: `${texto} (vacío)` });
+    else if((min != null && val < min) || (max != null && val > max)) err.push({ id, texto: `${texto} (valor fuera de rango: ${String(val).replace('.',',')})` });
+  };
+  req('ind-f-uf',        ind.uf,                 'Valor UF', 20000, 100000);
+  req('ind-f-utm',       ind.utm,                'UTM', 30000, 200000);
+  req('ind-f-tope-afp',  ind.tope_imponible_afp, 'Tope imponible AFP', 1000000, 10000000);
+  req('ind-f-tope-afc',  ind.tope_imponible_afc, 'Tope imponible AFC', 1000000, 15000000);
+  req('ind-f-renta-min', ind.renta_minima,       'Renta mínima', 200000, 2000000);
+  req('ind-f-sis',       ind.sis,                'Tasa SIS', 0, 5);
+  if(ind.periodo >= '2025-08') req('ind-f-exp-vida', ind.exp_vida, 'Expectativa de Vida', 0, 5);
+  if(ind.periodo >= '2026-08') req('ind-f-rentabilidad-protegida', ind.rentabilidad_protegida, 'Rentabilidad Protegida', 0, 5);
+  const nombres = {capital:'Capital',cuprum:'Cuprum',habitat:'Habitat',planvital:'PlanVital',provida:'Provida',modelo:'Modelo',uno:'Uno'};
+  Object.keys(nombres).forEach(k => req(`ind-f-afp-${k}-trab`, ind.afp?.[k]?.trabajador, `AFP ${nombres[k]} trabajador`, 9, 14));
+  req('ind-f-afc-indef-emp',  ind.afc?.indefinido?.empleador,  'AFC indefinido empleador', 0, 5);
+  req('ind-f-afc-indef-trab', ind.afc?.indefinido?.trabajador, 'AFC indefinido trabajador', 0, 5);
+  req('ind-f-afc-fijo-emp',   ind.afc?.fijo?.empleador,        'AFC plazo fijo empleador', 0, 5);
+  // G — opcional, pero si se llena una casilla debe llenarse la otra y sumar 7%
+  const c = ind.salud_ccaf?.ccaf, fo = ind.salud_ccaf?.fonasa;
+  if((c != null) !== (fo != null)) err.push({ id: c == null ? 'ind-f-salud-ccaf' : 'ind-f-salud-fonasa', texto: 'Distribución 7% salud: completa ambas casillas' });
+  else if(c != null && Math.abs((c + fo) - 7) > 0.001) err.push({ id: 'ind-f-salud-ccaf', texto: `Distribución 7% salud: CCAF + Fonasa deben sumar 7% (suman ${String(+(c+fo).toFixed(2)).replace('.',',')}%)` });
+  return err;
+}
+
+function _marcarCamposIndicador(ids){
+  document.querySelectorAll('#ind-form-wrap input').forEach(el => {
+    el.style.borderColor = ids.includes(el.id) ? '#DC2626' : '';
+    el.style.background  = ids.includes(el.id) ? '#FEF2F2' : '';
+  });
 }
 
 /* ── ELIMINAR ───────────────────────────────────────────── */
