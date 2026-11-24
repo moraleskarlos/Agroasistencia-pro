@@ -1991,35 +1991,35 @@
             border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;gap:10px;align-items:flex-start;">
           </div>
 
-          <!-- Aviso permanente, independiente -->
-          <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 14px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:var(--radius);margin-bottom:14px;font-size:12px;color:#1E40AF;line-height:1.6;">
-            <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0;margin-top:1px;"></i>
-            <div>⚠️ <strong>Estos valores cambian mensualmente.</strong> Verifica siempre en Previred antes de guardar.
-            Publica los indicadores entre el día 1 y 5 de cada mes para el mes en curso.</div>
-          </div>
-
-          <!-- Título + acciones -->
+          <!-- Encabezado: período + acción principal a la izquierda, fuentes
+               oficiales a la derecha, aviso mensual al pie (rediseño 23-11-2026) -->
           <div class="card" style="margin-bottom:14px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-              <div class="card-title card-title-oscuro"><i class="ti ti-file-certificate"></i> Indicadores Previsionales Previred</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-                <a href="https://www.previred.com/web/previred/indicadores-previsionales"
-                  target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
-                  <i class="ti ti-external-link"></i> Abrir Previred
-                </a>
-                <a href="https://www.sii.cl/valores_y_fechas/uf/uf2026.htm"
-                  target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
-                  <i class="ti ti-external-link"></i> Abrir SII (UF / UTM / UTA)
-                </a>
-                <div class="form-group" style="margin:0;">
-                  <label style="font-size:10px;">Período</label>
-                  <input type="month" id="ind-periodo-selector" onchange="renderDetalleIndicador(this.value)"
-                    style="padding:7px 10px;font-size:13px;">
+            <div class="card-title card-title-oscuro"><i class="ti ti-file-certificate"></i> Indicadores Previsionales</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;">
+              <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+                <div class="form-group" style="margin:0;min-width:190px;">
+                  <label>Período a revisar</label>
+                  <input type="month" id="ind-periodo-selector" onchange="renderDetalleIndicador(this.value)">
                 </div>
-                <button class="btn btn-primary btn-sm" onclick="nuevoIndicadorManual()">
-                  <i class="ti ti-plus"></i> Ingresar / Editar período
+                <button class="btn btn-primary" onclick="nuevoIndicadorManual()">
+                  <i class="ti ti-pencil"></i> Ingresar / editar valores
                 </button>
               </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                <span style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;">Fuentes oficiales</span>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                  <a href="https://www.previred.com/web/previred/indicadores-previsionales" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">
+                    <i class="ti ti-external-link"></i> Previred
+                  </a>
+                  <a href="https://www.sii.cl/valores_y_fechas/uf/uf2026.htm" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">
+                    <i class="ti ti-external-link"></i> SII · UF, UTM, UTA
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-start;margin-top:14px;padding-top:12px;border-top:1px solid var(--borde);font-size:12px;color:var(--texto2);line-height:1.6;">
+              <i class="ti ti-info-circle" style="font-size:15px;flex-shrink:0;margin-top:2px;color:#2563EB;"></i>
+              <div><strong>Estos valores cambian cada mes.</strong> Previred los publica entre el día 1 y 5; cópialos del PDF del mes antes de liquidar.</div>
             </div>
           </div>
 
@@ -2276,21 +2276,35 @@
         </div>
 
         <div id="panel-rem-previred" style="display:none;">
+          <!-- Encabezado con el mismo estilo que Indicadores (rediseño 23-11-2026) -->
           <div class="card" style="margin-bottom:14px;">
-            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-              <div class="form-group" style="margin:0;">
-                <label>Período</label>
-                <input type="month" id="prev-periodo-selector" onchange="renderPrevired()" style="padding:7px 10px;font-size:13px;">
+            <div class="card-title card-title-oscuro"><i class="ti ti-file-type-txt"></i> Archivo de cotizaciones Previred</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;">
+              <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+                <div class="form-group" style="margin:0;min-width:190px;">
+                  <label>Período a pagar</label>
+                  <input type="month" id="prev-periodo-selector" onchange="renderPrevired()">
+                </div>
+                <div class="form-group" style="margin:0;min-width:240px;">
+                  <label>Empresa empleadora</label>
+                  <select id="prev-empresa-selector" onchange="renderPrevired()">
+                    <option value="">— Selecciona empresa propia —</option>
+                  </select>
+                </div>
+                <button class="btn btn-secondary" onclick="renderPrevired()">
+                  <i class="ti ti-refresh"></i> Actualizar
+                </button>
               </div>
-              <div class="form-group" style="margin:0;">
-                <label>Empresa propia</label>
-                <select id="prev-empresa-selector" onchange="renderPrevired()" style="padding:7px 10px;font-size:13px;">
-                  <option value="">— Selecciona empresa propia —</option>
-                </select>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                <span style="font-size:11px;font-weight:700;color:var(--texto3);text-transform:uppercase;letter-spacing:.4px;">Portal de pago</span>
+                <a href="https://www.previred.com" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">
+                  <i class="ti ti-external-link"></i> Previred
+                </a>
               </div>
-              <button class="btn btn-secondary btn-sm" onclick="renderPrevired()" style="align-self:flex-end;">
-                <i class="ti ti-refresh"></i> Actualizar
-              </button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-start;margin-top:14px;padding-top:12px;border-top:1px solid var(--borde);font-size:12px;color:var(--texto2);line-height:1.6;">
+              <i class="ti ti-info-circle" style="font-size:15px;flex-shrink:0;margin-top:2px;color:#2563EB;"></i>
+              <div>El archivo se arma con las <strong>liquidaciones generadas</strong> del período. Las cotizaciones se pagan hasta el día 13 del mes siguiente (o el día 10 si pagas en papel).</div>
             </div>
           </div>
           <div id="prev-contenido">
