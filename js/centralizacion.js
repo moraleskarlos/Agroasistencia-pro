@@ -52,6 +52,10 @@ function cargarPlanCuentas(){
     if(plan_cuentas[k] === PLAN_CUENTAS_ANTERIOR[k]) plan_cuentas[k] = PLAN_CUENTAS_DEFAULT[k];
   });
 }
+/* ✅ C9 — código de cuenta opcional (el que usa el contador en su plan de
+   cuentas). Se guarda en plan_cuentas.codigos = { clave: '2101' }. */
+function _codigoCuenta(key){ return (plan_cuentas.codigos || {})[key] || ''; }
+
 function guardarPlanCuentas(){
   localStorage.setItem(LOCAL_PLAN_CUENTAS, JSON.stringify(plan_cuentas));
 }
@@ -73,18 +77,44 @@ function initCentralizacion(){
   renderCentralizacion();
 }
 
+/* ✅ C7 — empresa obligatoria: cada empresa lleva su propia contabilidad,
+   un asiento consolidado de varias empresas no sirve para contabilizar.
+   Con una sola empresa, queda elegida de inmediato. */
 function _poblarFiltroEmpresaCentralizacion(){
   const sel = document.getElementById('cent-empresa-selector');
   if(!sel) return;
   const val = sel.value;
-  sel.innerHTML = '<option value="">Todas las empresas (consolidado)</option>'
-    + (empresas_propias||[]).map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
-  if(val) sel.value = val;
+  const lista = empresas_propias || [];
+  sel.innerHTML = '<option value="">— Selecciona empresa —</option>'
+    + lista.map(e => `<option value="${e.id}">${e.nombre||e.razon_social}</option>`).join('');
+  if(val && lista.some(e => e.id === val)) sel.value = val;
+  else if(lista.length === 1) sel.value = lista[0].id;
 }
 
-/* ✅ C6 (auditoría Centralización, 23-11-2026) — la empresa se toma del
-   contrato de ESE período (_empresaDelPeriodo, mismo criterio que H9 en
-   Liquidaciones), no de la empresa actual del trabajador. */
+/* ✅ C8 — avisos antes de contabilizar (mismo criterio que el LRE). */
+function _avisosCentralizacion(periodo, empresaId){
+  const avisos = [];
+  const lista = _getLiquidacionesCentralizacion(periodo, empresaId);
+  if(typeof _trabajadoresDelPeriodo === 'function'){
+    const sinLiq = _trabajadoresDelPeriodo(empresaId, periodo)
+      .filter(t => _empresaDelPeriodo(t.rut, periodo) === empresaId && !lista.some(l => l.rut === t.rut));
+    if(sinLiq.length) avisos.push(`${sinLiq.length} trabajador${sinLiq.length!==1?'es':''} con contrato en el mes sin liquidación generada: ${sinLiq.map(t => t.nombre).join(', ')} — no ${sinLiq.length!==1?'están':'está'} en el asiento.`);
+  }
+  if(typeof _estadoLiquidacion === 'function'){
+    const desact = lista.filter(l => _estadoLiquidacion(l.rut, periodo).estado === 'desactualizada');
+    if(desact.length) avisos.push(`${desact.length} liquidaci${desact.length!==1?'ones':'ón'} con datos cambiados (🟡): ${desact.map(l => l.nombre).join(', ')} — reábre${desact.length!==1?'las':'la'} para que el asiento use los montos correctos.`);
+  }
+  return avisos;
+}
+
+function _empresaCentralizacion(empresaId){
+  return (empresas_propias || []).find(e => e.id === empresaId) || {};
+}
+function _fechaAsiento(periodo){
+  const [a, m] = periodo.split('-').map(Number);
+  return `${String(new Date(a, m, 0).getDate()).padStart(2,'0')}-${String(m).padStart(2,'0')}-${a}`;
+}
+
 function _getLiquidacionesCentralizacion(periodo, empresaId){
   let lista = liquidaciones_guardadas.filter(l => l.periodo === periodo);
   if(empresaId) lista = lista.filter(l => _empresaDelPeriodo(l.rut, periodo) === empresaId);
@@ -207,10 +237,9 @@ function renderCentralizacion(){
   const cont      = document.getElementById('cent-contenido');
   if(!cont) return;
 
-  if(!periodo){
-    cont.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:var(--texto3);">Selecciona el período.</div>`;
-    return;
-  }
+  const vacio = txt => `<div class="card" style="text-align:center;padding:40px;color:var(--texto3);">${txt}</div>`;
+  if(!empresaId){ cont.innerHTML = vacio('Elige la <strong>empresa empleadora</strong> — cada empresa tiene su propio asiento contable.'); return; }
+  if(!periodo){ cont.innerHTML = vacio('Selecciona el período.'); return; }
 
   const asiento = construirAsientoCentralizacion(periodo, empresaId);
   if(asiento.error){
@@ -223,15 +252,32 @@ function renderCentralizacion(){
   }
 
   const fmtM = v => '$' + Math.round(v).toLocaleString('es-CL');
+  const ep = _empresaCentralizacion(empresaId);
+  const avisos = _avisosCentralizacion(periodo, empresaId);
+  const fila = (l, lado) => `<tr>
+      <td style="font-size:12px;color:var(--texto2);white-space:nowrap;">${_codigoCuenta(l.key) || '—'}</td>
+      <td class="wrap-ok" style="font-size:13px;">${l.cuenta}<div style="font-size:11px;color:var(--texto3);">${l.glosa}</div></td>
+      <td style="text-align:right;font-size:13px;">${lado==='d' ? fmtM(l.monto) : ''}</td>
+      <td style="text-align:right;font-size:13px;">${lado==='h' ? fmtM(l.monto) : ''}</td>
+    </tr>`;
 
   cont.innerHTML = `
+    ${avisos.length ? `
+    <div class="card" style="margin-bottom:14px;border:1px solid #FDE68A;background:#FFFBEB;">
+      <div class="card-title" style="color:#92400E;"><i class="ti ti-alert-triangle"></i> Revisa antes de contabilizar</div>
+      ${avisos.map(a => `<div style="font-size:13px;color:#78350F;margin-bottom:4px;">• ${a}</div>`).join('')}
+    </div>` : ''}
+
     <div class="card" style="margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
         <div>
-          <div style="font-size:14px;font-weight:700;">Centralización contable — ${getNombreMes(periodo)}</div>
-          <div style="font-size:12px;color:var(--texto2);">${asiento.trabajadores} liquidaci${asiento.trabajadores===1?'ón':'ones'}${asiento.finiquitos?` · ${asiento.finiquitos} finiquito${asiento.finiquitos>1?'s':''}`:''}</div>
+          <div style="font-size:14px;font-weight:700;">Asiento de remuneraciones — ${getNombreMes(periodo)}</div>
+          <div style="font-size:12px;color:var(--texto2);">
+            ${ep.razon_social || ep.nombre || ''}${ep.rut ? ' · RUT ' + ep.rut : ''} · Fecha del asiento ${_fechaAsiento(periodo)} ·
+            ${asiento.trabajadores} liquidaci${asiento.trabajadores===1?'ón':'ones'}${asiento.finiquitos?` · ${asiento.finiquitos} finiquito${asiento.finiquitos>1?'s':''}`:''}
+          </div>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-secondary btn-sm" onclick="_abrirEdicionPlanCuentas()"><i class="ti ti-list-details"></i> Plan de cuentas</button>
           <button class="btn btn-secondary btn-sm" onclick="imprimirCentralizacion()"><i class="ti ti-printer"></i> Imprimir</button>
           <button class="btn btn-primary btn-sm" onclick="exportarCentralizacionExcel()"><i class="ti ti-table-export"></i> Exportar Excel</button>
@@ -239,29 +285,23 @@ function renderCentralizacion(){
       </div>
 
       <div class="tabla-wrap">
-        <table class="tabla">
-          <thead><tr style="background:#0f2942;">
-            <th style="color:#fff;">Cuenta</th>
-            <th style="color:#fff;text-align:right;">Debe</th>
-            <th style="color:#fff;text-align:right;">Haber</th>
+        <table class="tabla" style="min-width:640px;">
+          <thead><tr>
+            <th style="width:90px;">Código</th>
+            <th>Cuenta</th>
+            <th style="text-align:right;width:140px;">Debe</th>
+            <th style="text-align:right;width:140px;">Haber</th>
           </tr></thead>
           <tbody>
-            ${asiento.debe.map(l => `<tr>
-              <td style="font-size:13px;">${l.cuenta}<div style="font-size:11px;color:var(--texto3);">${l.glosa}</div></td>
-              <td style="text-align:right;font-size:13px;">${fmtM(l.monto)}</td>
-              <td></td>
-            </tr>`).join('')}
-            ${asiento.haber.map(l => `<tr>
-              <td style="font-size:13px;">${l.cuenta}<div style="font-size:11px;color:var(--texto3);">${l.glosa}</div></td>
-              <td></td>
-              <td style="text-align:right;font-size:13px;">${fmtM(l.monto)}</td>
-            </tr>`).join('')}
+            ${asiento.debe.map(l => fila(l,'d')).join('')}
+            ${asiento.haber.map(l => fila(l,'h')).join('')}
           </tbody>
           <tfoot>
-            <tr style="background:#1e293b;color:#fff;font-weight:700;">
-              <td>TOTALES</td>
-              <td style="text-align:right;">${fmtM(asiento.total_debe)}</td>
-              <td style="text-align:right;">${fmtM(asiento.total_haber)}</td>
+            <tr>
+              <td style="background:#1e293b;color:#fff;"></td>
+              <td style="background:#1e293b;color:#fff;font-weight:700;">TOTALES</td>
+              <td style="background:#1e293b;color:#fff;font-weight:700;text-align:right;">${fmtM(asiento.total_debe)}</td>
+              <td style="background:#1e293b;color:#fff;font-weight:700;text-align:right;">${fmtM(asiento.total_haber)}</td>
             </tr>
           </tfoot>
         </table>
@@ -285,26 +325,35 @@ function _abrirEdicionPlanCuentas(){
   wrap.style.display = 'block';
   wrap.innerHTML = `
     <div class="card" style="margin-top:14px;">
-      <div class="card-title card-title-oscuro"><i class="ti ti-list-details"></i> Nombres de cuentas contables</div>
-      <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;">
-        Ajusta los nombres para que calcen con tu plan de cuentas real. Se guardan localmente y se reutilizan en todos los períodos.
+      <div class="card-title card-title-oscuro"><i class="ti ti-list-details"></i> Plan de cuentas</div>
+      <div style="font-size:12px;color:var(--texto2);margin-bottom:12px;">
+        Ajusta el código (opcional) y el nombre para que calcen con el plan de cuentas de tu contador. Se guardan y se usan en todos los períodos.
       </div>
-      <div class="form-grid">
-        ${Object.keys(PLAN_CUENTAS_DEFAULT).map(key => `
-          <div class="form-group">
-            <label>${PLAN_CUENTAS_DEFAULT[key]}</label>
-            <input type="text" id="cent-cuenta-${key}" value="${plan_cuentas[key]||PLAN_CUENTAS_DEFAULT[key]}">
-          </div>`).join('')}
+      <div class="tabla-wrap">
+        <table class="tabla">
+          <thead><tr><th style="width:120px;">Código</th><th>Nombre de la cuenta</th><th style="font-size:11px;">Cuenta del sistema</th></tr></thead>
+          <tbody>
+            ${Object.keys(PLAN_CUENTAS_DEFAULT).map(key => `<tr>
+              <td><input type="text" id="cent-codigo-${key}" value="${_codigoCuenta(key)}" placeholder="Ej: 2101" style="width:100px;"></td>
+              <td><input type="text" id="cent-cuenta-${key}" value="${plan_cuentas[key]||PLAN_CUENTAS_DEFAULT[key]}" style="width:100%;min-width:260px;"></td>
+              <td style="font-size:11px;color:var(--texto3);">${PLAN_CUENTAS_DEFAULT[key]}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="_guardarPlanCuentasUI()"><i class="ti ti-device-floppy"></i> Guardar plan de cuentas</button>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="_guardarPlanCuentasUI()"><i class="ti ti-device-floppy"></i> Guardar plan de cuentas</button>
     </div>`;
 }
 
 function _guardarPlanCuentasUI(){
+  const codigos = {};
   Object.keys(PLAN_CUENTAS_DEFAULT).forEach(key => {
     const val = document.getElementById(`cent-cuenta-${key}`)?.value.trim();
     if(val) plan_cuentas[key] = val;
+    const cod = document.getElementById(`cent-codigo-${key}`)?.value.trim();
+    if(cod) codigos[key] = cod;
   });
+  plan_cuentas.codigos = codigos;
   guardarPlanCuentas();
   toast('✅ Plan de cuentas actualizado', 'exito');
   renderCentralizacion();
@@ -314,32 +363,56 @@ function _guardarPlanCuentasUI(){
 function imprimirCentralizacion(){
   const periodo   = document.getElementById('cent-periodo-selector')?.value || '';
   const empresaId = document.getElementById('cent-empresa-selector')?.value || '';
+  if(!empresaId){ toast('⚠️ Elige la empresa empleadora', 'error'); return; }
   const asiento   = construirAsientoCentralizacion(periodo, empresaId);
   if(asiento.error){ toast(`⚠️ ${asiento.error}`, 'error'); return; }
   const fmtM = v => '$' + Math.round(v).toLocaleString('es-CL');
+  const ep = _empresaCentralizacion(empresaId);
+  const fila = (l, lado) => `<tr><td class="cod">${_codigoCuenta(l.key)}</td><td>${l.cuenta}<div class="glosa">${l.glosa}</div></td>
+    <td class="num">${lado==='d'?fmtM(l.monto):''}</td><td class="num">${lado==='h'?fmtM(l.monto):''}</td></tr>`;
 
   const win = window.open('', '_blank', 'width=900,height=700');
   win.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
     <title>Centralización ${periodo}</title>
     <style>
-      body{font-family:'Segoe UI',system-ui,sans-serif;margin:24px;font-size:13px;color:#1e293b;}
-      table{width:100%;border-collapse:collapse;margin-top:14px;}
-      th,td{padding:7px 9px;border-bottom:1px solid #e2e8f0;text-align:left;}
-      th{background:#0f2942;color:#fff;font-size:11px;text-transform:uppercase;}
-      td:nth-child(2),td:nth-child(3),th:nth-child(2),th:nth-child(3){text-align:right;}
+      @page{size:letter portrait;margin:14mm;}
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      body{font-family:'Segoe UI',system-ui,sans-serif;margin:0;font-size:12px;color:#1e293b;}
+      .enc{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0f2942;padding-bottom:10px;}
+      .enc h1{font-size:17px;color:#0f2942;margin:0 0 4px;}
+      .enc .emp{font-size:13px;font-weight:700;} .enc .sub{color:#64748b;font-size:11px;line-height:1.5;}
+      table{width:100%;border-collapse:collapse;margin-top:16px;}
+      th,td{padding:7px 9px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top;}
+      th{background:#0f2942;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.4px;}
+      .num{text-align:right;white-space:nowrap;} .cod{color:#64748b;white-space:nowrap;width:70px;}
+      .glosa{font-size:10px;color:#94a3b8;margin-top:2px;}
       tfoot td{background:#1e293b;color:#fff;font-weight:700;}
+      .estado{margin-top:10px;font-weight:600;}
+      .firmas{display:flex;gap:40px;margin-top:60px;} .firmas div{flex:1;border-top:1px solid #64748b;padding-top:6px;text-align:center;font-size:11px;color:#475569;}
     </style>
   </head><body>
-    <h2 style="color:#0f2942;margin-bottom:2px;">Centralización Contable — Remuneraciones</h2>
-    <p style="color:#64748b;">Período: ${getNombreMes(periodo)} · ${asiento.trabajadores} trabajadores</p>
+    <div class="enc">
+      <div>
+        <h1>Centralización Contable de Remuneraciones</h1>
+        <div class="emp">${ep.razon_social || ep.nombre || ''}</div>
+        <div class="sub">${ep.rut ? 'RUT ' + ep.rut : ''}</div>
+      </div>
+      <div class="sub" style="text-align:right;">
+        Período: <strong>${getNombreMes(periodo)}</strong><br>
+        Fecha del asiento: <strong>${_fechaAsiento(periodo)}</strong><br>
+        ${asiento.trabajadores} liquidaci${asiento.trabajadores===1?'ón':'ones'}${asiento.finiquitos?` · ${asiento.finiquitos} finiquito${asiento.finiquitos>1?'s':''}`:''}
+      </div>
+    </div>
     <table>
-      <thead><tr><th>Cuenta</th><th>Debe</th><th>Haber</th></tr></thead>
+      <thead><tr><th>Código</th><th>Cuenta</th><th class="num">Debe</th><th class="num">Haber</th></tr></thead>
       <tbody>
-        ${asiento.debe.map(l=>`<tr><td>${l.cuenta}</td><td>${fmtM(l.monto)}</td><td></td></tr>`).join('')}
-        ${asiento.haber.map(l=>`<tr><td>${l.cuenta}</td><td></td><td>${fmtM(l.monto)}</td></tr>`).join('')}
+        ${asiento.debe.map(l=>fila(l,'d')).join('')}
+        ${asiento.haber.map(l=>fila(l,'h')).join('')}
       </tbody>
-      <tfoot><tr><td>TOTALES</td><td>${fmtM(asiento.total_debe)}</td><td>${fmtM(asiento.total_haber)}</td></tr></tfoot>
+      <tfoot><tr><td></td><td>TOTALES</td><td class="num">${fmtM(asiento.total_debe)}</td><td class="num">${fmtM(asiento.total_haber)}</td></tr></tfoot>
     </table>
+    <div class="estado" style="color:${asiento.cuadrado?'#065f46':'#dc2626'};">${asiento.cuadrado ? 'Asiento cuadrado' : 'Asiento descuadrado — diferencia de ' + fmtM(Math.abs(asiento.diferencia))}</div>
+    <div class="firmas"><div>Preparado por</div><div>V°B° Contador</div></div>
     <script>setTimeout(()=>window.print(),600);<\/script>
   </body></html>`);
   win.document.close();
@@ -349,19 +422,29 @@ function imprimirCentralizacion(){
 function exportarCentralizacionExcel(){
   const periodo   = document.getElementById('cent-periodo-selector')?.value || '';
   const empresaId = document.getElementById('cent-empresa-selector')?.value || '';
+  if(!empresaId){ toast('⚠️ Elige la empresa empleadora', 'error'); return; }
   const asiento   = construirAsientoCentralizacion(periodo, empresaId);
   if(asiento.error){ toast(`⚠️ ${asiento.error}`, 'error'); return; }
+  const ep = _empresaCentralizacion(empresaId);
+  const fecha = _fechaAsiento(periodo);
 
-  const rows = [
-    ...asiento.debe.map(l => ({ Cuenta: l.cuenta, Glosa: l.glosa, Debe: Math.round(l.monto), Haber: 0 })),
-    ...asiento.haber.map(l => ({ Cuenta: l.cuenta, Glosa: l.glosa, Debe: 0, Haber: Math.round(l.monto) })),
-    { Cuenta: 'TOTALES', Glosa: '', Debe: Math.round(asiento.total_debe), Haber: Math.round(asiento.total_haber) },
+  const aoa = [
+    ['Centralización contable de remuneraciones'],
+    ['Empresa', ep.razon_social || ep.nombre || ''],
+    ['RUT', ep.rut || ''],
+    ['Período', getNombreMes(periodo)],
+    ['Fecha del asiento', fecha],
+    [],
+    ['Fecha', 'Código', 'Cuenta', 'Glosa', 'Debe', 'Haber'],
+    ...asiento.debe.map(l  => [fecha, _codigoCuenta(l.key), l.cuenta, l.glosa, Math.round(l.monto), 0]),
+    ...asiento.haber.map(l => [fecha, _codigoCuenta(l.key), l.cuenta, l.glosa, 0, Math.round(l.monto)]),
+    ['', '', 'TOTALES', '', Math.round(asiento.total_debe), Math.round(asiento.total_haber)],
   ];
 
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{wch:38},{wch:44},{wch:14},{wch:14}];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:12},{wch:10},{wch:44},{wch:60},{wch:14},{wch:14}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Centralización');
-  XLSX.writeFile(wb, `Centralizacion_${periodo}.xlsx`);
+  XLSX.writeFile(wb, `Centralizacion_${(ep.rut||'empresa').replace(/[.\-]/g,'')}_${periodo}.xlsx`);
   toast('⬇️ Excel exportado', 'exito');
 }
